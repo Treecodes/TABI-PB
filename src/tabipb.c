@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <math.h>
 #include "gl_variables.h"
+#include "gl_constants.h"
 #include <stdlib.h>
 #include <string.h>
 #include "treecode.h"
