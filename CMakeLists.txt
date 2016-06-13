@@ -13,12 +13,15 @@ add_executable(tabipb
   )
 
 
-#optional building as plugin for apbs
+################################################
+###### APBS components
+################################################
+
 option(ENABLE_TABIPB_APBS "TABIPB APBS" OFF)
 if(ENABLE_TABIPB_APBS)
 
-include(ExternalProject)
-enable_language (C)
+#include(ExternalProject)
+#enable_language (C)
 
 OPTION (BUILD_SHARED_LIBS "Build shared libraries." OFF)
 
@@ -28,6 +31,7 @@ if (NOT CMAKE_BUILD_TYPE)
       "Choose the type of build, options are: None Debug Release."
       FORCE)
 endif (NOT CMAKE_BUILD_TYPE)
+
 
 # default installation
 get_filename_component (default_prefix "." ABSOLUTE)
@@ -49,8 +53,7 @@ elseif (C_COMPILER_NAME MATCHES "icc.*")
 else (C_COMPILER_NAME MATCHES "gcc.*")
   message ("CMAKE_C_COMPILER full path: " ${CMAKE_C_COMPILER})
   message ("C compiler: " ${C_COMPILER_NAME})
-  message ("No optimized Fortran compiler flags are known, we just try -O2...")
-  set (CMAKE_C_FLAGS_RELEASE "-c -O2")
+  set (CMAKE_C_FLAGS_RELEASE "-c -O3")
   set (CMAKE_C_FLAGS_DEBUG   "")
 endif (C_COMPILER_NAME MATCHES "gcc.*")
 
