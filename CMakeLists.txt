@@ -1,10 +1,25 @@
 cmake_minimum_required (VERSION 2.8)
 set(CMAKE_VERBOSE_MAKEFILE ON)
+
+project(tabipb)
+
+include_directories("/src")
+
+# C code for standalone
+add_executable(tabipb
+  src/main.c src/gmres.c src/daxpy.c src/dcopy.c src/ddot.c
+  src/dgemv.c src/dnrm2.c src/drot.c src/drotg.c src/dscal.c src/d_sign.c
+  src/dtrsv.c src/gl_functions.c src/readin.c src/pp_timer.c src/treecode.c
+  )
+
+
+#optional building as plugin for apbs
+option(ENABLE_TABIPB_APBS "TABIPB APBS" OFF)
+if(ENABLE_TABIPB_APBS)
+
 include(ExternalProject)
-
-project (tabipb)
-
 enable_language (C)
+
 OPTION (BUILD_SHARED_LIBS "Build shared libraries." OFF)
 
 # make sure that the default is a RELEASE
@@ -32,8 +47,8 @@ elseif (C_COMPILER_NAME MATCHES "icc.*")
   set (CMAKE_C_FLAGS_RELEASE "-fast -c")
   set (CMAKE_C_FLAGS_DEBUG   "")
 else (C_COMPILER_NAME MATCHES "gcc.*")
-  message ("CMAKE_Fortran_COMPILER full path: " ${CMAKE_C_COMPILER})
-  message ("Fortran compiler: " ${C_COMPILER_NAME})
+  message ("CMAKE_C_COMPILER full path: " ${CMAKE_C_COMPILER})
+  message ("C compiler: " ${C_COMPILER_NAME})
   message ("No optimized Fortran compiler flags are known, we just try -O2...")
   set (CMAKE_C_FLAGS_RELEASE "-c -O2")
   set (CMAKE_C_FLAGS_DEBUG   "")
@@ -79,3 +94,5 @@ else()
 endif()
 
 install(FILES ${MODULES} DESTINATION ${CMAKE_INSTALL_LIBDIR})
+
+endif()
