@@ -1,9 +1,10 @@
 #include <time.h>
 #include <stdio.h>
 #include <math.h>
-#include "gl_variables.h"
 #include <stdlib.h>
 #include <string.h>
+
+#include "gl_variables.h"
 #include "treecode.h"  /* try to use less variables */
 
 int main(int argc, char *argv[])
@@ -15,8 +16,8 @@ int main(int argc, char *argv[])
   int i,j,k,ierr;
   double s[3],pot=0.0,sum=0.0,pot_temp=0.0;
   double ptl,soleng,t1,t2;
-  char fname[16],density[16];
-  extern void readin(char fname[16], char density[16]);
+  char fname[16],density[16], probe_radius[16];
+  extern void readin(char fname[16], char density[16], char probe_radius[16]);
   extern double potential_molecule(double s[3]);
   extern int comp_source();
   extern int output_potential();
@@ -50,6 +51,7 @@ int main(int argc, char *argv[])
   fp=fopen("usrdata.in","r");
     ierr=fscanf(fp,"%s %s",c,fname);
     ierr=fscanf(fp,"%s %s",c,density);
+    ierr=fscanf(fp,"%s %s",c,probe_radius);
     ierr=fscanf(fp,"%s %lf",c,&epsp);
     ierr=fscanf(fp,"%s %lf",c,&epsw);
     ierr=fscanf(fp,"%s %lf",c,&bulk_strength);
@@ -68,7 +70,7 @@ int main(int argc, char *argv[])
   kappa2=bulk_coef*bulk_strength/epsw;
   kappa=sqrt(kappa2);
 
-  readin(fname,density);
+  readin(fname,density,probe_radius);
 
   comp_source();
   /* tr_xyz=[x[i],y[i],z[i]] */
