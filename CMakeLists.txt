@@ -85,6 +85,8 @@ if(ENABLE_TABIPB_APBS)
 
 endif()
 
+target_link_libraries(tabipb m)
+
 ################################################
 ###### Install
 ################################################
