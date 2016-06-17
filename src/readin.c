@@ -94,8 +94,10 @@ int readin(char fname[16], char density[16], char probe_radius[16], int mesh_fla
 
         printf("Running NanoShaper...\n");
         ierr = system("NanoShaper");
-        ierr = system("mv triangulatedSurf.face %s%s.face\n", fpath, fname); 
-        ierr = system("mv triangulatedSurf.vert %s%s.vert\n", fpath, fname); 
+        sprintf(fname_tp,"mv triangulatedSurf.face %s%s.face\n", fpath, fname); 
+        ierr = system(fname_tp); 
+        sprintf("mv triangulatedSurf.vert %s%s.vert\n", fpath, fname); 
+        ierr = system(fname_tp); 
         ierr = system("rm stderror.txt"); 
         ierr = system("rm surfaceConfiguration.prm"); 
   }
