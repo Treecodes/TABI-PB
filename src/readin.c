@@ -24,7 +24,7 @@ double triangle_area(double v[3][3])
 }
 
 /* function read in molecule information */
-int readin(char fname[16], char density[16], char probe_radius[16])
+int readin(char fname[16], char density[16], char probe_radius[16], int mesh_flag)
 {
   FILE *fp,*wfp;
   char c,c1[10],c2[10],c3[10],c4[10],c5[10];
@@ -60,10 +60,16 @@ int readin(char fname[16], char density[16], char probe_radius[16])
   fclose(wfp);
 
   /* Run msms */
-  sprintf(fname_tp,"msms -if %s%s.xyzr -prob %s -dens %s -of %s%s ",
-          fpath,fname,probe_radius,density,fpath,fname);
-  printf("%s\n",fname_tp);
-  ierr=system(fname_tp);
+  if (mesh_flag == 0) {
+        sprintf(fname_tp,"msms -if %s%s.xyzr -prob %s -dens %s -of %s%s ",
+                fpath,fname,probe_radius,density,fpath,fname);
+        printf("%s\n",fname_tp);
+        ierr=system(fname_tp);
+
+  } else if (mesh_flag == 1) {
+        printf("Here is where we run NanoShaper...\n");
+        EXIT_FAILURE;
+  }
 
   /* read in vert */
   sprintf(fname_tp, "%s%s.vert",fpath,fname);	//or use "strcat(fname_tp,".vert")"

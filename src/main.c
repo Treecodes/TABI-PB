@@ -17,7 +17,10 @@ int main(int argc, char *argv[])
   double s[3],pot=0.0,sum=0.0,pot_temp=0.0;
   double ptl,soleng,t1,t2;
   char fname[16],density[16], probe_radius[16];
-  extern void readin(char fname[16], char density[16], char probe_radius[16]);
+  int mesh_flag;
+
+  extern void readin(char fname[16], char density[16], char probe_radius[16], int
+                  mesh_flag);
   extern double potential_molecule(double s[3]);
   extern int comp_source();
   extern int output_potential();
@@ -70,7 +73,7 @@ int main(int argc, char *argv[])
   kappa2=bulk_coef*bulk_strength/epsw;
   kappa=sqrt(kappa2);
 
-  readin(fname,density,probe_radius);
+  readin(fname,density,probe_radius,mesh_flag);
 
   comp_source();
   /* tr_xyz=[x[i],y[i],z[i]] */
