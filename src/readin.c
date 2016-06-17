@@ -26,7 +26,7 @@ double triangle_area(double v[3][3])
 /* function read in molecule information */
 int readin(char fname[16], char density[16], char probe_radius[16], int mesh_flag)
 {
-  FILE *fp,*wfp;
+  FILE *fp,*wfp,*nsfp;
   char c,c1[10],c2[10],c3[10],c4[10],c5[10];
   char fpath[256];
   //char fname[16],density[16];
@@ -74,6 +74,7 @@ int readin(char fname[16], char density[16], char probe_radius[16], int mesh_fla
         fprintf(nsfp,"Build_epsilon_maps = false\n");
         fprintf(nsfp,"Build_status_map = false\n");
         fprintf(nsfp,"Save_Mesh_MSMS_Format = true\n");
+        fprintf(nsfp,"Compute_Vertex_Normals = true\n");
 
         fprintf(nsfp,"Surface = skin\n");
         fprintf(nsfp,"Smooth_Mesh = true\n");
