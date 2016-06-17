@@ -146,9 +146,6 @@ int readin(char fname[16], char density[16], char probe_radius[16], int mesh_fla
   }
     
     
-  ierr=fscanf(fp,"%d %d %lf %lf ",&nspt,&natm,&den,&prob_rds);
-  printf("nspt=%d, natm=%d, den=%lf, prob=%lf\n", nspt,natm,den,prob_rds);
-
   /*allocate variables for vertices file*/
   extr_v=Make2DIntArray(3,nspt,"extr_v");
   vert=Make2DDoubleArray(3,nspt,"vert");
