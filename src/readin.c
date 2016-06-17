@@ -24,9 +24,9 @@ double triangle_area(double v[3][3])
 }
 
 /* function read in molecule information */
-int readin(char fname[16], char density[16], char probe_radius[16])
+int readin(char fname[16], char density[16], char probe_radius[16], int mesh_flag)
 {
-  FILE *fp,*wfp;
+  FILE *fp,*wfp,*nsfp;
   char c,c1[10],c2[10],c3[10],c4[10],c5[10];
   char fpath[256];
   //char fname[16],density[16];
@@ -60,10 +60,42 @@ int readin(char fname[16], char density[16], char probe_radius[16])
   fclose(wfp);
 
   /* Run msms */
-  sprintf(fname_tp,"msms -if %s%s.xyzr -prob %s -dens %s -of %s%s ",
-          fpath,fname,probe_radius,density,fpath,fname);
-  printf("%s\n",fname_tp);
-  ierr=system(fname_tp);
+  if (mesh_flag == 0) {
+        sprintf(fname_tp,"msms -if %s%s.xyzr -prob %s -dens %s -of %s%s ",
+                fpath,fname,probe_radius,density,fpath,fname);
+        printf("%s\n",fname_tp);
+        ierr=system(fname_tp);
+
+  } else if (mesh_flag == 1) {
+        nsfp=fopen("surfaceConfiguration.prm","w");
+        fprintf(nsfp,"Grid_scale = %f\n", 2.0);
+        fprintf(nsfp,"Grid_perfil = %f\n", 90.0);
+        fprintf(nsfp,"XYZR_FileName = %s%s.xyzr\n", fpath, fname);
+        fprintf(nsfp,"Build_epsilon_maps = false\n");
+        fprintf(nsfp,"Build_status_map = false\n");
+        fprintf(nsfp,"Save_Mesh_MSMS_Format = true\n");
+        fprintf(nsfp,"Compute_Vertex_Normals = true\n");
+
+        fprintf(nsfp,"Surface = skin\n");
+        fprintf(nsfp,"Smooth_Mesh = true\n");
+        fprintf(nsfp,"Skin_Surface_Parameter = %f\n", 0.45);
+
+        fprintf(nsfp,"Cavity_Detection_Filling = false\n");
+        fprintf(nsfp,"Conditional_Volume_Filling_Value = %f\n", 11.4);
+        fprintf(nsfp,"Keep_Water_Shaped_Cavities = false\n");
+        fprintf(nsfp,"Probe_Radius = %f\n", 1.4);
+        fprintf(nsfp,"Accurate_Triangulation = true\n");
+        fprintf(nsfp,"Triangulation = true\n");
+        fprintf(nsfp,"Check_duplicated_vertices = true\n");
+        fprintf(nsfp,"Save_Status_map = false\n");
+        fprintf(nsfp,"Save_PovRay = false\n");
+
+        fclose(nsfp);
+
+        printf("Running NanoShaper...\n");
+        ierr = system("NanoShaper");
+        EXIT_FAILURE;
+  }
 
   /* read in vert */
   sprintf(fname_tp, "%s%s.vert",fpath,fname);	//or use "strcat(fname_tp,".vert")"
