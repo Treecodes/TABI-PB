@@ -59,6 +59,28 @@ int readin(char fname[16], char density[16], char probe_radius[16], int mesh_fla
   fclose(fp);
   fclose(wfp);
 
+  sscanf(probe_radius, "%lf", &prob_rds);
+  sscanf(density, "%lf", &den);
+    
+  if (mesh_flag == 1) {
+        // Determine number of atoms, since NanoShaper msms output doesn't do it
+        // automagically.
+        sprintf(fname_tp, "%s%s.xyzr",fpath,fname);
+        fp=fopen(fname_tp,"r");
+        int ch, number_of_lines = 0;
+        do {
+            ch = fgetc(fp);
+            if(ch == '\n')
+                number_of_lines++;
+        } while (ch != EOF);
+        // last line doesn't end with a new line!
+        // but there has to be a line at least before the last line
+        //if(ch != '\n' && number_of_lines != 0)
+        //      number_of_lines++;
+        fclose(fp);
+        natm = number_of_lines;    //natm is number of lines in .xyzr
+  }
+
   /* Run msms */
   if (mesh_flag == 0) {
         sprintf(fname_tp,"msms -if %s%s.xyzr -prob %s -dens %s -of %s%s ",
@@ -68,7 +90,7 @@ int readin(char fname[16], char density[16], char probe_radius[16], int mesh_fla
 
   } else if (mesh_flag == 1) {
         nsfp=fopen("surfaceConfiguration.prm","w");
-        fprintf(nsfp,"Grid_scale = %f\n", 2.0);
+        fprintf(nsfp,"Grid_scale = %f\n", den);
         fprintf(nsfp,"Grid_perfil = %f\n", 90.0);
         fprintf(nsfp,"XYZR_FileName = %s%s.xyzr\n", fpath, fname);
         fprintf(nsfp,"Build_epsilon_maps = false\n");
@@ -83,7 +105,7 @@ int readin(char fname[16], char density[16], char probe_radius[16], int mesh_fla
         fprintf(nsfp,"Cavity_Detection_Filling = false\n");
         fprintf(nsfp,"Conditional_Volume_Filling_Value = %f\n", 11.4);
         fprintf(nsfp,"Keep_Water_Shaped_Cavities = false\n");
-        fprintf(nsfp,"Probe_Radius = %f\n", 1.4);
+        fprintf(nsfp,"Probe_Radius = %f\n", prob_rds);
         fprintf(nsfp,"Accurate_Triangulation = true\n");
         fprintf(nsfp,"Triangulation = true\n");
         fprintf(nsfp,"Check_duplicated_vertices = true\n");
@@ -112,6 +134,18 @@ int readin(char fname[16], char density[16], char probe_radius[16], int mesh_fla
     while (c=getc(fp)!='\n'){
     }
   }
+    
+    
+  if (mesh_flag == 0) {
+        ierr=fscanf(fp,"%d %d %lf %lf ",&nspt,&natm,&den,&prob_rds);
+        printf("nspt=%d, natm=%d, den=%lf, prob=%lf\n", nspt,natm,den,prob_rds);
+        
+  } else if (mesh_flag == 1) {
+        ierr=fscanf(fp,"%d ",&nspt);
+        printf("nspt=%d, natm=%d, den=%lf, prob=%lf\n", nspt,natm,den,prob_rds);
+  }
+    
+    
   ierr=fscanf(fp,"%d %d %lf %lf ",&nspt,&natm,&den,&prob_rds);
   printf("nspt=%d, natm=%d, den=%lf, prob=%lf\n", nspt,natm,den,prob_rds);
 
@@ -153,8 +187,18 @@ int readin(char fname[16], char density[16], char probe_radius[16], int mesh_fla
     while (c=getc(fp)!='\n'){
     }
   }
-  ierr=fscanf(fp,"%d %d %lf %lf ",&nface,&natm,&den,&prob_rds);
-  printf("nface=%d, natm=%d, den=%lf, prob=%lf\n", nface,natm,den,prob_rds);
+
+    
+  if (mesh_flag == 0) {
+        ierr=fscanf(fp,"%d %d %lf %lf ",&nface,&natm,&den,&prob_rds);
+        printf("nface=%d, natm=%d, den=%lf, prob=%lf\n", nface,natm,den,prob_rds);
+        
+  } else if (mesh_flag == 1) {
+        ierr=fscanf(fp,"%d ",&nface);
+        printf("nface=%d, natm=%d, den=%lf, prob=%lf\n", nface,natm,den,prob_rds);
+  }
+    
+    
   extr_f=Make2DIntArray(2,nface,"extr_f");
   face=Make2DIntArray(3,nface,"face");
 
