@@ -1,7 +1,27 @@
+/*                                                                                           
+ * This file is part of CLAPACK, the f2c'ed version of LAPACK                                
+ * hosted at netlib.org.                                                                     
+ *                                                                                           
+ * For more information, see the LAPACK User's Guide:                                        
+ *                                                                                           
+  @BOOK{laug,                                                                                
+        AUTHOR = {Anderson, E. and Bai, Z. and Bischof, C. and                               
+                  Blackford, S. and Demmel, J. and Dongarra, J. and                          
+                  Du Croz, J. and Greenbaum, A. and Hammarling, S. and                       
+                  McKenney, A. and Sorensen, D.},                                            
+        TITLE = {{LAPACK} Users' Guide},                                                     
+        EDITION = {Third},                                                                   
+        PUBLISHER = {Society for Industrial and Applied Mathematics},                        
+        YEAR = {1999},                                                                       
+        ADDRESS = {Philadelphia, PA},                                                        
+        ISBN = {0-89871-447-8 (paperback)}  }                                                
+ *                                                                                           
+ */ 
+
 /* GMRES.f -- translated by f2c (version of 20 August 1993  13:15:44).
    You must link the resulting object file with the libraries:
 	-lf2c -lm   (in that order)
-*/
+ */
 
 #include "f2c.h"
 #include <stdio.h>

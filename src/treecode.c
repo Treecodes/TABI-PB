@@ -1,6 +1,19 @@
-/* Author: Jiahui Chen
- * Advisor: Weihua Geng
- * treecode subroutines */
+/*
+ * C routines for setting up and executing the treecode for tabipb
+ *
+ * C version authored by:
+ * Jiahui Chen, Southern Methodist University, Dallas, TX
+ *
+ * Additional modifications and updates by:
+ * Leighton Wilson, University of Michigan, Ann Arbor, MI
+ *
+ * Based on package originally written in FORTRAN by:
+ * Weihua Geng, Southern Methodist University, Dallas, TX
+ * Robery Krasny, University of Michigan, Ann Arbor, MI
+ *
+ * Last modified by Leighton Wilson, 06/20/2016
+ */
+
 #include <time.h>
 #include <stdio.h>
 #include <math.h>
@@ -10,32 +23,24 @@
 #include "treecode.h"
 
 
-/* treecode_initializaion(){
- *   setup()
- *   create_tree(){
- *     if cond{
- *       partition_8()
- *         partition()
- *       create_tree()
- *     }
- * } */
-int treecode_initialization(int main_order,int main_maxparnode,double main_theta){
-/* set up variables used in treecode */
+int treecode_initialization(int main_order,int main_maxparnode,double main_theta) {
+  /* set up variables used in treecode */
   /* local variables*/
   int level, ierr, err, i, j, k, mm, nn, idx, ijk[3];
 
   /* variables needed for cpu time */
   double totaltime, timetree;
   double *temp_a, *temp_b;
-  double * temp_q;
+  double *temp_q;
 
   extern int setup();
   extern int create_tree();
 
-  printf("Initialize treecode~\n");
-  /*  */
+  printf("Initializing treecode...\n");
+
   numpars=nface;
   order=main_order;
+
   /* creating tree */
   level=0;
   minlevel=50000;

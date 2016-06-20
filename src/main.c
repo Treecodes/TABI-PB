@@ -334,11 +334,11 @@ int output_potential(){
 
   printf("The max and min potential and normal derivatives on elements are:\n");
   printf("potential %f %f\n",maxval(xvct,nface),minval(xvct,nface));
-  printf("norm derv %f %f\n",maxval(xvct+nface,nface),minval(xvct+nface,nface));
+  printf("norm derv %f %f\n\n",maxval(xvct+nface,nface),minval(xvct+nface,nface));
 
   printf("The max and min potential and normal derivatives on vertices are:\n");
   printf("potential %f %f\n",maxval(vert_ptl,nspt),minval(vert_ptl,nspt));
-  printf("norm derv %f %f\n",maxval(vert_ptl+nspt,nspt),minval(vert_ptl+nspt,nspt));
+  printf("norm derv %f %f\n\n",maxval(vert_ptl+nspt,nspt),minval(vert_ptl+nspt,nspt));
 
   FILE *fp=fopen("surface_potential.dat","w");
   fprintf(fp,"%d %d\n",nspt,nface);
