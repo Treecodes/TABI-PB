@@ -89,9 +89,11 @@ int apbs2tabipb_(char** apbs_pqr_filename, int* nion, double* ionc,
   theta = *mac;
   mesh_flag = *mesh;   // 0 runs msms for mesh generation, 1 runs NanoShaper
 
-  printf("order max theta %d %d %f\n", order, maxparnode, theta);
+  printf("\n Treecode order: %d", order);
+  printf("\n Max # of nodes: %d", maxparnode);
+  printf("\n    MAC (theta): %f\n", theta);
 
-  printf("set up the input\n");
+  printf("\nSetting up the TABI input...\n");
 
   /***************constant*****************/
   pi = 3.14159265358979324;

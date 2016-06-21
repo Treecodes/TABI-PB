@@ -169,7 +169,7 @@ int gmres_(n, b, x, restrt, work, ldw, h, ldh, iter, resid, matvec, psolve,
 
     /* Parameter adjustments */
 		   
-    printf("%d\t%f\t%f\t%d\t%d\t%d\t%d\t%f\n",*n,b[0],x[0],*restrt,*ldw,*ldh,*iter,*resid);
+    //printf("%d\t%f\t%f\t%d\t%d\t%d\t%d\t%f\n",*n,b[0],x[0],*restrt,*ldw,*ldh,*iter,*resid);
 
     h_dim1 = *ldh;
     h_offset = h_dim1 + 1;

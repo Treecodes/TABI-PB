@@ -36,7 +36,7 @@ int treecode_initialization(int main_order,int main_maxparnode,double main_theta
   extern int setup();
   extern int create_tree();
 
-  printf("Initializing treecode...\n");
+  printf("\nInitializing treecode...\n");
 
   numpars=nface;
   order=main_order;
@@ -193,7 +193,7 @@ int treecode_initialization(int main_order,int main_maxparnode,double main_theta
   setup(x,y,z,q,numpars,order,iflag,xyzminmax);
 
   troot = (tnode*)malloc(1*sizeof(tnode));
-  printf("Creating tree for %d particles with max %d per node\n",numpars,maxparnode);
+  printf("Creating tree for %d particles with max %d per node...\n",numpars,maxparnode);
 
   create_tree(troot,0,numpars-1,xyzminmax,level);
 
@@ -276,7 +276,7 @@ int setup(double* x,double* y,double* z,double* q,int numpars,
   int err,i,j,k;
   double t1;
 
-  printf("Set up right now\n");
+  printf("Setting up arrays for Taylor expansion...\n");
 
 /* global integers and reals:  TORDER, TORDERLIM and THETASQ */
   /* keep the accuracy of first and second derivative of funtion G */
@@ -374,8 +374,9 @@ int setup(double* x,double* y,double* z,double* q,int numpars,
   xyzminmax[4]=minval(z,numpars);
   xyzminmax[5]=maxval(z,numpars);
 
-printf("%f,%f,%f,%f,%f,%f\n",xyzminmax[0],xyzminmax[1],xyzminmax[2],
-       xyzminmax[3],xyzminmax[4],xyzminmax[5]);
+printf("x-limits of box: %f, %f\n", xyzminmax[0], xyzminmax[1]);
+printf("y-limits of box: %f, %f\n", xyzminmax[2], xyzminmax[3]);
+printf("z-limits of box: %f, %f\n", xyzminmax[4], xyzminmax[5]);
 
   orderarr = (int*)calloc(numpars, sizeof(int));
   if (orderarr == NULL){
@@ -1204,7 +1205,7 @@ int treecode_finalization(){
 
   remove_node(troot);
   free(troot);
-  printf("Clean up the tree structure\n");
+  printf("Cleaning up the tree structure...\n");
 
 /***********variables in setup************/
   free(cf);
@@ -1226,7 +1227,7 @@ int treecode_finalization(){
   free(orderarr);
 /*****************************************/
 
-  printf("Clean up the memory!\n");
+  printf("Memory has been cleaned!\n");
 
   return 0;
 }

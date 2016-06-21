@@ -94,6 +94,8 @@ int main(int argc, char *argv[])
   work=(double *) calloc(ldw*(RESTRT+4),sizeof(double));
   h=(double *) calloc(ldh*(RESTRT+2),sizeof(double));
 
+  printf("Running GMRES routine... \n\n");
+
   gmres_(&N,bvct,xvct,&RESTRT,work,&ldw,h,&ldh,&iter,
          &resid,matvec,psolve,&info);
 

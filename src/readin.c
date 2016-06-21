@@ -111,7 +111,7 @@ int readin(char fname[16], char density[16], char probe_radius[16], int mesh_fla
                         fpath, fname, probe_radius, density, fpath, fname);
                 printf("%s\n", fname_tp);
 
-                printf("\nRunning MSMS...\n");
+                printf("Running MSMS...\n");
                 ierr = system(fname_tp);
 
   /* Run NanoShaper */
@@ -141,7 +141,7 @@ int readin(char fname[16], char density[16], char probe_radius[16], int mesh_fla
 
                 fclose(nsfp);
 
-                printf("\nRunning NanoShaper...\n");
+                printf("Running NanoShaper...\n");
                 ierr = system("NanoShaper");
                 sprintf(fname_tp,"mv triangulatedSurf.face %s%s.face\n", fpath, fname);
                 ierr = system(fname_tp);
@@ -164,11 +164,11 @@ int readin(char fname[16], char density[16], char probe_radius[16], int mesh_fla
 
         if (mesh_flag == 0) {
                 ierr = fscanf(fp,"%d %d %lf %lf ",&nspt,&natm,&den,&prob_rds);
-                printf("nspt=%d, natm=%d, den=%lf, prob=%lf\n", nspt,natm,den,prob_rds);
+                //printf("nspt=%d, natm=%d, den=%lf, prob=%lf\n", nspt,natm,den,prob_rds);
 
         } else if (mesh_flag == 1) {
                 ierr = fscanf(fp,"%d ",&nspt);
-                printf("nspt=%d, natm=%d, den=%lf, prob=%lf\n", nspt,natm,den,prob_rds);
+                //printf("nspt=%d, natm=%d, den=%lf, prob=%lf\n", nspt,natm,den,prob_rds);
         }
 
 
@@ -216,11 +216,11 @@ int readin(char fname[16], char density[16], char probe_radius[16], int mesh_fla
 
         if (mesh_flag == 0) {
                 ierr=fscanf(fp,"%d %d %lf %lf ",&nface,&natm,&den,&prob_rds);
-                printf("nface=%d, natm=%d, den=%lf, prob=%lf\n", nface,natm,den,prob_rds);
+                //printf("nface=%d, natm=%d, den=%lf, prob=%lf\n", nface,natm,den,prob_rds);
 
         } else if (mesh_flag == 1) {
                 ierr=fscanf(fp,"%d ",&nface);
-                printf("nface=%d, natm=%d, den=%lf, prob=%lf\n", nface,natm,den,prob_rds);
+                //printf("nface=%d, natm=%d, den=%lf, prob=%lf\n", nface,natm,den,prob_rds);
         }
 
 
