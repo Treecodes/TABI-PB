@@ -6,6 +6,7 @@
  */
 
 /* Return 1 if the difference is negative, otherwise 0.  */
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
