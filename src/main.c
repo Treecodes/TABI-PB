@@ -73,6 +73,7 @@ int main(int argc, char *argv[])
   kappa2=bulk_coef*bulk_strength/epsw;
   kappa=sqrt(kappa2);
 
+  mesh_flag = 0;
   readin(fname,density,probe_radius,mesh_flag);
 
   comp_source();
