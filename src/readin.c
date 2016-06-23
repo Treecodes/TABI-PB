@@ -250,7 +250,6 @@ int readin(char fname[16], char density[16], char probe_radius[16], int mesh_fla
                 printf("Error in allocating atmrad!\n");
         }
 
-    //    atmpos = Make2DDoubleArray(3, natm, "atmpos");
         make_matrix(atmpos, 3, natm);
 
         for (i = 0; i < natm; i++) {
