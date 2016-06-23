@@ -118,35 +118,11 @@ int main(int argc, char *argv[])
 
   timer_end();
 
-  /* free memory */
-//  for(i=0;i<3;i++) {
-//    free(extr_v[i]);
-//  }
   free_matrix(extr_v);
-
-//  for(i=0;i<3;i++) {
-//    free(vert[i]);
-//  }
   free_matrix(vert);
-
-//  for(i=0;i<3;i++) {
-//    free(snrm[i]);
-//  }
   free_matrix(snrm);
-
-//  for(i=0;i<3;i++) {
-//    free(face[i]);
-//  }
   free_matrix(face);
-
-//  for(i=0;i<2;i++) {
-//    free(extr_f[i]);
-//  }
   free_matrix(extr_f);
-
-//  for(i=0;i<3;i++) {
-//    free(atmpos[i]);
-//  }
   free_matrix(atmpos);
 
   free(tr_xyz);
