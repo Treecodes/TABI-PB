@@ -73,6 +73,7 @@ int main(int argc, char *argv[])
   kappa2=bulk_coef*bulk_strength/epsw;
   kappa=sqrt(kappa2);
 
+  mesh_flag = 0;
   readin(fname,density,probe_radius,mesh_flag);
 
   comp_source();
@@ -93,6 +94,8 @@ int main(int argc, char *argv[])
 
   work=(double *) calloc(ldw*(RESTRT+4),sizeof(double));
   h=(double *) calloc(ldh*(RESTRT+2),sizeof(double));
+
+  printf("Running GMRES routine... \n\n");
 
   gmres_(&N,bvct,xvct,&RESTRT,work,&ldw,h,&ldh,&iter,
          &resid,matvec,psolve,&info);
@@ -334,11 +337,11 @@ int output_potential(){
 
   printf("The max and min potential and normal derivatives on elements are:\n");
   printf("potential %f %f\n",maxval(xvct,nface),minval(xvct,nface));
-  printf("norm derv %f %f\n",maxval(xvct+nface,nface),minval(xvct+nface,nface));
+  printf("norm derv %f %f\n\n",maxval(xvct+nface,nface),minval(xvct+nface,nface));
 
   printf("The max and min potential and normal derivatives on vertices are:\n");
   printf("potential %f %f\n",maxval(vert_ptl,nspt),minval(vert_ptl,nspt));
-  printf("norm derv %f %f\n",maxval(vert_ptl+nspt,nspt),minval(vert_ptl+nspt,nspt));
+  printf("norm derv %f %f\n\n",maxval(vert_ptl+nspt,nspt),minval(vert_ptl+nspt,nspt));
 
   FILE *fp=fopen("surface_potential.dat","w");
   fprintf(fp,"%d %d\n",nspt,nface);

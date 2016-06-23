@@ -1,6 +1,19 @@
-/* Author: Jiahui Chen
- * Advisor: Weihua Geng
- * treecode subroutines */
+/*
+ * C routines for setting up and executing the treecode for tabipb
+ *
+ * C version authored by:
+ * Jiahui Chen, Southern Methodist University, Dallas, TX
+ *
+ * Additional modifications and updates by:
+ * Leighton Wilson, University of Michigan, Ann Arbor, MI
+ *
+ * Based on package originally written in FORTRAN by:
+ * Weihua Geng, Southern Methodist University, Dallas, TX
+ * Robery Krasny, University of Michigan, Ann Arbor, MI
+ *
+ * Last modified by Leighton Wilson, 06/20/2016
+ */
+
 #include <time.h>
 #include <stdio.h>
 #include <math.h>
@@ -10,32 +23,24 @@
 #include "treecode.h"
 
 
-/* treecode_initializaion(){
- *   setup()
- *   create_tree(){
- *     if cond{
- *       partition_8()
- *         partition()
- *       create_tree()
- *     }
- * } */
-int treecode_initialization(int main_order,int main_maxparnode,double main_theta){
-/* set up variables used in treecode */
+int treecode_initialization(int main_order,int main_maxparnode,double main_theta) {
+  /* set up variables used in treecode */
   /* local variables*/
   int level, ierr, err, i, j, k, mm, nn, idx, ijk[3];
 
   /* variables needed for cpu time */
   double totaltime, timetree;
   double *temp_a, *temp_b;
-  double * temp_q;
+  double *temp_q;
 
   extern int setup();
   extern int create_tree();
 
-  printf("Initialize treecode~\n");
-  /*  */
+  printf("\nInitializing treecode...\n");
+
   numpars=nface;
   order=main_order;
+
   /* creating tree */
   level=0;
   minlevel=50000;
@@ -187,7 +192,7 @@ int treecode_initialization(int main_order,int main_maxparnode,double main_theta
 /* and setup global variables. Also, copy variables into global copy arrays. */
   setup(x,y,z,q,numpars,order,iflag,xyzminmax);
 
-  troot = (tnode*)malloc(1*sizeof(tnode));
+  troot = (tnode*)calloc(1,sizeof(tnode));
   printf("Creating tree for %d particles with max %d per node\n",numpars,maxparnode);
 
   create_tree(troot,0,numpars-1,xyzminmax,level);
@@ -271,7 +276,7 @@ int setup(double* x,double* y,double* z,double* q,int numpars,
   int err,i,j,k;
   double t1;
 
-  printf("Set up right now\n");
+  printf("Setting up arrays for Taylor expansion...\n");
 
 /* global integers and reals:  TORDER, TORDERLIM and THETASQ */
   /* keep the accuracy of first and second derivative of funtion G */
@@ -369,8 +374,9 @@ int setup(double* x,double* y,double* z,double* q,int numpars,
   xyzminmax[4]=minval(z,numpars);
   xyzminmax[5]=maxval(z,numpars);
 
-printf("%f,%f,%f,%f,%f,%f\n",xyzminmax[0],xyzminmax[1],xyzminmax[2],
-       xyzminmax[3],xyzminmax[4],xyzminmax[5]);
+printf("x-limits of box: %f, %f\n", xyzminmax[0], xyzminmax[1]);
+printf("y-limits of box: %f, %f\n", xyzminmax[2], xyzminmax[3]);
+printf("z-limits of box: %f, %f\n", xyzminmax[4], xyzminmax[5]);
 
   orderarr = (int*)calloc(numpars, sizeof(int));
   if (orderarr == NULL){
@@ -441,8 +447,8 @@ int create_tree(tnode* p,int ibeg,int iend,double xyzmm[6],int level){
   if (maxlevel < level) maxlevel=level;
   p->num_children = 0;
 /* old version */  /* struct tnode* child[8] */
-  p->child=(tnode**)malloc(8*sizeof(tnode*));
-  for (i=0;i<8;i++) p->child[i]=(tnode*)malloc(1*sizeof(tnode));
+  p->child=(tnode**)calloc(8,sizeof(tnode*));
+  for (i=0;i<8;i++) p->child[i]=(tnode*)calloc(1,sizeof(tnode));
 
   if (p->numpar > maxparnode){
 /* set IND array to 0 and then call PARTITION routine. IND array holds indices
@@ -1199,7 +1205,7 @@ int treecode_finalization(){
 
   remove_node(troot);
   free(troot);
-  printf("Clean up the tree structure\n");
+  printf("Cleaning up the tree structure...\n");
 
 /***********variables in setup************/
   free(cf);
@@ -1221,7 +1227,7 @@ int treecode_finalization(){
   free(orderarr);
 /*****************************************/
 
-  printf("Clean up the memory!\n");
+  printf("Memory has been cleaned!\n");
 
   return 0;
 }
