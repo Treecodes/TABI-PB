@@ -20,7 +20,7 @@ add_executable(tabipb
   src/main.c src/gmres.c src/daxpy.c src/dcopy.c src/ddot.c
   src/dgemv.c src/dnrm2.c src/drot.c src/drotg.c src/dscal.c src/d_sign.c
   src/dtrsv.c src/gl_functions.c src/readin.c src/pp_timer.c src/treecode.c
-  )
+  src/xmalloc.c)
 
 
 ################################################
@@ -56,7 +56,8 @@ if(ENABLE_TABIPB_APBS)
   set (LIBFILES
     src/tabipb.c src/gmres.c src/daxpy.c src/dcopy.c src/ddot.c
     src/dgemv.c src/dnrm2.c src/drot.c src/drotg.c src/dscal.c src/d_sign.c
-    src/dtrsv.c src/gl_functions.c src/readin.c src/pp_timer.c src/treecode.c)
+    src/dtrsv.c src/gl_functions.c src/readin.c src/pp_timer.c src/treecode.c
+    src/xmalloc.c)
 
   message(***** ${CMAKE_INSTALL_PREFIX} *****)
 

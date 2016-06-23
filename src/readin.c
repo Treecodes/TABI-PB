@@ -179,9 +179,9 @@ int readin(char fname[16], char density[16], char probe_radius[16], int mesh_fla
      //   vert = Make2DDoubleArray(3, nspt, "vert");
      //   snrm = Make2DDoubleArray(3, nspt, "snrm");
 
-        make_matrix(extr_v, 3, nspt)
-        make_matrix(vert, 3, nspt)
-        make_matrix(snrm, 3, nspt)
+        make_matrix(extr_v, 3, nspt);
+        make_matrix(vert, 3, nspt);
+        make_matrix(snrm, 3, nspt);
 
         for (i = 0; i <= nspt-1; i++) {
                 ierr = fscanf(fp, "%lf %lf %lf %lf %lf %lf %d %d %d",
@@ -258,7 +258,9 @@ int readin(char fname[16], char density[16], char probe_radius[16], int mesh_fla
         if ((atmrad = (double *) malloc(natm * sizeof(double))) == NULL) {
                 printf("Error in allocating atmrad!\n");
         }
-        atmpos = Make2DDoubleArray(3, natm, "atmpos");
+
+    //    atmpos = Make2DDoubleArray(3, natm, "atmpos");
+        make_matrix(atmpos, 3, natm);
 
         for (i = 0; i < natm; i++) {
                 ierr = fscanf(fp, "%lf %lf %lf %lf ", &a1,&a2,&a3,&b1);
