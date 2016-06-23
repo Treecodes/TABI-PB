@@ -6,6 +6,7 @@
 
 #include "gl_variables.h"
 #include "treecode.h"  /* try to use less variables */
+#include "array.h"
 
 int main(int argc, char *argv[])
 {
@@ -118,35 +119,35 @@ int main(int argc, char *argv[])
   timer_end();
 
   /* free memory */
-  for(i=0;i<3;i++) {
-    free(extr_v[i]);
-  }
-  free(extr_v);
+//  for(i=0;i<3;i++) {
+//    free(extr_v[i]);
+//  }
+  free_matrix(extr_v);
 
-  for(i=0;i<3;i++) {
-    free(vert[i]);
-  }
-  free(vert);
+//  for(i=0;i<3;i++) {
+//    free(vert[i]);
+//  }
+  free_matrix(vert);
 
-  for(i=0;i<3;i++) {
-    free(snrm[i]);
-  }
-  free(snrm);
+//  for(i=0;i<3;i++) {
+//    free(snrm[i]);
+//  }
+  free_matrix(snrm);
 
-  for(i=0;i<3;i++) {
-    free(face[i]);
-  }
-  free(face);
+//  for(i=0;i<3;i++) {
+//    free(face[i]);
+//  }
+  free_matrix(face);
 
-  for(i=0;i<2;i++) {
-    free(extr_f[i]);
-  }
-  free(extr_f);
+//  for(i=0;i<2;i++) {
+//    free(extr_f[i]);
+//  }
+  free_matrix(extr_f);
 
-  for(i=0;i<3;i++) {
-    free(atmpos[i]);
-  }
-  free(atmpos);
+//  for(i=0;i<3;i++) {
+//    free(atmpos[i]);
+//  }
+  free_matrix(atmpos);
 
   free(tr_xyz);
   free(tr_q);

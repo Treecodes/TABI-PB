@@ -22,6 +22,7 @@
 
 #include "gl_variables.h"
 #include "treecode.h"
+#include "array.h"
 
 int apbs2tabipb_(char** apbs_pqr_filename, int* nion, double* ionc,
                 double* ionq, double* ionr, double* pdie,
@@ -150,35 +151,35 @@ int apbs2tabipb_(char** apbs_pqr_filename, int* nion, double* ionc,
   timer_end();
 
   /* free memory */
-  for (i = 0; i < 3; i++)
-          free(extr_v[i]);
+//  for (i = 0; i < 3; i++)
+//          free(extr_v[i]);
 
-  free(extr_v);
+  free_matrix(extr_v);
 
-  for (i = 0; i < 3; i++)
-          free(vert[i]);
+//  for (i = 0; i < 3; i++)
+//          free(vert[i]);
 
-  free(vert);
+  free_matrix(vert);
 
-  for (i = 0; i < 3; i++)
-          free(snrm[i]);
+//  for (i = 0; i < 3; i++)
+//          free(snrm[i]);
 
-  free(snrm);
+  free_matrix(snrm);
 
-  for (i = 0; i < 3; i++)
-          free(face[i]);
+//  for (i = 0; i < 3; i++)
+//          free(face[i]);
 
-  free(face);
+  free_matrix(face);
 
-  for (i = 0; i < 2; i++)
-          free(extr_f[i]);
+//  for (i = 0; i < 2; i++)
+//          free(extr_f[i]);
 
-  free(extr_f);
+  free_matrix(extr_f);
 
-  for (i = 0; i < 3; i++)
-          free(atmpos[i]);
+//  for (i = 0; i < 3; i++)
+//          free(atmpos[i]);
 
-  free(atmpos);
+  free_matrix(atmpos);
 
   free(tr_xyz);
   free(tr_q);

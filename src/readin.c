@@ -19,7 +19,9 @@
 #include <math.h>
 #include <string.h>
 #include <stdlib.h>
+
 #include "gl_variables.h"
+#include "array.h"
 
 /* function computing the area of a triangle given vertices coodinates */
 double triangle_area(double v[3][3])
@@ -64,8 +66,8 @@ int readin(char fname[16], char density[16], char probe_radius[16], int mesh_fla
         double cos_theta, G0, tp1, G1, r_s[3];
         double xx[3], yy[3];
 
-        extern double **Make2DIntArray();
-        extern double **Make2DDoubleArray();
+    //    extern double **Make2DIntArray();
+    //    extern double **Make2DDoubleArray();
 
   /*read in vertices*/
 
@@ -173,9 +175,13 @@ int readin(char fname[16], char density[16], char probe_radius[16], int mesh_fla
 
 
   /*allocate variables for vertices file*/
-        extr_v = Make2DIntArray(3, nspt, "extr_v");
-        vert = Make2DDoubleArray(3, nspt, "vert");
-        snrm = Make2DDoubleArray(3, nspt, "snrm");
+     //   extr_v = Make2DIntArray(3, nspt, "extr_v");
+     //   vert = Make2DDoubleArray(3, nspt, "vert");
+     //   snrm = Make2DDoubleArray(3, nspt, "snrm");
+
+        make_matrix(extr_v, 3, nspt)
+        make_matrix(vert, 3, nspt)
+        make_matrix(snrm, 3, nspt)
 
         for (i = 0; i <= nspt-1; i++) {
                 ierr = fscanf(fp, "%lf %lf %lf %lf %lf %lf %d %d %d",
@@ -224,8 +230,11 @@ int readin(char fname[16], char density[16], char probe_radius[16], int mesh_fla
         }
 
 
-        extr_f = Make2DIntArray(2, nface, "extr_f");
-        face = Make2DIntArray(3, nface, "face");
+     //   extr_f = Make2DIntArray(2, nface, "extr_f");
+     //   face = Make2DIntArray(3, nface, "face");
+
+        make_matrix(extr_f, 2, nface);
+        make_matrix(face, 3, nface);
 
 
         for (i = 0; i < nface; i++) {
@@ -293,7 +302,10 @@ int readin(char fname[16], char density[16], char probe_radius[16], int mesh_fla
    *    + are too close to each other
    */
         nfacenew = nface;
-        face_copy = Make2DIntArray(3, nface, "face_copy");
+
+   //     face_copy = Make2DIntArray(3, nface, "face_copy");
+        make_matrix(face_copy, 3, nface);
+
         for (i = 0; i < 3; i++)
                 memcpy(face_copy[i], face[i], nface * sizeof(int));
 
@@ -358,19 +370,28 @@ int readin(char fname[16], char density[16], char probe_radius[16], int mesh_fla
         printf("\n%d faces have been deleted...\n", nface - nfacenew);
         nface = nfacenew;
 
-        for (i = 0; i < 3; i++)
-                free(face[i]);
-        free(face);
+    //    for (i = 0; i < 3; i++)
+    //            free(face[i]);
+    //    free(face);
 
-        face = Make2DIntArray(3, nface, "face msms");
+        free_matrix(face);
+
+
+    //    face = Make2DIntArray(3, nface, "face msms");
+
+        make_matrix(face, 3, nface);
+
+
         for (i = 0; i < nface; i++) {
                 for (j = 0; j < 3; j++)
                         face[j][i] = face_copy[j][i];
         }
 
-        for (i = 0; i < 3; i++)
-                free(face_copy[i]);
-        free(face_copy);
+    //    for (i = 0; i < 3; i++)
+    //            free(face_copy[i]);
+    //    free(face_copy);
+
+        free_matrix(face_copy);
 
 /*  tr_xyz: The position of the particles on surface */
 /*    tr_q: The normal direction at the particle location */
