@@ -6,6 +6,7 @@
 
 #include "gl_variables.h"
 #include "treecode.h"  /* try to use less variables */
+#include "array.h"
 
 int main(int argc, char *argv[])
 {
@@ -73,6 +74,7 @@ int main(int argc, char *argv[])
   kappa2=bulk_coef*bulk_strength/epsw;
   kappa=sqrt(kappa2);
 
+  mesh_flag = 0;
   readin(fname,density,probe_radius,mesh_flag);
 
   comp_source();
@@ -116,36 +118,12 @@ int main(int argc, char *argv[])
 
   timer_end();
 
-  /* free memory */
-  for(i=0;i<3;i++) {
-    free(extr_v[i]);
-  }
-  free(extr_v);
-
-  for(i=0;i<3;i++) {
-    free(vert[i]);
-  }
-  free(vert);
-
-  for(i=0;i<3;i++) {
-    free(snrm[i]);
-  }
-  free(snrm);
-
-  for(i=0;i<3;i++) {
-    free(face[i]);
-  }
-  free(face);
-
-  for(i=0;i<2;i++) {
-    free(extr_f[i]);
-  }
-  free(extr_f);
-
-  for(i=0;i<3;i++) {
-    free(atmpos[i]);
-  }
-  free(atmpos);
+  free_matrix(extr_v);
+  free_matrix(vert);
+  free_matrix(snrm);
+  free_matrix(face);
+  free_matrix(extr_f);
+  free_matrix(atmpos);
 
   free(tr_xyz);
   free(tr_q);
