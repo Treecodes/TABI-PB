@@ -24,10 +24,15 @@
 #include "treecode.h"
 #include "array.h"
 
-int apbs2tabipb_(char** apbs_pqr_filename, int* nion, double* ionc,
+int tabipb_(char** apbs_pqr_filename, int* nion, double* ionc,
                 double* ionq, double* ionr, double* pdie,
                 double* sdie, double* sdens, double* temp, double* srad,
                 int* tree_order, int* tree_n0, double* mac, int* mesh) {
+//int apbs2tabipb_(char** apbs_pqr_filename, int* nion, double* ionc,
+//                double* ionq, double* ionr, double* pdie,
+//                double* sdie, double* sdens, double* temp, double* srad,
+//                int* tree_order, int* tree_n0, double* mac, int* mesh) {
+//
 
   /* variables local to main */
   int i, j, k;
