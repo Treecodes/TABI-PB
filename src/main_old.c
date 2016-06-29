@@ -5,7 +5,7 @@
 #include <string.h>
 
 #include "gl_variables.h"
-#include "treecode.h"  /* try to use less variables */
+#include "treecode.h"
 #include "array.h"
 
 int main(int argc, char *argv[])

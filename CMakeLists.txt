@@ -17,7 +17,7 @@ include_directories("/src")
 
 # C code for standalone
 add_executable(tabipb
-  src/main.c src/gmres.c src/daxpy.c src/dcopy.c src/ddot.c
+  src/main.c src/tabipb.c src/gmres.c src/daxpy.c src/dcopy.c src/ddot.c
   src/dgemv.c src/dnrm2.c src/drot.c src/drotg.c src/dscal.c src/d_sign.c
   src/dtrsv.c src/readin.c src/pp_timer.c src/treecode.c
   src/xmalloc.c)

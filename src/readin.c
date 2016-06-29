@@ -11,7 +11,7 @@
  * Weihua Geng, Southern Methodist University, Dallas, TX
  * Robery Krasny, University of Michigan, Ann Arbor, MI
  *
- * Last modified by Leighton Wilson, 06/20/2016
+ * Last changed at 6/29/2016
  */
 
 #include <time.h>
@@ -46,11 +46,11 @@ double triangle_area(double v[3][3])
 }
 
 /* function read in molecule information */
-int readin(char fname[16], char density[16], char probe_radius[16], int mesh_flag)
+int readin(char fpath[256], char fname[16], int number_of_lines,
+           char density[16], char probe_radius[16], int mesh_flag)
 {
         FILE *fp, *wfp, *nsfp;
         char c, c1[10], c2[10], c3[10], c4[10], c5[10];
-        char fpath[256];
         char fname_tp[256];
 
         int i, j, k, i1, i2, i3, j1, j2, j3, ii, jj, kk;
@@ -66,43 +66,10 @@ int readin(char fname[16], char density[16], char probe_radius[16], int mesh_fla
         double cos_theta, G0, tp1, G1, r_s[3];
         double xx[3], yy[3];
 
-  /*read in vertices*/
-
-        sprintf(fpath, "");
-
-        sprintf(fname_tp, "%s%s.pqr", fpath, fname);
-        fp = fopen(fname_tp, "r");
-
-        sprintf(fname_tp, "%s%s.xyzr", fpath, fname);
-        wfp=fopen(fname_tp, "w");
-
-        while(fscanf(fp, "%s %s %s %s %s %lf %lf %lf %lf %lf",
-                     c1, c2, c3, c4, c5, &a1, &a2, &a3, &b1, &b2) != EOF) {
-                fprintf(wfp, "%f %f %f %f\n", a1, a2, a3, b2);
-        }
-
-        fclose(fp);
-        fclose(wfp);
-
         sscanf(probe_radius, "%lf", &prob_rds);
         sscanf(density, "%lf", &den);
 
-        if (mesh_flag == 1) {
-        // Determine number of atoms, since NanoShaper msms output doesn't do it
-        // automagically.
-                sprintf(fname_tp, "%s%s.xyzr", fpath, fname);
-                fp = fopen(fname_tp, "r");
-                int ch, number_of_lines = 0;
-
-                do {
-                        ch = fgetc(fp);
-                        if(ch == '\n')
-                                number_of_lines++;
-                } while (ch != EOF);
-
-                fclose(fp);
-                natm = number_of_lines;    //natm is number of lines in .xyzr
-        }
+        natm = number_of_lines;    //natm is number of lines in .xyzr
 
   /* Run msms */
         if (mesh_flag == 0) {
@@ -239,54 +206,6 @@ int readin(char fname[16], char density[16], char probe_radius[16], int mesh_fla
 
         fclose(fp);
         printf("Finished reading .face file...\n");
-
-
-  /*read atom coodinates and radius */
-
-        sprintf(fname_tp, "%s%s.xyzr", fpath, fname);
-        fp = fopen(fname_tp, "r");
-
-        if ((atmrad = (double *) malloc(natm * sizeof(double))) == NULL) {
-                printf("Error in allocating atmrad!\n");
-        }
-
-        make_matrix(atmpos, 3, natm);
-
-        for (i = 0; i < natm; i++) {
-                ierr = fscanf(fp, "%lf %lf %lf %lf ", &a1,&a2,&a3,&b1);
-                atmpos[0][i] = a1;
-                atmpos[1][i] = a2;
-                atmpos[2][i] = a3;
-                atmrad[i] = b1;
-        }
-
-        fclose(fp);
-        printf("Finished reading position (.xyzr) file...\n");
-
-  /*read charge coodinates and radius */
-
-        sprintf(fname_tp, "%s%s.pqr", fpath, fname);
-        fp = fopen(fname_tp, "r");
-
-        nchr = natm;
-        if ((atmchr = (double *) malloc(nchr * sizeof(double))) == NULL) {
-                printf("Error in allocating atmchr!\n");
-        }
-        if ((chrpos = (double *) malloc(3 * nchr * sizeof(double))) == NULL) {
-                printf("Error in allocating chrpos!\n");
-        }
-
-        for (i = 0; i < nchr; i++) {
-                ierr = fscanf(fp, "%s %s %s %s %s %lf %lf %lf %lf %lf",
-                              c1,c2,c3,c4,c5,&a1,&a2,&a3,&b1,&b2);
-                chrpos[3*i] = a1;
-                chrpos[3*i + 1] = a2;
-                chrpos[3*i + 2] = a3;
-                atmchr[i] = b1;
-        }
-
-        fclose(fp);
-        printf("Finished reading charge (.pqr) file...\n");
 
   /*
    * Delete triangles that either:

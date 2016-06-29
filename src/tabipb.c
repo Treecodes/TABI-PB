@@ -11,7 +11,7 @@
  * Weihua Geng, Southern Methodist University, Dallas, TX
  * Robery Krasny, University of Michigan, Ann Arbor, MI
  *
- * Last modified by Leighton Wilson, 06/20/2016
+ * Last modified 06/26/2016
  */
 
 #include <time.h>
@@ -24,24 +24,18 @@
 #include "treecode.h"
 #include "array.h"
 
-int tabipb(char** apbs_pqr_filename, int* nion, double* ionc,
-           double* ionq, double* ionr, double* pdie,
-           double* sdie, double* sdens, double* temp, double* srad,
-           int* tree_order, int* tree_n0, double* mac, int* mesh) {
-//int apbs2tabipb_(char** apbs_pqr_filename, int* nion, double* ionc,
-//                double* ionq, double* ionr, double* pdie,
-//                double* sdie, double* sdens, double* temp, double* srad,
-//                int* tree_order, int* tree_n0, double* mac, int* mesh) {
-//
+int tabipb(char fpath[256], char fname[5], int number_of_lines,
+           char density[16], char probe_radius[16],
+           double epsp, double epsw, double bulk_strength, int order,
+           int maxparnode, double theta, int mesh_flag,
+           double* t_chrpos, double* t_atmchr, double* t_atmrad) {
 
   /* variables local to main */
   int i, j, k;
   double s[3], pot = 0.0, sum = 0.0, pot_temp = 0.0;
   double ptl, soleng, t1, t2;
-  char fname[5], density[16], fnamepqr[16], probe_radius[16];
-  int mesh_flag;
 
-  extern void readin(char *fname, char *density, char *probe_radius, int mesh_flag);
+  extern void readin();
   extern double potential_molecule(double s[3]);
   extern int comp_source();
   extern int output_potential();
@@ -56,8 +50,6 @@ int tabipb(char** apbs_pqr_filename, int* nion, double* ionc,
   extern int comp_pot(double *chrptl);
 
   /* variables used in treecode */
-  int order,maxparnode;
-  double theta;
   extern int treecode_initialization(int order,int maxparnode,double theta);
   extern int treecode_finalization();
 
@@ -74,27 +66,6 @@ int tabipb(char** apbs_pqr_filename, int* nion, double* ionc,
 
   timer_start("TOTAL_TIME");
 
-  /***************input****************/
-//  fnamepqr=*apbs_pqr_filename;
-
-  strncpy(fname, &*apbs_pqr_filename, 4);
-  fname[4] = '\0';
-
-  sprintf(density, "%f", *sdens);
-  sprintf(probe_radius, "%f", *srad);
-
-  epsp = *pdie;
-  epsw = *sdie;
-  bulk_strength = 0.0;
-
-  for (i=0; i < *nion; i++)
-          bulk_strength += ionc[i] * ionq[i] * ionq[i];
-
-  order = *tree_order;
-  maxparnode = *tree_n0;
-  theta = *mac;
-  mesh_flag = *mesh;   // 0 runs msms for mesh generation, 1 runs NanoShaper
-
   printf("\n Treecode order: %d", order);
   printf("\n Max # of nodes: %d", maxparnode);
   printf("\n    MAC (theta): %f\n", theta);
@@ -104,14 +75,18 @@ int tabipb(char** apbs_pqr_filename, int* nion, double* ionc,
   /***************constant*****************/
   pi = 3.14159265358979324;
   one_over_4pi = 0.079577471545948;
-
   bulk_coef = 8.430325455;
   units_coef = 332.0716;
   eps = epsw/epsp;
   kappa2 = bulk_coef * bulk_strength / epsw;
   kappa = sqrt(kappa2);
 
-  readin(fname, density, probe_radius, mesh_flag);
+  /*read charge coodinates, charges and radius*/
+  chrpos = &t_chrpos[0];
+  atmchr = &t_atmchr[0];
+  atmrad = &t_atmrad[0];
+
+  readin(fpath, fname, number_of_lines, density, probe_radius, mesh_flag);
 
   comp_source();
   /* tr_xyz=[x[i],y[i],z[i]] */
@@ -168,8 +143,9 @@ int tabipb(char** apbs_pqr_filename, int* nion, double* ionc,
   free(tr_area);
   free(bvct);
   free(xvct);
-  free(atmchr);
-  free(chrpos);
+//  free(atmchr);
+//  free(atmrad);
+//  free(chrpos);
   free(chrptl);
 
   /* dellocate treecode variables */
@@ -209,7 +185,7 @@ int comp_source() {
         for (i = 0; i < nface; i++) {
                 bvct[i] = 0.0;
                 bvct[i + nface] = 0.0;
-                for (j = 0; j < nchr; j++) {
+                for (j = 0; j < natm; j++) {
 
   /* r_s = distance of charge position to triangular */
                         r_s[0] = chrpos[3*j] - tr_xyz[3*i];
@@ -262,7 +238,7 @@ int comp_pot(double *chrptl) {
                 v[1] = tr_q[j*3 + 1];
                 v[2] = tr_q[j*3 + 2];
 
-                for (i = 0; i < nchr; i++) {
+                for (i = 0; i < natm; i++) {
   /* s = chrpos[] & r_s = r[]-s[] */
                         s[0] = chrpos[3*i];
                         s[1] = chrpos[3*i + 1];
