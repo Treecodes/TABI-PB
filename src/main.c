@@ -44,7 +44,7 @@ int main(int argc, char *argv[]){
     ierr=fscanf(fp,"%s %lf",c,&theta);
   fclose(fp);
 
-  mesh_flag=1;
+  mesh_flag=0;
 
 /********************************************************/
 
@@ -79,21 +79,21 @@ int main(int argc, char *argv[]){
   }
 
   for (i = 0; i < number_of_lines; i++) {
-          ierr = fscanf(fp, "%s %s %s %s %s %lf %lf %lf %lf %lf",
-                        c1,c2,c3,c4,c5,&a1,&a2,&a3,&b1,&b2);
-          t_chrpos[3*i] = a1;
-          t_chrpos[3*i + 1] = a2;
-          t_chrpos[3*i + 2] = a3;
-          t_atmchr[i] = b1;
-          t_atmrad[i] = b2;
+    ierr = fscanf(fp, "%s %s %s %s %s %lf %lf %lf %lf %lf",
+                  c1,c2,c3,c4,c5,&a1,&a2,&a3,&b1,&b2);
+    t_chrpos[3*i] = a1;
+    t_chrpos[3*i + 1] = a2;
+    t_chrpos[3*i + 2] = a3;
+    t_atmchr[i] = b1;
+    t_atmrad[i] = b2;
   }
 
   fclose(fp);
   printf("Finished reading charge (.pqr) file...\n");
 
-  tabipb(fpath, fname, number_of_lines, density, probe_radius, epsp, epsw,
-         bulk_strength, order, maxparnode, theta, mesh_flag,
-         t_chrpos,t_atmchr,t_atmrad);
+  ierr=tabipb(fpath, fname, number_of_lines, density, probe_radius, epsp, epsw,
+              bulk_strength, order, maxparnode, theta, mesh_flag,
+              t_chrpos,t_atmchr,t_atmrad);
 
   free(t_atmchr);
   free(t_chrpos);
