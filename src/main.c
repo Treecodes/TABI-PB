@@ -1,6 +1,4 @@
 /*
- * C routine to interface tabipb with apbs
- *
  * C version authored by:
  * Jiahui Chen, Southern Methodist University, Dallas, TX
  *
