@@ -23,12 +23,9 @@
 #include "gl_variables.h"
 #include "treecode.h"
 #include "array.h"
+#include "TABIPBstruct.h"
 
-int tabipb(char fpath[256], char fname[5], int number_of_lines,
-           char density[16], char probe_radius[16],
-           double epsp, double epsw, double bulk_strength, int order,
-           int maxparnode, double theta, int mesh_flag,
-           double* t_chrpos, double* t_atmchr, double* t_atmrad) {
+int tabipb(TABIPBparm *parm, double* t_chrpos, double* t_atmchr, double* t_atmrad) {
 
   /* variables local to main */
   int i, j, k;
@@ -66,9 +63,9 @@ int tabipb(char fpath[256], char fname[5], int number_of_lines,
 
   timer_start("TOTAL_TIME");
 
-  printf("\n Treecode order: %d", order);
-  printf("\n Max # of nodes: %d", maxparnode);
-  printf("\n    MAC (theta): %f\n", theta);
+  printf("\n Treecode order: %d", parm->order);
+  printf("\n Max # of nodes: %d", parm->maxparnode);
+  printf("\n    MAC (theta): %f\n", parm->theta);
 
   printf("\nSetting up the TABI input...\n");
 
@@ -77,8 +74,8 @@ int tabipb(char fpath[256], char fname[5], int number_of_lines,
   one_over_4pi = 0.079577471545948;
   bulk_coef = 8.430325455;
   units_coef = 332.0716;
-  eps = epsw/epsp;
-  kappa2 = bulk_coef * bulk_strength / epsw;
+  eps = parm->epsw/parm->epsp;
+  kappa2 = bulk_coef * parm->bulk_strength / parm->epsw;
   kappa = sqrt(kappa2);
 
   /*read charge coodinates, charges and radius*/
@@ -86,14 +83,15 @@ int tabipb(char fpath[256], char fname[5], int number_of_lines,
   atmchr = &t_atmchr[0];
   atmrad = &t_atmrad[0];
 
-  readin(fpath, fname, number_of_lines, density, probe_radius, mesh_flag);
+  readin(parm->fpath, parm->fname, parm->number_of_lines,
+         parm->density, parm->probe_radius, parm->mesh_flag);
 
   comp_source();
   /* tr_xyz=[x[i],y[i],z[i]] */
   /* tr_q=[qx[i],qy[i],qz[i]] */
 
   /* set up treecode */
-  treecode_initialization(order, maxparnode, theta);
+  treecode_initialization(parm->order, parm->maxparnode, parm->theta);
 
   /* parameters for GMRES */
   RESTRT = 10;

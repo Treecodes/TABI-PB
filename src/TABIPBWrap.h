@@ -11,12 +11,13 @@
  * Weihua Geng, Southern Methodist University, Dallas, TX
  * Robery Krasny, University of Michigan, Ann Arbor, MI
  *
- * Rebuild the architecture of wrapper at 6/29/2016
+ * Rebuild the architecture of wrapper at 6/30/2016
  */
 
-#include <stdlib.h> /* calloc() */
-#include <stdio.h> /* FILE */
+#ifndef H_TABIPBWRAP_H
+#define H_TABIPBWRAP_H
 
-#ifdef TABIPB_APBS
-  #include "generic/valist.h"
-#endif
+
+
+
+#endif /* H_TABIPBWRAP_H */
