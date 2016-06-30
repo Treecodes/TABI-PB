@@ -123,7 +123,7 @@ int readin(char fpath[256], char fname[16], int number_of_lines,
   /* open the file and read through the first two rows */
         fp = fopen(fname_tp, "r");
         for (i = 1; i <= 2; i++) {
-                while (c = getc(fp) != '\n') {
+                while ((c = getc(fp)) != '\n') {
                 }
         }
 
@@ -176,7 +176,7 @@ int readin(char fpath[256], char fname[16], int number_of_lines,
         sprintf(fname_tp, "%s%s.face", fpath, fname);
         fp = fopen(fname_tp, "r");
         for (i = 1; i < 3; i++) {
-                while (c = getc(fp) != '\n') {
+                while ((c = getc(fp)) != '\n') {
                 }
         }
 
