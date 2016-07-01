@@ -29,6 +29,15 @@ add_executable(tabipb
 
 option(ENABLE_TABIPB_APBS "TABIPB APBS" OFF)
 if(ENABLE_TABIPB_APBS)
+  add_definitions(-DTABIPB_APBS)
+  include_directories(
+        ../../src/
+        ../../tools/windows/configuration\ headers/
+        ../../externals/fetk/maloc/src/base
+        ../../externals/fetk/maloc/src/vsys
+        ../../externals/fetk/maloc/src/vsh
+        ../../externals/fetk/maloc/src/psh
+        )
 
   option(BUILD_SHARED_LIBS "Build shared libraries." OFF)
 
@@ -54,7 +63,7 @@ if(ENABLE_TABIPB_APBS)
   endif ()
 
   set (LIBFILES
-    src/tabipb.c src/gmres.c src/daxpy.c src/dcopy.c src/ddot.c
+    src/TABIPBWrap.c src/tabipb.c src/gmres.c src/daxpy.c src/dcopy.c src/ddot.c
     src/dgemv.c src/dnrm2.c src/drot.c src/drotg.c src/dscal.c src/d_sign.c
     src/dtrsv.c src/readin.c src/pp_timer.c src/treecode.c
     src/xmalloc.c)

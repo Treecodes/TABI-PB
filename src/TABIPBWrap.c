@@ -14,9 +14,14 @@
  * Rebuild the architecture of wrapper at 6/29/2016
  */
 
-#include <stdlib.h> /* calloc() */
-#include <stdio.h> /* FILE */
+#include "TABIPBstruct.h"
 
 #ifdef TABIPB_APBS
   #include "generic/valist.h"
 #endif
+
+int apbs2tabipb_(TABIPBparm* parm, Valist* molecules){
+
+
+  return 0;
+}

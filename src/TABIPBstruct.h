@@ -14,8 +14,12 @@
  * Rebuild the architecture of wrapper at 6/30/2016
  */
 
-#ifndef H_TABIPBPARM_H
-#define H_TABIPBPARM_H
+#ifndef H_TABIPBSTRUCT_H
+#define H_TABIPBSTRUCT_H
+
+#include <stdlib.h> /* calloc() */
+#include <stdio.h> /* FILE */
+
 struct sTABIPBparm {
 
   /* molecule ID */
@@ -42,4 +46,4 @@ struct sTABIPBparm {
 
 typedef struct sTABIPBparm TABIPBparm;
 
-#endif /* H_TABIPBPARM_H */
+#endif /* H_TABIPBSTRUCT_H */

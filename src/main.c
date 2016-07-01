@@ -12,9 +12,6 @@
  * Rebuild the architecture of wrapper at 6/29/2016
  */
 
-#include <stdlib.h> /* calloc() */
-#include <stdio.h> /* FILE */
-
 #include "TABIPBstruct.h"
 
 int main(int argc, char *argv[]){
