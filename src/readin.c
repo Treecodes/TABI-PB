@@ -115,6 +115,7 @@ int readin(char fpath[256], char fname[16], int number_of_lines,
                 ierr = system(fname_tp);
                 ierr = system("rm stderror.txt");
                 ierr = system("rm surfaceConfiguration.prm");
+                ierr = system("rm triangleAreas.txt");
         }
 
   /* read in vert */

@@ -15,6 +15,8 @@
 #include "TABIPBstruct.h"
 
 int main(int argc, char *argv[]){
+  /* main reads the input file, writes xyzr file for msms and sets up position,
+     raduis and charges */
 
   FILE *fp, *wfp;
   char c[16];
@@ -94,7 +96,7 @@ int main(int argc, char *argv[]){
   }
 
   fclose(fp);
-  printf("Finished reading charge (.pqr) file...\n");
+  printf("Finished assembling charge (.pqr) file...\n");
 
   ierr=tabipb(main_parm,t_chrpos,t_atmchr,t_atmrad);
 

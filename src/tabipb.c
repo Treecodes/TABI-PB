@@ -26,6 +26,12 @@
 #include "TABIPBstruct.h"
 
 int tabipb(TABIPBparm *parm, double* t_chrpos, double* t_atmchr, double* t_atmrad) {
+  /* Assemble the TABIPBparm out side this subroutine, and pass the three arryas */
+  /* TABIPBparm a structure of parameters: file path, file name, density,
+     probe radius, epsp, epsw, bulk_strength, treecode order, treecode maxparnode,
+     treecode theta, mesh flag, and number of lines in pqr file */
+  /* t_chrpos, t_atmchr and t_atmrad are three arrays of position, charges and
+     raduis */
 
   /* variables local to main */
   int i, j, k;
