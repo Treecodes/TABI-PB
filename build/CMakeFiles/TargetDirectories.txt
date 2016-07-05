@@ -1,7 +1,0 @@
-/home/jiahui/Documents/apbs-pdb2pqr/apbs/externals/TABIPB/build/CMakeFiles/install.dir
-/home/jiahui/Documents/apbs-pdb2pqr/apbs/externals/TABIPB/build/CMakeFiles/list_install_components.dir
-/home/jiahui/Documents/apbs-pdb2pqr/apbs/externals/TABIPB/build/CMakeFiles/rebuild_cache.dir
-/home/jiahui/Documents/apbs-pdb2pqr/apbs/externals/TABIPB/build/CMakeFiles/tabipb.dir
-/home/jiahui/Documents/apbs-pdb2pqr/apbs/externals/TABIPB/build/CMakeFiles/install/local.dir
-/home/jiahui/Documents/apbs-pdb2pqr/apbs/externals/TABIPB/build/CMakeFiles/install/strip.dir
-/home/jiahui/Documents/apbs-pdb2pqr/apbs/externals/TABIPB/build/CMakeFiles/edit_cache.dir
