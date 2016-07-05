@@ -24,7 +24,7 @@ double bulk_strength, kappa2, kappa;
 
 
 /*global scalar variables*/
-int nface, nspt, natm, nchr;
+int nface, nspt, natm;
 
 
 /*dynamic allocated variables*/
@@ -35,8 +35,8 @@ int **face, **face_copy;//[3][nface]
 double **vert, **snrm; //[3][nspt];
 double *tr_xyz, *tr_q; //[3][nface]
 double *tr_area, *bvct, *xvct; //[nface];
-double **atmpos; //[3][natm/nchr];
-double *atmrad, *atmchr, *chrpos; //[natm/nchr];
+double **atmpos; //[3][natm];
+double *atmrad, *atmchr, *chrpos; //[natm];
 
 double *work, *h;
 

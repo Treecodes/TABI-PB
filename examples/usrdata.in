@@ -1,9 +1,10 @@
-fname 1a63  
-den 3   
+fname 1a63
+den 1 
 probe_radius 1.4
 epsp 1
 epsw 80
 bulk_strength 0.30
-order 1 
+order 1
 maxparnode 500
 max 0.8
+mesh 1
