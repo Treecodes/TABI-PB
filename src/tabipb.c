@@ -78,10 +78,10 @@ int tabipb(TABIPBparm *parm, double* t_chrpos, double* t_atmchr, double* t_atmra
   /***************constant*****************/
   pi = 3.14159265358979324;
   one_over_4pi = 0.079577471545948;
-  bulk_coef = 8.430325455;
+  bulk_coef = 2529.12179861515279; /* constant without temperature */
   units_coef = 332.0716;
   eps = parm->epsw/parm->epsp;
-  kappa2 = bulk_coef * parm->bulk_strength / parm->epsw;
+  kappa2 = bulk_coef * parm->bulk_strength / parm->epsw / parm->temp;
   kappa = sqrt(kappa2);
 
   /*read charge coodinates, charges and radius*/

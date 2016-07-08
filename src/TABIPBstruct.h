@@ -28,6 +28,7 @@ struct sTABIPBparm {
   char density[16];
   char probe_radius[16];
 
+  double temp;
   double epsp;
   double epsw;
   double bulk_strength;

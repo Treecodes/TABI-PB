@@ -113,9 +113,9 @@ int readin(char fpath[256], char fname[16], int number_of_lines,
                 ierr = system(fname_tp);
                 sprintf(fname_tp,"mv triangulatedSurf.vert %s%s.vert\n", fpath, fname);
                 ierr = system(fname_tp);
-                ierr = system("rm stderror.txt");
-                ierr = system("rm surfaceConfiguration.prm");
-                ierr = system("rm triangleAreas.txt");
+                ierr = system("rm -f stderror.txt");
+                ierr = system("rm -f surfaceConfiguration.prm");
+                ierr = system("rm -f triangleAreas.txt");
         }
 
   /* read in vert */
@@ -341,11 +341,11 @@ int readin(char fpath[256], char fname[16], int number_of_lines,
 
         printf("Total suface area = %.17f\n",sum);
 
-        sprintf(fname_tp, "rm %s%s.xyzr", fpath, fname);
+        sprintf(fname_tp, "rm -f %s%s.xyzr", fpath, fname);
         ierr = system(fname_tp);
-        sprintf(fname_tp, "rm %s%s.vert", fpath, fname);
+        sprintf(fname_tp, "rm -f %s%s.vert", fpath, fname);
         ierr = system(fname_tp);
-        sprintf(fname_tp, "rm %s%s.face", fpath, fname);
+        sprintf(fname_tp, "rm -f %s%s.face", fpath, fname);
         ierr = system(fname_tp);
 
         return 0;
