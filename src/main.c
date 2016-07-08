@@ -23,7 +23,7 @@ int main(int argc, char *argv[]){
   char fname_tp[256];
   char c1[10], c2[10], c3[10], c4[10], c5[10];
   double a1, a2, a3, b1, b2, b3;
-  double epsp, epsw, bulk_strength, theta;
+  double epsp, epsw, bulk_strength, theta, temp;
   int maxparnode,order,ierr,i;
   double *t_chrpos, *t_atmchr, *t_atmrad;
 
@@ -49,9 +49,13 @@ int main(int argc, char *argv[]){
     main_parm->maxparnode = maxparnode;
     ierr=fscanf(fp,"%s %lf",c,&theta);
     main_parm->theta = theta;
+    ierr=fscanf(fp,"%s %lf",c,&temp);
+    main_parm->temp = temp;
   fclose(fp);
 
-  main_parm->mesh_flag=0;
+  main_parm->temp = 300;
+
+  main_parm->mesh_flag = 0;
 
 /********************************************************/
 
