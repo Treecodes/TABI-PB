@@ -25,7 +25,6 @@ int main(int argc, char *argv[]){
   double a1, a2, a3, b1, b2, b3;
   double epsp, epsw, bulk_strength, theta, temp;
   int maxparnode,order,ierr,i;
-  double *t_chrpos, *t_atmchr, *t_atmrad;
 
   /* time */
   extern void timer_start();
