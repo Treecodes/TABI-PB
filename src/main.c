@@ -31,6 +31,8 @@ int main(int argc, char *argv[]){
   extern void timer_start();
   extern void timer_end();
 
+  extern int output_print();
+
   timer_start("TOTAL_TIME");
 
   TABIPBparm *main_parm;
@@ -88,13 +90,13 @@ int main(int argc, char *argv[]){
   fp = fopen(fname_tp, "r");
 
   if ((main_vars->chrpos = (double *) malloc(3 * main_parm->number_of_lines * sizeof(double))) == NULL) {
-          printf("Error in allocating t_chrpos!\n");
+    printf("Error in allocating t_chrpos!\n");
   }
   if ((main_vars->atmchr = (double *) malloc(main_parm->number_of_lines * sizeof(double))) == NULL) {
-          printf("Error in allocating t_atmchr!\n");
+    printf("Error in allocating t_atmchr!\n");
   }
   if ((main_vars->atmrad = (double *) malloc(main_parm->number_of_lines * sizeof(double))) == NULL) {
-          printf("Error in allocating t_atmrad!\n");
+    printf("Error in allocating t_atmrad!\n");
   }
 
   for (i = 0; i < main_parm->number_of_lines; i++) {
@@ -112,12 +114,17 @@ int main(int argc, char *argv[]){
 
   ierr=tabipb(main_parm, main_vars);
 
+  ierr=output_print(main_vars);
+
   free(main_parm);
   free(main_vars->atmchr);
   free(main_vars->chrpos);
   free(main_vars->atmrad);
   free(main_vars->vert_ptl); // allocate in output_potential()
   free(main_vars->xvct);
+  free_matrix(main_vars->vert);
+  free_matrix(main_vars->snrm);
+  free_matrix(main_vars->face);
   free(main_vars);
 
   timer_end();

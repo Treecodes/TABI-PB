@@ -19,6 +19,7 @@
 
 #include <stdlib.h> /* calloc() */
 #include <stdio.h> /* FILE */
+#include "array.h"
 
 struct sTABIPBparm {
 
@@ -70,10 +71,12 @@ struct sTABIPBvars {
   /* surface potential on vertices area */
   double *vert_ptl;
   double max_vert_ptl, min_vert_ptl;
+  double max_der_vert_ptl, min_der_vert_ptl;
 
   /* surface potential on elements area */
   double *xvct;
   double max_xvct, min_xvct;
+  double max_der_xvct, min_der_xvct;
 
   /* connectivity data for MSMS surface triangulation */
   int **face;
