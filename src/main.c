@@ -27,8 +27,16 @@ int main(int argc, char *argv[]){
   int maxparnode,order,ierr,i;
   double *t_chrpos, *t_atmchr, *t_atmrad;
 
+  /* time */
+  extern void timer_start();
+  extern void timer_end();
+
+  timer_start("TOTAL_TIME");
+
   TABIPBparm *main_parm;
   main_parm = (TABIPBparm*)calloc(1,sizeof(TABIPBparm));
+  TABIPBvars *main_vars;
+  main_vars = (TABIPBvars*)calloc(1,sizeof(TABIPBvars));
 
   extern int tabipb();
 /********************************************************/
@@ -79,35 +87,40 @@ int main(int argc, char *argv[]){
   sprintf(fname_tp, "%s%s.pqr", main_parm->fpath, main_parm->fname);
   fp = fopen(fname_tp, "r");
 
-  if ((t_chrpos = (double *) malloc(3 * main_parm->number_of_lines * sizeof(double))) == NULL) {
+  if ((main_vars->chrpos = (double *) malloc(3 * main_parm->number_of_lines * sizeof(double))) == NULL) {
           printf("Error in allocating t_chrpos!\n");
   }
-  if ((t_atmchr = (double *) malloc(main_parm->number_of_lines * sizeof(double))) == NULL) {
+  if ((main_vars->atmchr = (double *) malloc(main_parm->number_of_lines * sizeof(double))) == NULL) {
           printf("Error in allocating t_atmchr!\n");
   }
-  if ((t_atmrad = (double *) malloc(main_parm->number_of_lines * sizeof(double))) == NULL) {
+  if ((main_vars->atmrad = (double *) malloc(main_parm->number_of_lines * sizeof(double))) == NULL) {
           printf("Error in allocating t_atmrad!\n");
   }
 
   for (i = 0; i < main_parm->number_of_lines; i++) {
     ierr = fscanf(fp, "%s %s %s %s %s %lf %lf %lf %lf %lf",
                   c1,c2,c3,c4,c5,&a1,&a2,&a3,&b1,&b2);
-    t_chrpos[3*i] = a1;
-    t_chrpos[3*i + 1] = a2;
-    t_chrpos[3*i + 2] = a3;
-    t_atmchr[i] = b1;
-    t_atmrad[i] = b2;
+    main_vars->chrpos[3*i] = a1;
+    main_vars->chrpos[3*i + 1] = a2;
+    main_vars->chrpos[3*i + 2] = a3;
+    main_vars->atmchr[i] = b1;
+    main_vars->atmrad[i] = b2;
   }
 
   fclose(fp);
   printf("Finished assembling charge (.pqr) file...\n");
 
-  ierr=tabipb(main_parm,t_chrpos,t_atmchr,t_atmrad);
+  ierr=tabipb(main_parm, main_vars);
 
   free(main_parm);
-  free(t_atmchr);
-  free(t_chrpos);
-  free(t_atmrad);
+  free(main_vars->atmchr);
+  free(main_vars->chrpos);
+  free(main_vars->atmrad);
+  free(main_vars->vert_ptl); // allocate in output_potential()
+  free(main_vars->xvct);
+  free(main_vars);
+
+  timer_end();
 
   return 0;
 }

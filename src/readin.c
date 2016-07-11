@@ -66,6 +66,8 @@ int readin(char fpath[256], char fname[16], int number_of_lines,
         double cos_theta, G0, tp1, G1, r_s[3];
         double xx[3], yy[3];
 
+        int **face_copy;
+
         sscanf(probe_radius, "%lf", &prob_rds);
         sscanf(density, "%lf", &den);
 

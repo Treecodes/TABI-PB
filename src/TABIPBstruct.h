@@ -47,4 +47,39 @@ struct sTABIPBparm {
 
 typedef struct sTABIPBparm TABIPBparm;
 
+struct sTABIPBvars {
+
+  /* solvation energy */
+  double soleng;
+
+  /* number of nodes, number of triangles */
+  int nspt, nface, natm;
+
+  /* msms variables */
+  int **extr_v, **extr_f; //[3][nspt],[2][nface]
+
+  /*
+  double *tr_xyz, *tr_q; //[3]*[nface]
+  double *tr_area, *bvct;
+   */
+  double *atmrad, *atmchr, *chrpos;
+
+  /* vertices, normal vector*/
+  double **vert, **snrm;
+
+  /* surface potential on vertices area */
+  double *vert_ptl;
+  double max_vert_ptl, min_vert_ptl;
+
+  /* surface potential on elements area */
+  double *xvct;
+  double max_xvct, min_xvct;
+
+  /* connectivity data for MSMS surface triangulation */
+  int **face;
+
+};
+
+typedef struct sTABIPBvars TABIPBvars;
+
 #endif /* H_TABIPBSTRUCT_H */

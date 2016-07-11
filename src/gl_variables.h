@@ -17,6 +17,8 @@
 #ifndef H_GLVARS_H
 #define H_GLVARS_H
 
+#include "TABIPBstruct.h"
+
 
 /*constant variables */
 double pi, one_over_4pi, bulk_coef, units_coef, epsw, epsp, eps;
@@ -30,20 +32,15 @@ int nface, nspt, natm;
 /*dynamic allocated variables*/
 int **extr_v; //[3][nspt]
 int **extr_f; //[2][nface]
-int **face, **face_copy;//[3][nface]
+int **face;//[3][nface]
 
 double **vert, **snrm; //[3][nspt];
-double *tr_xyz, *tr_q; //[3][nface]
+double *tr_xyz, *tr_q; //[3]*[nface]
 double *tr_area, *bvct, *xvct; //[nface];
-double **atmpos; //[3][natm];
-double *atmrad, *atmchr, *chrpos; //[natm];
+double *atmrad, *atmchr, *chrpos; //[natm],[3][nface];
 
+/* GMRes variables */
 double *work, *h;
-
-
-/*device pointers*/
-double *h_pot;
-double *dev_xp, *dev_yp, *dev_zp, *dev_q, *dev_pot;
 
 
 #endif /* H_GLVARS_H */

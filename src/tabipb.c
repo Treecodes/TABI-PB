@@ -25,7 +25,7 @@
 #include "array.h"
 #include "TABIPBstruct.h"
 
-int tabipb(TABIPBparm *parm, double* t_chrpos, double* t_atmchr, double* t_atmrad) {
+int tabipb(TABIPBparm *parm, TABIPBvars *vars) {
   /* Assemble the TABIPBparm out side this subroutine, and pass the three arryas */
   /* TABIPBparm a structure of parameters: file path, file name, density,
      probe radius, epsp, epsw, bulk_strength, treecode order, treecode maxparnode,
@@ -43,9 +43,6 @@ int tabipb(TABIPBparm *parm, double* t_chrpos, double* t_atmchr, double* t_atmra
   extern int comp_source();
   extern int output_potential();
 
-  /* time */
-  extern void timer_start();
-  extern void timer_end();
 
   /* variables used to compute potential solution */
   double units_para;
@@ -67,8 +64,6 @@ int tabipb(TABIPBparm *parm, double* t_chrpos, double* t_atmchr, double* t_atmra
                     long int *iter,double *resid,int (*matvec) (),
                     int (*psolve) (),long int *info);
 
-  timer_start("TOTAL_TIME");
-
   printf("\n Treecode order: %d", parm->order);
   printf("\n Max # of nodes: %d", parm->maxparnode);
   printf("\n    MAC (theta): %f\n", parm->theta);
@@ -85,9 +80,9 @@ int tabipb(TABIPBparm *parm, double* t_chrpos, double* t_atmchr, double* t_atmra
   kappa = sqrt(kappa2);
 
   /*read charge coodinates, charges and radius*/
-  chrpos = &t_chrpos[0];
-  atmchr = &t_atmchr[0];
-  atmrad = &t_atmrad[0];
+  chrpos = &vars->chrpos[0];
+  atmchr = &vars->atmchr[0];
+  atmrad = &vars->atmrad[0];
 
   readin(parm->fpath, parm->fname, parm->number_of_lines,
          parm->density, parm->probe_radius, parm->mesh_flag);
@@ -132,14 +127,11 @@ int tabipb(TABIPBparm *parm, double* t_chrpos, double* t_atmchr, double* t_atmra
 
   output_potential();
 
-  timer_end();
-
   free_matrix(extr_v);
   free_matrix(vert);
   free_matrix(snrm);
   free_matrix(face);
   free_matrix(extr_f);
-  free_matrix(atmpos);
 
   free(tr_xyz);
   free(tr_q);
@@ -361,12 +353,12 @@ int output_potential() {
                 vert_ptl[i + nspt] = vert_ptl[i + nspt] * para_temp;
         }
 
-        printf("The max and min potential and normal derivatives on elements are:\n");
+        printf("The max and min potential and normal derivatives on elements area:\n");
         printf("potential %f %f\n", maxval(xvct, nface), minval(xvct, nface));
         printf("norm derv %f %f\n\n", maxval(xvct + nface, nface),
                                       minval(xvct + nface, nface));
 
-        printf("The max and min potential and normal derivatives on vertices are:\n");
+        printf("The max and min potential and normal derivatives on vertices area:\n");
         printf("potential %f %f\n", maxval(vert_ptl, nspt), minval(vert_ptl, nspt));
         printf("norm derv %f %f\n\n", maxval(vert_ptl + nspt, nspt),
                                       minval(vert_ptl + nspt, nspt));
