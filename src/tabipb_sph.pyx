@@ -1,5 +1,6 @@
 cimport TABIPBstruct
 from cython.view cimport array as cvarray
+from libc.stdlib cimport malloc, free
 
 import logging
 
@@ -49,7 +50,29 @@ cdef class TABIPB_Solver:
     self._pid = os.getpid()
 
   cdef _run_tabipb(self, molecules):
+    cdef int natm, i
+    cdef double[:,:] xyzr
+    cdef TABIPBstruct.sTABIPBparm tabipbparm
+    cdef TABIPBstruct.sTABIPBvars tabipbvars
 
+    natm = len(molecule['atoms'])
+    xyzr = cvarray(shape=(natm, 5), itemsize=sizeof(double), format="d")
+
+    for i, atom in enumerate(molecule['atoms']):
+			xyzr[i, 0] = atom['pos'][0]
+			xyzr[i, 1] = atom['pos'][1]
+			xyzr[i, 2] = atom['pos'][2]
+			xyzr[i, 3] = atom['radius']
+      xyzr[i, 4] = atom['charge']
+
+    tabipbparm.temp = self.temp_;
+    tabipbparm.epsp = self.epse_;
+    tabipbparm.epsw = self.epsw_;
+    tabipbparm.bulk_strength = self.bulk_strength_
+    tabipbparm.order = self.order_;
+    tabipbparm.maxparnode = self.maxparnode_;
+    tabipbparm.theta = self.theta_;
+    tabipbparm.mesh_flag = self.mesh_flag_;
 
 
 

@@ -75,8 +75,10 @@ int readin(TABIPBparm *parm, TABIPBvars *vars)
 
   /* Run msms */
         if (parm->mesh_flag == 0) {
-                sprintf(fname_tp, "msms -if %s%s.xyzr -prob %s -dens %s -of %s%s ",
-                        parm->fpath, parm->fname, parm->probe_radius, parm->density, parm->fpath, parm->fname);
+                //sprintf(fname_tp, "msms -if %s%s.xyzr -prob %s -dens %s -of %s%s ",
+                //        parm->fpath, parm->fname, parm->probe_radius, parm->density, parm->fpath, parm->fname);
+                sprintf(fname_tp, "msms -if molecule.xyzr -prob %s -dens %s -of molecule",
+                        parm->probe_radius,parm->density);
                 printf("%s\n", fname_tp);
 
                 printf("Running MSMS...\n");
@@ -87,7 +89,8 @@ int readin(TABIPBparm *parm, TABIPBvars *vars)
                 nsfp = fopen("surfaceConfiguration.prm", "w");
                 fprintf(nsfp, "Grid_scale = %f\n", den);
                 fprintf(nsfp, "Grid_perfil = %f\n", 90.0);
-                fprintf(nsfp, "XYZR_FileName = %s%s.xyzr\n", parm->fpath, parm->fname);
+                //fprintf(nsfp, "XYZR_FileName = %s%s.xyzr\n", parm->fpath, parm->fname);
+                fprintf(nsfp, "XYZR_FileName = molecule.xyzr\n");
                 fprintf(nsfp, "Build_epsilon_maps = false\n");
                 fprintf(nsfp, "Build_status_map = false\n");
                 fprintf(nsfp, "Save_Mesh_MSMS_Format = true\n");
@@ -111,9 +114,11 @@ int readin(TABIPBparm *parm, TABIPBvars *vars)
 
                 printf("Running NanoShaper...\n");
                 ierr = system("NanoShaper");
-                sprintf(fname_tp,"mv triangulatedSurf.face %s%s.face\n", parm->fpath, parm->fname);
+                //sprintf(fname_tp,"mv triangulatedSurf.face %s%s.face\n", parm->fpath, parm->fname);
+                sprintf(fname_tp,"mv triangulatedSurf.face molecule.face\n");
                 ierr = system(fname_tp);
-                sprintf(fname_tp,"mv triangulatedSurf.vert %s%s.vert\n", parm->fpath, parm->fname);
+                //sprintf(fname_tp,"mv triangulatedSurf.vert %s%s.vert\n", parm->fpath, parm->fname);
+                sprintf(fname_tp,"mv triangulatedSurf.vert molecule.vert\n");
                 ierr = system(fname_tp);
                 ierr = system("rm -f stderror.txt");
                 ierr = system("rm -f surfaceConfiguration.prm");
@@ -121,7 +126,8 @@ int readin(TABIPBparm *parm, TABIPBvars *vars)
         }
 
   /* read in vert */
-        sprintf(fname_tp, "%s%s.vert", parm->fpath, parm->fname);
+        //sprintf(fname_tp, "%s%s.vert", parm->fpath, parm->fname);
+        sprintf(fname_tp, "molecule.vert");
 
   /* open the file and read through the first two rows */
         fp = fopen(fname_tp, "r");
@@ -176,7 +182,8 @@ int readin(TABIPBparm *parm, TABIPBvars *vars)
 
   /* read in faces */
 
-        sprintf(fname_tp, "%s%s.face", parm->fpath, parm->fname);
+        //sprintf(fname_tp, "%s%s.face", parm->fpath, parm->fname);
+        sprintf(fname_tp, "molecule.face");
         fp = fopen(fname_tp, "r");
         for (i = 1; i < 3; i++) {
                 while ((c = getc(fp)) != '\n') {
@@ -343,11 +350,14 @@ int readin(TABIPBparm *parm, TABIPBvars *vars)
 
         printf("Total suface area = %.17f\n",sum);
 
-        sprintf(fname_tp, "rm -f %s%s.xyzr", parm->fpath, parm->fname);
+        //sprintf(fname_tp, "rm -f %s%s.xyzr", parm->fpath, parm->fname);
+        sprintf(fname_tp, "rm -f molecule.xyzr");
         ierr = system(fname_tp);
-        sprintf(fname_tp, "rm -f %s%s.vert", parm->fpath, parm->fname);
+        //sprintf(fname_tp, "rm -f %s%s.vert", parm->fpath, parm->fname);
+        sprintf(fname_tp, "rm -f molecule.vert");
         ierr = system(fname_tp);
-        sprintf(fname_tp, "rm -f %s%s.face", parm->fpath, parm->fname);
+        //sprintf(fname_tp, "rm -f %s%s.face", parm->fpath, parm->fname);
+        sprintf(fname_tp, "rm -f molecule.face");
         ierr = system(fname_tp);
 
         return 0;

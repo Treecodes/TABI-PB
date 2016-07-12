@@ -113,7 +113,7 @@ int tabipb(TABIPBparm *parm, TABIPBvars *vars) {
   units_para = units_para * units_coef;
   units_para = units_para * pi;
 
-  chrptl = (double *) malloc(nface * sizeof(double));
+  chrptl = (double *) calloc(nface, sizeof(double));
   comp_pot(chrptl);
 
   soleng = 0.0;
@@ -365,7 +365,7 @@ int output_potential(TABIPBvars *vars) {
                 vars->vert_ptl[i + nspt] = vars->vert_ptl[i + nspt] * para_temp;
         }
 
-        if ((vars->xvct = (double *) malloc(2 * nface * sizeof(double))) == NULL) {
+        if ((vars->xvct = (double *) calloc(2 * nface, sizeof(double))) == NULL) {
                 printf("Error in allocating vars->xvct!\n");
         }
         memcpy(vars->xvct, xvct, 2 * nface * sizeof(double));
@@ -374,19 +374,11 @@ int output_potential(TABIPBvars *vars) {
         vars->min_xvct = minval(xvct, nface);
         vars->max_der_xvct = maxval(xvct + nface, nface);
         vars->min_der_xvct = minval(xvct + nface, nface);
-        //printf("The max and min potential and normal derivatives on elements area:\n");
-        //printf("potential %f %f\n", maxval(xvct, nface), minval(xvct, nface));
-        //printf("norm derv %f %f\n\n", maxval(xvct + nface, nface),
-        //                              minval(xvct + nface, nface));
 
-        vars->max_vert_ptl = maxval(xvct, nface);
-        vars->min_vert_ptl = minval(xvct, nface);
-        vars->max_der_vert_ptl = maxval(xvct + nface, nface);
-        vars->min_der_vert_ptl = minval(xvct + nface, nface);
-        //printf("The max and min potential and normal derivatives on vertices area:\n");
-        //printf("potential %f %f\n", maxval(vars->vert_ptl, nspt), minval(vars->vert_ptl, nspt));
-        //printf("norm derv %f %f\n\n", maxval(vars->vert_ptl + nspt, nspt),
-        //                              minval(vars->vert_ptl + nspt, nspt));
+        vars->max_vert_ptl = maxval(vert_ptl, nface);
+        vars->min_vert_ptl = minval(vert_ptl, nface);
+        vars->max_der_vert_ptl = maxval(vert_ptl + nface, nface);
+        vars->min_der_vert_ptl = minval(vert_ptl + nface, nface);
 
         vars->nface = nface;
         vars->nspt = nspt;
@@ -399,19 +391,6 @@ int output_potential(TABIPBvars *vars) {
                 memcpy(vars->snrm[i], snrm[i], nspt * sizeof(double));
         for (i = 0; i < 3; i++)
                 memcpy(vars->face[i], face[i], nface * sizeof(int));
-
-//        FILE *fp = fopen("surface_potential.dat", "w");
-//        fprintf(fp, "%d %d\n", nspt, nface);
-
-//        for (i = 0; i < nspt; i++)
-//                fprintf(fp, "%d %f %f %f %f %f %f %f %f\n", i, vert[0][i], vert[1][i],
-//                        vert[2][i], snrm[0][i], snrm[1][i], snrm[2][i], vars->vert_ptl[i],
-//                        vars->vert_ptl[i + nspt]);
-
-//        for (i = 0; i < nface; i++)
-//                fprintf(fp, "%d %d %d\n", face[0][i], face[1][i], face[2][i]);
-
-//        fclose(fp);
 
         free(xtemp);
 

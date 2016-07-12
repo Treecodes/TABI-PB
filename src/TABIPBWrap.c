@@ -28,7 +28,8 @@ int apbs2tabipb_(TABIPBparm* parm, TABIPBvars* vars){
   int i, ierr;
   extern int tabipb();
 
-  sprintf(fname_tp, "%s%s.xyzr",parm->fpath, parm->fname);
+  //sprintf(fname_tp, "%s%s.xyzr",parm->fpath, parm->fname);
+  sprintf(fname_tp, "molecule.xyzr");
   wfp=fopen(fname_tp,"w");
   for (i = 0; i < parm->number_of_lines; i++) {
     fprintf(wfp, "%f %f %f %f\n", vars->chrpos[3*i], vars->chrpos[3*i + 1],

@@ -72,7 +72,8 @@ int main(int argc, char *argv[]){
 
   sprintf(fname_tp, "%s%s.pqr", main_parm->fpath, main_parm->fname);
   fp = fopen(fname_tp, "r");
-  sprintf(fname_tp, "%s%s.xyzr", main_parm->fpath, main_parm->fname);
+  //sprintf(fname_tp, "%s%s.xyzr", main_parm->fpath, main_parm->fname);
+  sprintf(fname_tp,"molecule.xyzr");
   wfp=fopen(fname_tp, "w");
   int ch;// main_parm->number_of_lines = 0;
 
@@ -88,13 +89,13 @@ int main(int argc, char *argv[]){
   sprintf(fname_tp, "%s%s.pqr", main_parm->fpath, main_parm->fname);
   fp = fopen(fname_tp, "r");
 
-  if ((main_vars->chrpos = (double *) malloc(3 * main_parm->number_of_lines * sizeof(double))) == NULL) {
+  if ((main_vars->chrpos = (double *) calloc(3 * main_parm->number_of_lines, sizeof(double))) == NULL) {
     printf("Error in allocating t_chrpos!\n");
   }
-  if ((main_vars->atmchr = (double *) malloc(main_parm->number_of_lines * sizeof(double))) == NULL) {
+  if ((main_vars->atmchr = (double *) calloc(main_parm->number_of_lines, sizeof(double))) == NULL) {
     printf("Error in allocating t_atmchr!\n");
   }
-  if ((main_vars->atmrad = (double *) malloc(main_parm->number_of_lines * sizeof(double))) == NULL) {
+  if ((main_vars->atmrad = (double *) calloc(main_parm->number_of_lines, sizeof(double))) == NULL) {
     printf("Error in allocating t_atmrad!\n");
   }
 
