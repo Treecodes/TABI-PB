@@ -375,10 +375,10 @@ int output_potential(TABIPBvars *vars) {
         vars->max_der_xvct = maxval(xvct + nface, nface);
         vars->min_der_xvct = minval(xvct + nface, nface);
 
-        vars->max_vert_ptl = maxval(vert_ptl, nface);
-        vars->min_vert_ptl = minval(vert_ptl, nface);
-        vars->max_der_vert_ptl = maxval(vert_ptl + nface, nface);
-        vars->min_der_vert_ptl = minval(vert_ptl + nface, nface);
+        vars->max_vert_ptl = maxval(vars->vert_ptl, nface);
+        vars->min_vert_ptl = minval(vars->vert_ptl, nface);
+        vars->max_der_vert_ptl = maxval(vars->vert_ptl + nface, nface);
+        vars->min_der_vert_ptl = minval(vars->vert_ptl + nface, nface);
 
         vars->nface = nface;
         vars->nspt = nspt;
