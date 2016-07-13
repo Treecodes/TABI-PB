@@ -52,19 +52,13 @@ cdef class TABIPB_Solver:
   cdef _run_tabipb(self, molecules):
     cdef int natm, i
     cdef double[:,:] xyzr
-    cdef TABIPBstruct.sTABIPBparm tabipbparm
-    cdef TABIPBstruct.sTABIPBvars tabipbvars
+    cdef TABIPBstruct.TABIPBparm tabipbparm
+    cdef TABIPBstruct.TABIPBvars tabipbvars
 
-    natm = len(molecule['atoms'])
-    xyzr = cvarray(shape=(natm, 5), itemsize=sizeof(double), format="d")
+    natm = len(molecules['atoms'])
 
-    for i, atom in enumerate(molecule['atoms']):
-			xyzr[i, 0] = atom['pos'][0]
-			xyzr[i, 1] = atom['pos'][1]
-			xyzr[i, 2] = atom['pos'][2]
-			xyzr[i, 3] = atom['radius']
-      xyzr[i, 4] = atom['charge']
-
+    tabipbparm.density = str(self.density_);
+    tabipbparm.probe_radius = str(self.probe_radius_);
     tabipbparm.temp = self.temp_;
     tabipbparm.epsp = self.epse_;
     tabipbparm.epsw = self.epsw_;
@@ -73,8 +67,28 @@ cdef class TABIPB_Solver:
     tabipbparm.maxparnode = self.maxparnode_;
     tabipbparm.theta = self.theta_;
     tabipbparm.mesh_flag = self.mesh_flag_;
+    tabipbparm.number_of_lines = natm;
 
+    tabipbvars.chrpos = <double*> malloc(3 * natm * sizeof(double));
+    tabipbvars.atmchr = <double*> malloc(natm * sizeof(double));
+    tabipbvars.atmrad = <double*> malloc(natm * sizeof(double));
 
+    for i, atom in enumerate(molecules['atoms']):
+      tabipbvars.chrpos[i*3] = atom['pos'][0]
+      tabipbvars.chrpos[i*3+1] = atom['pos'][1]
+      tabipbvars.chrpos[i*3+2] = atom['pos'][2]
+      tabipbvars.atmchr[i] = atom['charge']
+      tabipbvars.atmrad[i] = atom['radius']
+
+    TABIPBstruct.sphinx2tabipb(&tabipbparm, &tabipbvars)
+
+    free(tabipbvars.chrpos)
+    free(tabipbvars.atmchr)
+    free(tabipbvars.atmrad)
+
+    return {'Solvation energy': tabipbvars.soleng,
+          'Max Surface potential': tabipbvars.max_vert_ptl,
+          'Min Surface potential': tabipbvars.min_vert_ptl}
 
   def run_solve(self, molecules):
     '''Method called from plugin.py, seems to be wrapping
@@ -84,7 +98,7 @@ cdef class TABIPB_Solver:
 
     _log.info("({}): TABIPB flow solver started.".format(self._pid))
 
-    results.appeng(self._run_tabipb(molecules))
+    results.append(self._run_tabipb(molecules))
 
     _log.info("({}): TABIPB flow solver done.".format(self._pid))
     return results

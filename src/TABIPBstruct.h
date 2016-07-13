@@ -21,13 +21,13 @@
 #include <stdio.h> /* FILE */
 #include "array.h"
 
-struct sTABIPBparm {
+typedef struct sTABIPBparm {
 
   /* molecule ID */
   char fpath[256];
   char fname[5];
-  char density[16];
-  char probe_radius[16];
+  double density;
+  double probe_radius;
 
   double temp;
   double epsp;
@@ -44,11 +44,9 @@ struct sTABIPBparm {
 
   int number_of_lines;
 
-};
+} TABIPBparm;
 
-typedef struct sTABIPBparm TABIPBparm;
-
-struct sTABIPBvars {
+typedef struct sTABIPBvars {
 
   /* solvation energy */
   double soleng;
@@ -81,8 +79,8 @@ struct sTABIPBvars {
   /* connectivity data for MSMS surface triangulation */
   int **face;
 
-};
+} TABIPBvars;
 
-typedef struct sTABIPBvars TABIPBvars;
+int sphinx2tabipb(TABIPBparm *parm, TABIPBvars *vars);
 
 #endif /* H_TABIPBSTRUCT_H */

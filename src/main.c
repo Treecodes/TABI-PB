@@ -23,7 +23,7 @@ int main(int argc, char *argv[]){
   char fname_tp[256];
   char c1[10], c2[10], c3[10], c4[10], c5[10];
   double a1, a2, a3, b1, b2, b3;
-  double epsp, epsw, bulk_strength, theta, temp;
+  double density, radius, epsp, epsw, bulk_strength, theta, temp;
   int maxparnode,order,ierr,i;
 
   /* time */
@@ -44,8 +44,10 @@ int main(int argc, char *argv[]){
 
   fp=fopen("usrdata.in","r");
     ierr=fscanf(fp,"%s %s",c,main_parm->fname);
-    ierr=fscanf(fp,"%s %s",c,main_parm->density);
-    ierr=fscanf(fp,"%s %s",c,main_parm->probe_radius);
+    ierr=fscanf(fp,"%s %lf",c,&density);
+    main_parm->density = density;
+    ierr=fscanf(fp,"%s %lf",c,&radius);
+    main_parm->probe_radius = radius;
     ierr=fscanf(fp,"%s %lf",c,&epsp);
     main_parm->epsp = epsp;
     ierr=fscanf(fp,"%s %lf",c,&epsw);

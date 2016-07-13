@@ -16,17 +16,13 @@
 
 #include "TABIPBstruct.h"
 
-#ifdef TABIPB_APBS
-  #include "generic/valist.h"
-#endif
-
 int apbs2tabipb_(TABIPBparm* parm, TABIPBvars* vars){
 
   FILE *wfp;
   char fname_tp[256];
-  Vatom *atom;
   int i, ierr;
   extern int tabipb();
+  extern int output_print();
 
   //sprintf(fname_tp, "%s%s.xyzr",parm->fpath, parm->fname);
   sprintf(fname_tp, "molecule.xyzr");
@@ -42,4 +38,30 @@ int apbs2tabipb_(TABIPBparm* parm, TABIPBvars* vars){
   ierr=output_print(vars);
 
   return 0;
+}
+
+int sphinx2tabipb(TABIPBparm* parm, TABIPBvars* vars){
+
+  FILE *wfp;
+  char fname_tp[256];
+  int i, ierr;
+  extern int tabipb();
+  extern int output_print();
+
+  sprintf(fname_tp, "molecule.xyzr");
+  wfp=fopen(fname_tp,"w");
+  for (i = 0; i < parm->number_of_lines; i++) {
+    fprintf(wfp, "%f %f %f %f\n", vars->chrpos[3*i], vars->chrpos[3*i + 1],
+            vars->chrpos[3*i + 2], vars->atmrad[i]);
+  }
+  fclose(wfp);
+
+  ierr=tabipb(parm,vars);
+
+  free(vars->vert_ptl);
+  free(vars->xvct);
+  free_matrix(vars->vert);
+  free_matrix(vars->snrm);
+  free_matrix(vars->face);
+
 }

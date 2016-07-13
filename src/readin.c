@@ -68,16 +68,13 @@ int readin(TABIPBparm *parm, TABIPBvars *vars)
 
         int **face_copy;
 
-        sscanf(parm->probe_radius, "%lf", &prob_rds);
-        sscanf(parm->density, "%lf", &den);
-
         natm = parm->number_of_lines;    //natm is number of lines in .xyzr
 
   /* Run msms */
         if (parm->mesh_flag == 0) {
                 //sprintf(fname_tp, "msms -if %s%s.xyzr -prob %s -dens %s -of %s%s ",
                 //        parm->fpath, parm->fname, parm->probe_radius, parm->density, parm->fpath, parm->fname);
-                sprintf(fname_tp, "msms -if molecule.xyzr -prob %s -dens %s -of molecule",
+                sprintf(fname_tp, "msms -if molecule.xyzr -prob %f -dens %f -of molecule",
                         parm->probe_radius,parm->density);
                 printf("%s\n", fname_tp);
 
@@ -87,7 +84,7 @@ int readin(TABIPBparm *parm, TABIPBvars *vars)
   /* Run NanoShaper */
         } else if (parm->mesh_flag == 1) {
                 nsfp = fopen("surfaceConfiguration.prm", "w");
-                fprintf(nsfp, "Grid_scale = %f\n", den);
+                fprintf(nsfp, "Grid_scale = %f\n", parm->density);
                 fprintf(nsfp, "Grid_perfil = %f\n", 90.0);
                 //fprintf(nsfp, "XYZR_FileName = %s%s.xyzr\n", parm->fpath, parm->fname);
                 fprintf(nsfp, "XYZR_FileName = molecule.xyzr\n");
@@ -103,7 +100,7 @@ int readin(TABIPBparm *parm, TABIPBvars *vars)
                 fprintf(nsfp, "Cavity_Detection_Filling = false\n");
                 fprintf(nsfp, "Conditional_Volume_Filling_Value = %f\n", 11.4);
                 fprintf(nsfp, "Keep_Water_Shaped_Cavities = false\n");
-                fprintf(nsfp, "Probe_Radius = %f\n", prob_rds);
+                fprintf(nsfp, "Probe_Radius = %f\n", parm->probe_radius);
                 fprintf(nsfp, "Accurate_Triangulation = true\n");
                 fprintf(nsfp, "Triangulation = true\n");
                 fprintf(nsfp, "Check_duplicated_vertices = true\n");
