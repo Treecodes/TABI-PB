@@ -92,7 +92,7 @@ int readin(char fpath[256], char fname[16], int number_of_lines,
                 fprintf(nsfp, "Compute_Vertex_Normals = true\n");
 
                 if (mesh_flag == 1) 
-                        fprintf(nsfp, "Surface = SES\n");
+                        fprintf(nsfp, "Surface = ses\n");
                 else if (mesh_flag == 2)
                         fprintf(nsfp, "Surface = skin\n");
                 else if (mesh_flag == 3)
@@ -122,6 +122,8 @@ int readin(char fpath[256], char fname[16], int number_of_lines,
                 ierr = system("rm -f stderror.txt");
                 ierr = system("rm -f surfaceConfiguration.prm");
                 ierr = system("rm -f triangleAreas.txt");
+                ierr = system("rm -f exposed.xyz");
+                ierr = system("rm -f exposedIndices.txt");
         }
 
   /* read in vert */
@@ -139,7 +141,7 @@ int readin(char fpath[256], char fname[16], int number_of_lines,
                 ierr = fscanf(fp,"%d %d %lf %lf ",&nspt,&natm,&den,&prob_rds);
                 //printf("nspt=%d, natm=%d, den=%lf, prob=%lf\n", nspt,natm,den,prob_rds);
 
-        } else if (mesh_flag == 1) {
+        } else if (mesh_flag == 1 || mesh_flag == 2 || mesh_flag == 3) {
                 ierr = fscanf(fp,"%d ",&nspt);
                 //printf("nspt=%d, natm=%d, den=%lf, prob=%lf\n", nspt,natm,den,prob_rds);
         }
@@ -192,7 +194,7 @@ int readin(char fpath[256], char fname[16], int number_of_lines,
                 ierr=fscanf(fp,"%d %d %lf %lf ",&nface,&natm,&den,&prob_rds);
                 //printf("nface=%d, natm=%d, den=%lf, prob=%lf\n", nface,natm,den,prob_rds);
 
-        } else if (mesh_flag == 1) {
+        } else if (mesh_flag == 1 || mesh_flag == 2 || mesh_flag == 3) {
                 ierr=fscanf(fp,"%d ",&nface);
                 //printf("nface=%d, natm=%d, den=%lf, prob=%lf\n", nface,natm,den,prob_rds);
         }

@@ -24,7 +24,7 @@ int main(int argc, char *argv[]){
   char c1[10], c2[10], c3[10], c4[10], c5[10];
   double a1, a2, a3, b1, b2, b3;
   double epsp, epsw, bulk_strength, theta;
-  int maxparnode,order,ierr,i;
+  int maxparnode,order,mesh_flag,ierr,i;
   double *t_chrpos, *t_atmchr, *t_atmrad;
 
   TABIPBparm *main_parm;
@@ -49,9 +49,9 @@ int main(int argc, char *argv[]){
     main_parm->maxparnode = maxparnode;
     ierr=fscanf(fp,"%s %lf",c,&theta);
     main_parm->theta = theta;
+    ierr=fscanf(fp,"%s %d",c,&mesh_flag);
+    main_parm->mesh_flag = mesh_flag;
   fclose(fp);
-
-  main_parm->mesh_flag=0;
 
 /********************************************************/
 

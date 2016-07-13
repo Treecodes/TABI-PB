@@ -72,6 +72,7 @@ int tabipb(TABIPBparm *parm, double* t_chrpos, double* t_atmchr, double* t_atmra
   printf("\n Treecode order: %d", parm->order);
   printf("\n Max # of nodes: %d", parm->maxparnode);
   printf("\n    MAC (theta): %f\n", parm->theta);
+  printf("\n      Mesh flag: %d\n", parm->mesh_flag);
 
   printf("\nSetting up the TABI input...\n");
 
