@@ -81,7 +81,7 @@ int readin(char fpath[256], char fname[16], int number_of_lines,
                 ierr = system(fname_tp);
 
   /* Run NanoShaper */
-        } else if (mesh_flag == 1) {
+        } else if (mesh_flag == 1 || mesh_flag == 2 || mesh_flag == 3) {
                 nsfp = fopen("surfaceConfiguration.prm", "w");
                 fprintf(nsfp, "Grid_scale = %f\n", den);
                 fprintf(nsfp, "Grid_perfil = %f\n", 90.0);
@@ -91,7 +91,13 @@ int readin(char fpath[256], char fname[16], int number_of_lines,
                 fprintf(nsfp, "Save_Mesh_MSMS_Format = true\n");
                 fprintf(nsfp, "Compute_Vertex_Normals = true\n");
 
-                fprintf(nsfp, "Surface = skin\n");
+                if (mesh_flag == 1) 
+                        fprintf(nsfp, "Surface = SES\n");
+                else if (mesh_flag == 2)
+                        fprintf(nsfp, "Surface = skin\n");
+                else if (mesh_flag == 3)
+                        fprintf(nsfp, "Surface = blobby\n");
+
                 fprintf(nsfp, "Smooth_Mesh = true\n");
                 fprintf(nsfp, "Skin_Surface_Parameter = %f\n", 0.45);
 
