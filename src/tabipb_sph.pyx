@@ -57,10 +57,10 @@ cdef class TABIPB_Solver:
 
     natm = len(molecules['atoms'])
 
-    tabipbparm.density = str(self.density_);
-    tabipbparm.probe_radius = str(self.probe_radius_);
+    tabipbparm.density = self.density_;
+    tabipbparm.probe_radius = self.probe_radius_;
     tabipbparm.temp = self.temp_;
-    tabipbparm.epsp = self.epse_;
+    tabipbparm.epsp = self.epsp_;
     tabipbparm.epsw = self.epsw_;
     tabipbparm.bulk_strength = self.bulk_strength_
     tabipbparm.order = self.order_;
