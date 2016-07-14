@@ -9,7 +9,10 @@
  * Weihua Geng, Southern Methodist University, Dallas, TX
  * Robery Krasny, University of Michigan, Ann Arbor, MI
  *
- * Rebuild the architecture of wrapper at 6/29/2016
+ * Works for Sphinx by Jiahui at 7/14/2016
+ * Rebuild the architecture of wrapper by Jiahui at 6/30/2016
+ * Build matrix free and nanoshaper by Leighton at 6/23/2016
+ * 
  */
 
 #include "TABIPBstruct.h"
@@ -66,18 +69,12 @@ int main(int argc, char *argv[]){
     main_parm->temp = temp;
   fclose(fp);
 
-  main_parm->temp = 300;
-
-  main_parm->mesh_flag = 0;
-
-
 /********************************************************/
 
   sprintf(main_parm->fpath, "");
 
   sprintf(fname_tp, "%s%s.pqr", main_parm->fpath, main_parm->fname);
   fp = fopen(fname_tp, "r");
-  //sprintf(fname_tp, "%s%s.xyzr", main_parm->fpath, main_parm->fname);
   sprintf(fname_tp,"molecule.xyzr");
   wfp=fopen(fname_tp, "w");
   int ch;// main_parm->number_of_lines = 0;
