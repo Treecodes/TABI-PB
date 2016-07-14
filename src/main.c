@@ -23,6 +23,11 @@ int main(int argc, char *argv[]){
   char fname_tp[256];
   char c1[10], c2[10], c3[10], c4[10], c5[10];
   double a1, a2, a3, b1, b2, b3;
+<<<<<<< HEAD
+  double epsp, epsw, bulk_strength, theta;
+  int maxparnode,order,mesh_flag,ierr,i;
+  double *t_chrpos, *t_atmchr, *t_atmrad;
+=======
   double density, radius, epsp, epsw, bulk_strength, theta, temp;
   int maxparnode,order,ierr,i;
 
@@ -33,6 +38,7 @@ int main(int argc, char *argv[]){
   extern int output_print();
 
   timer_start("TOTAL_TIME");
+>>>>>>> jiahui_branch
 
   TABIPBparm *main_parm;
   main_parm = (TABIPBparm*)calloc(1,sizeof(TABIPBparm));
@@ -60,6 +66,12 @@ int main(int argc, char *argv[]){
     main_parm->maxparnode = maxparnode;
     ierr=fscanf(fp,"%s %lf",c,&theta);
     main_parm->theta = theta;
+<<<<<<< HEAD
+    ierr=fscanf(fp,"%s %d",c,&mesh_flag);
+    main_parm->mesh_flag = mesh_flag;
+  fclose(fp);
+
+=======
     ierr=fscanf(fp,"%s %lf",c,&temp);
     main_parm->temp = temp;
   fclose(fp);
@@ -68,6 +80,7 @@ int main(int argc, char *argv[]){
 
   main_parm->mesh_flag = 0;
 
+>>>>>>> jiahui_branch
 /********************************************************/
 
   sprintf(main_parm->fpath, "");
