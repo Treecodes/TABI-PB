@@ -11,7 +11,10 @@
  * Weihua Geng, Southern Methodist University, Dallas, TX
  * Robery Krasny, University of Michigan, Ann Arbor, MI
  *
- * Rebuild the architecture of wrapper at 6/30/2016
+ * Works for Sphinx by Jiahui at 7/14/2016
+ * Rebuild the architecture of wrapper by Jiahui at 6/30/2016
+ * Build matrix free and nanoshaper by Leighton at 6/23/2016
+ *
  */
 
 #ifndef H_TABIPBSTRUCT_H
