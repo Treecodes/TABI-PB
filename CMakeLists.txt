@@ -7,6 +7,61 @@ set(TABIPB_BUILD ${PROJECT_BINARY_DIR})
 set(EXECUTABLE_OUTPUT_PATH ${TABIPB_BUILD}/bin)
 set(EXECUTABLE_INSTALL_PATH bin)
 
+################################################
+##### For APBS Sphinx
+################################################
+option(ENABLE_TABIPB_SPHINX "tabipb SPHINX" OFF)
+if(ENABLE_TABIPB_SPHINX)
+
+  if(APPLE)
+    list(APPEND CMAKE_MODULE_LINKER_FLAGS "-Wl,-undefined,dynamic_lookup")
+  endif()
+  if(WIN32)
+    list(APPEND CMAKE_MODULE_LINKER_FLAGS "/LIBPATH:C:\Python34\libs")
+  endif()
+
+  list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/../../../cmake")
+
+  find_package(PythonInterp 3.4 REQUIRED)
+  find_package(PythonInclude REQUIRED)
+  find_package(Cython REQUIRED)
+
+  include_directories("${PYTHON_INCLUDE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}")
+
+  add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/tabipb_py.c"
+                     COMMAND "${PYTHON_EXECUTABLE}" -m cython
+                     -o "${CMAKE_CURRENT_BINARY_DIR}/tabipb_py.c"
+                     "${CMAKE_CURRENT_SOURCE_DIR}/src/tabipb_sph.pyx"
+                     MAIN_DEPENDENCY "${CMAKE_CURRENT_SOURCE_DIR}/src/tabipb_sph.pyx")
+
+  add_library(tabipb_sph MODULE
+              tabipb_py.c
+              src/array.h
+              src/d_sign.c
+              src/daxpy.c
+              src/dcopy.c
+              src/ddot.c
+              src/dgemv.c
+              src/dnrm2.c
+              src/drot.c
+              src/drotg.c
+              src/dscal.c
+              src/dtrsv.c
+              src/f2c.h
+              src/gl_variables.h
+              src/gmres.c
+              src/readin.c
+              src/tabipb.c
+              src/TABIPBstruct.h
+              src/TABIPBWrap.c
+              src/treecode.c
+              src/treecode.h
+              src/xmalloc.c
+              src/xmalloc.h)
+
+  set_target_properties(tabipb_sph PROPERTIES PREFIX "")
+
+endif()
 
 ################################################
 ##### Make a directory for the executable
