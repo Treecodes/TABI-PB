@@ -25,7 +25,7 @@
 #include "array.h"
 #include "TABIPBstruct.h"
 
-int tabipb(TABIPBparm *parm, double* t_chrpos, double* t_atmchr, double* t_atmrad) {
+int tabipb(TABIPBparm *parm, TABIPBvars *vars) {
   /* Assemble the TABIPBparm out side this subroutine, and pass the three arryas */
   /* TABIPBparm a structure of parameters: file path, file name, density,
      probe radius, epsp, epsw, bulk_strength, treecode order, treecode maxparnode,
@@ -43,9 +43,6 @@ int tabipb(TABIPBparm *parm, double* t_chrpos, double* t_atmchr, double* t_atmra
   extern int comp_source();
   extern int output_potential();
 
-  /* time */
-  extern void timer_start();
-  extern void timer_end();
 
   /* variables used to compute potential solution */
   double units_para;
@@ -67,8 +64,6 @@ int tabipb(TABIPBparm *parm, double* t_chrpos, double* t_atmchr, double* t_atmra
                     long int *iter,double *resid,int (*matvec) (),
                     int (*psolve) (),long int *info);
 
-  timer_start("TOTAL_TIME");
-
   printf("\n Treecode order: %d", parm->order);
   printf("\n Max # of nodes: %d", parm->maxparnode);
   printf("\n    MAC (theta): %f\n", parm->theta);
@@ -79,19 +74,18 @@ int tabipb(TABIPBparm *parm, double* t_chrpos, double* t_atmchr, double* t_atmra
   /***************constant*****************/
   pi = 3.14159265358979324;
   one_over_4pi = 0.079577471545948;
-  bulk_coef = 8.430325455;
+  bulk_coef = 2529.12179861515279; /* constant without temperature */
   units_coef = 332.0716;
   eps = parm->epsw/parm->epsp;
-  kappa2 = bulk_coef * parm->bulk_strength / parm->epsw;
+  kappa2 = bulk_coef * parm->bulk_strength / parm->epsw / parm->temp;
   kappa = sqrt(kappa2);
 
   /*read charge coodinates, charges and radius*/
-  chrpos = &t_chrpos[0];
-  atmchr = &t_atmchr[0];
-  atmrad = &t_atmrad[0];
+  chrpos = &vars->chrpos[0];
+  atmchr = &vars->atmchr[0];
+  atmrad = &vars->atmrad[0];
 
-  readin(parm->fpath, parm->fname, parm->number_of_lines,
-         parm->density, parm->probe_radius, parm->mesh_flag);
+  readin(parm, vars);
 
   comp_source();
   /* tr_xyz=[x[i],y[i],z[i]] */
@@ -120,7 +114,7 @@ int tabipb(TABIPBparm *parm, double* t_chrpos, double* t_atmchr, double* t_atmra
   units_para = units_para * units_coef;
   units_para = units_para * pi;
 
-  chrptl = (double *) malloc(nface * sizeof(double));
+  chrptl = (double *) calloc(nface, sizeof(double));
   comp_pot(chrptl);
 
   soleng = 0.0;
@@ -129,18 +123,16 @@ int tabipb(TABIPBparm *parm, double* t_chrpos, double* t_atmchr, double* t_atmra
           soleng = soleng + chrptl[i];
 
   soleng = soleng * units_para;
-  printf("\nSolvation energy = %f kcal/mol\n\n", soleng);
+  vars->soleng = soleng;
+  //printf("\nSolvation energy = %f kcal/mol\n\n", soleng);
 
-  output_potential();
+  output_potential(vars);
 
-  timer_end();
-
-  free_matrix(extr_v);
+  free_matrix(vars->extr_v);
   free_matrix(vert);
   free_matrix(snrm);
   free_matrix(face);
-  free_matrix(extr_f);
-  free_matrix(atmpos);
+  free_matrix(vars->extr_f);
 
   free(tr_xyz);
   free(tr_q);
@@ -284,12 +276,12 @@ int comp_pot(double *chrptl) {
 
 
 /************************************/
-int output_potential() {
+int output_potential(TABIPBvars *vars) {
 
         int i, j, k, jerr, nface_vert;
         double tot_length, loc_length, aa[3], dot_aa, para_temp, phi_star;
         int **ind_vert;
-        double *xtemp, *vert_ptl, *xyz_temp;
+        double *xtemp, *xyz_temp;
 
         extern double maxval(double *, int);
         extern double minval(double *, int);
@@ -298,14 +290,26 @@ int output_potential() {
                             in at most 11 triangles, 15 is safe */
         para_temp = units_coef * 4 * pi;
 
-        xtemp = (double *) calloc(2 * nface, sizeof(double));
-        ind_vert = (int **) calloc(nface_vert, sizeof(int *));
+        if ((xtemp = (double *) calloc(2 * nface, sizeof(double)))  == NULL) {
+                printf("Error in allocating xtemp!\n");
+        }
 
-        for (i = 0; i < nface_vert; i++)
-                ind_vert[i] = (int *) calloc(nspt, sizeof(int));
+        if ((ind_vert = (int **) calloc(nface_vert, sizeof(int *)))  == NULL) {
+                printf("Error in allocating vars->xvct!\n");
+        }
 
-        vert_ptl = (double *) calloc(nspt * 2, sizeof(double));
-        xyz_temp = (double *) calloc(3 * nface, sizeof(double));
+        for (i = 0; i < nface_vert; i++){
+                if ((ind_vert[i] = (int *) calloc(nspt, sizeof(int)))  == NULL) {
+                        printf("Error in allocating vars->xvct!\n");
+                }
+        }
+
+        if ((vars->vert_ptl = (double *) calloc(nspt * 2, sizeof(double)))  == NULL) {
+                printf("Error in allocating vars->xvct!\n");
+        }
+        if ((xyz_temp = (double *) calloc(3 * nface, sizeof(double)))  == NULL) {
+                printf("Error in allocating vars->xvct!\n");
+        }
 
   /* put things back */
         for (i = 0; i < nface; i++) {
@@ -346,44 +350,48 @@ int output_potential() {
                         dot_aa = aa[0]*aa[0] + aa[1]*aa[1] + aa[2]*aa[2];
                         loc_length = sqrt(dot_aa);
 
-                        vert_ptl[i] += 1.0/loc_length*xvct[ind_vert[j][i]-1];
-                        vert_ptl[i+nspt] += 1.0/loc_length*xvct[ind_vert[j][i]+nface-1];
+                        vars->vert_ptl[i] += 1.0/loc_length*xvct[ind_vert[j][i]-1];
+                        vars->vert_ptl[i+nspt] += 1.0/loc_length*xvct[ind_vert[j][i]+nface-1];
                         tot_length += 1.0/loc_length;
                 }
-                vert_ptl[i] = vert_ptl[i] / tot_length;
-                vert_ptl[i + nspt] = vert_ptl[i + nspt] / tot_length;
+                vars->vert_ptl[i] = vars->vert_ptl[i] / tot_length;
+                vars->vert_ptl[i + nspt] = vars->vert_ptl[i + nspt] / tot_length;
         }
 
         for (i = 0; i < 2 * nface; i++)
                 xvct[i] = xvct[i] * para_temp;
 
         for (i = 0; i < nspt; i++) {
-                vert_ptl[i] = vert_ptl[i] * para_temp;
-                vert_ptl[i + nspt] = vert_ptl[i + nspt] * para_temp;
+                vars->vert_ptl[i] = vars->vert_ptl[i] * para_temp;
+                vars->vert_ptl[i + nspt] = vars->vert_ptl[i + nspt] * para_temp;
         }
 
-        printf("The max and min potential and normal derivatives on elements are:\n");
-        printf("potential %f %f\n", maxval(xvct, nface), minval(xvct, nface));
-        printf("norm derv %f %f\n\n", maxval(xvct + nface, nface),
-                                      minval(xvct + nface, nface));
+        if ((vars->xvct = (double *) calloc(2 * nface, sizeof(double))) == NULL) {
+                printf("Error in allocating vars->xvct!\n");
+        }
+        memcpy(vars->xvct, xvct, 2 * nface * sizeof(double));
 
-        printf("The max and min potential and normal derivatives on vertices are:\n");
-        printf("potential %f %f\n", maxval(vert_ptl, nspt), minval(vert_ptl, nspt));
-        printf("norm derv %f %f\n\n", maxval(vert_ptl + nspt, nspt),
-                                      minval(vert_ptl + nspt, nspt));
+        vars->max_xvct = maxval(xvct, nface);
+        vars->min_xvct = minval(xvct, nface);
+        vars->max_der_xvct = maxval(xvct + nface, nface);
+        vars->min_der_xvct = minval(xvct + nface, nface);
 
-        FILE *fp = fopen("surface_potential.dat", "w");
-        fprintf(fp, "%d %d\n", nspt, nface);
+        vars->max_vert_ptl = maxval(vars->vert_ptl, nface);
+        vars->min_vert_ptl = minval(vars->vert_ptl, nface);
+        vars->max_der_vert_ptl = maxval(vars->vert_ptl + nface, nface);
+        vars->min_der_vert_ptl = minval(vars->vert_ptl + nface, nface);
 
-        for (i = 0; i < nspt; i++)
-                fprintf(fp, "%d %f %f %f %f %f %f %f %f\n", i, vert[0][i], vert[1][i],
-                        vert[2][i], snrm[0][i], snrm[1][i], snrm[2][i], vert_ptl[i],
-                        vert_ptl[i + nspt]);
-
-        for (i = 0; i < nface; i++)
-                fprintf(fp, "%d %d %d\n", face[0][i], face[1][i], face[2][i]);
-
-        fclose(fp);
+        vars->nface = nface;
+        vars->nspt = nspt;
+        make_matrix(vars->vert, 3, nspt);
+        make_matrix(vars->snrm, 3, nspt);
+        make_matrix(vars->face, 3, nface);
+        for (i = 0; i < 3; i++)
+                memcpy(vars->vert[i], vert[i], nspt * sizeof(double));
+        for (i = 0; i < 3; i++)
+                memcpy(vars->snrm[i], snrm[i], nspt * sizeof(double));
+        for (i = 0; i < 3; i++)
+                memcpy(vars->face[i], face[i], nface * sizeof(int));
 
         free(xtemp);
 
@@ -391,8 +399,38 @@ int output_potential() {
                 free(ind_vert[i]);
 
         free(ind_vert);
-        free(vert_ptl);
         free(xyz_temp);
+}
+/************************************/
+int output_print(TABIPBvars *vars){
+
+        int i;
+
+        printf("\nSolvation energy = %f kcal/mol\n\n", vars->soleng);
+        printf("The max and min potential and normal derivatives on elements area:\n");
+        printf("potential %f %f\n", vars->max_xvct, vars->min_xvct);
+        printf("norm derv %f %f\n\n", vars->max_der_xvct,
+                                      vars->min_der_xvct);
+        printf("The max and min potential and normal derivatives on vertices area:\n");
+        printf("potential %f %f\n", vars->max_vert_ptl, vars->min_vert_ptl);
+        printf("norm derv %f %f\n\n", vars->max_der_vert_ptl,
+                                      vars->min_der_vert_ptl);
+
+        FILE *fp = fopen("surface_potential.dat", "w");
+        fprintf(fp, "%d %d\n", vars->nspt, vars->nface);
+
+        for (i = 0; i < nspt; i++)
+                fprintf(fp, "%d %f %f %f %f %f %f %f %f\n", i,
+                        vars->vert[0][i], vars->vert[1][i], vars->vert[2][i],
+                        vars->snrm[0][i], vars->snrm[1][i], vars->snrm[2][i],
+                        vars->vert_ptl[i], vars->vert_ptl[i + nspt]);
+
+        for (i = 0; i < nface; i++)
+                fprintf(fp, "%d %d %d\n", vars->face[0][i], vars->face[1][i], vars->face[2][i]);
+
+        fclose(fp);
+
+        return 0;
 }
 
 /************************************/

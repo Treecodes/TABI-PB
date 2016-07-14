@@ -22,6 +22,7 @@
 
 #include "gl_variables.h"
 #include "array.h"
+#include "TABIPBstruct.h"
 
 /* function computing the area of a triangle given vertices coodinates */
 double triangle_area(double v[3][3])
@@ -46,8 +47,7 @@ double triangle_area(double v[3][3])
 }
 
 /* function read in molecule information */
-int readin(char fpath[256], char fname[16], int number_of_lines,
-           char density[16], char probe_radius[16], int mesh_flag)
+int readin(TABIPBparm *parm, TABIPBvars *vars)
 {
         FILE *fp, *wfp, *nsfp;
         char c, c1[10], c2[10], c3[10], c4[10], c5[10];
@@ -66,26 +66,32 @@ int readin(char fpath[256], char fname[16], int number_of_lines,
         double cos_theta, G0, tp1, G1, r_s[3];
         double xx[3], yy[3];
 
-        sscanf(probe_radius, "%lf", &prob_rds);
-        sscanf(density, "%lf", &den);
+        int **face_copy;
 
-        natm = number_of_lines;    //natm is number of lines in .xyzr
+        natm = parm->number_of_lines;    //natm is number of lines in .xyzr
 
   /* Run msms */
-        if (mesh_flag == 0) {
-                sprintf(fname_tp, "msms -if %s%s.xyzr -prob %s -dens %s -of %s%s ",
-                        fpath, fname, probe_radius, density, fpath, fname);
+        if (parm->mesh_flag == 0) {
+                //sprintf(fname_tp, "msms -if %s%s.xyzr -prob %s -dens %s -of %s%s ",
+                //        parm->fpath, parm->fname, parm->probe_radius, parm->density, parm->fpath, parm->fname);
+                sprintf(fname_tp, "msms -if molecule.xyzr -prob %f -dens %f -of molecule",
+                        parm->probe_radius,parm->density);
                 printf("%s\n", fname_tp);
 
                 printf("Running MSMS...\n");
                 ierr = system(fname_tp);
 
   /* Run NanoShaper */
+<<<<<<< HEAD
         } else if (mesh_flag == 1 || mesh_flag == 2 || mesh_flag == 3) {
+=======
+        } else if (parm->mesh_flag == 1) {
+>>>>>>> jiahui_branch
                 nsfp = fopen("surfaceConfiguration.prm", "w");
-                fprintf(nsfp, "Grid_scale = %f\n", den);
+                fprintf(nsfp, "Grid_scale = %f\n", parm->density);
                 fprintf(nsfp, "Grid_perfil = %f\n", 90.0);
-                fprintf(nsfp, "XYZR_FileName = %s%s.xyzr\n", fpath, fname);
+                //fprintf(nsfp, "XYZR_FileName = %s%s.xyzr\n", parm->fpath, parm->fname);
+                fprintf(nsfp, "XYZR_FileName = molecule.xyzr\n");
                 fprintf(nsfp, "Build_epsilon_maps = false\n");
                 fprintf(nsfp, "Build_status_map = false\n");
                 fprintf(nsfp, "Save_Mesh_MSMS_Format = true\n");
@@ -104,7 +110,7 @@ int readin(char fpath[256], char fname[16], int number_of_lines,
                 fprintf(nsfp, "Cavity_Detection_Filling = false\n");
                 fprintf(nsfp, "Conditional_Volume_Filling_Value = %f\n", 11.4);
                 fprintf(nsfp, "Keep_Water_Shaped_Cavities = false\n");
-                fprintf(nsfp, "Probe_Radius = %f\n", prob_rds);
+                fprintf(nsfp, "Probe_Radius = %f\n", parm->probe_radius);
                 fprintf(nsfp, "Accurate_Triangulation = true\n");
                 fprintf(nsfp, "Triangulation = true\n");
                 fprintf(nsfp, "Check_duplicated_vertices = true\n");
@@ -115,9 +121,11 @@ int readin(char fpath[256], char fname[16], int number_of_lines,
 
                 printf("Running NanoShaper...\n");
                 ierr = system("NanoShaper");
-                sprintf(fname_tp,"mv triangulatedSurf.face %s%s.face\n", fpath, fname);
+                //sprintf(fname_tp,"mv triangulatedSurf.face %s%s.face\n", parm->fpath, parm->fname);
+                sprintf(fname_tp,"mv triangulatedSurf.face molecule.face\n");
                 ierr = system(fname_tp);
-                sprintf(fname_tp,"mv triangulatedSurf.vert %s%s.vert\n", fpath, fname);
+                //sprintf(fname_tp,"mv triangulatedSurf.vert %s%s.vert\n", parm->fpath, parm->fname);
+                sprintf(fname_tp,"mv triangulatedSurf.vert molecule.vert\n");
                 ierr = system(fname_tp);
                 ierr = system("rm -f stderror.txt");
                 ierr = system("rm -f surfaceConfiguration.prm");
@@ -127,7 +135,8 @@ int readin(char fpath[256], char fname[16], int number_of_lines,
         }
 
   /* read in vert */
-        sprintf(fname_tp, "%s%s.vert", fpath, fname);
+        //sprintf(fname_tp, "%s%s.vert", parm->fpath, parm->fname);
+        sprintf(fname_tp, "molecule.vert");
 
   /* open the file and read through the first two rows */
         fp = fopen(fname_tp, "r");
@@ -137,11 +146,15 @@ int readin(char fpath[256], char fname[16], int number_of_lines,
         }
 
 
-        if (mesh_flag == 0) {
+        if (parm->mesh_flag == 0) {
                 ierr = fscanf(fp,"%d %d %lf %lf ",&nspt,&natm,&den,&prob_rds);
                 //printf("nspt=%d, natm=%d, den=%lf, prob=%lf\n", nspt,natm,den,prob_rds);
 
+<<<<<<< HEAD
         } else if (mesh_flag == 1 || mesh_flag == 2 || mesh_flag == 3) {
+=======
+        } else if (parm->mesh_flag == 1) {
+>>>>>>> jiahui_branch
                 ierr = fscanf(fp,"%d ",&nspt);
                 //printf("nspt=%d, natm=%d, den=%lf, prob=%lf\n", nspt,natm,den,prob_rds);
         }
@@ -149,7 +162,7 @@ int readin(char fpath[256], char fname[16], int number_of_lines,
 
   /*allocate variables for vertices file*/
 
-        make_matrix(extr_v, 3, nspt);
+        make_matrix(vars->extr_v, 3, nspt);
         make_matrix(vert, 3, nspt);
         make_matrix(snrm, 3, nspt);
 
@@ -172,9 +185,9 @@ int readin(char fpath[256], char fname[16], int number_of_lines,
                 snrm[0][i] = b1;
                 snrm[1][i] = b2;
                 snrm[2][i] = b3;
-                extr_v[0][i] = i1;
-                extr_v[1][i] = i2;
-                extr_v[2][i] = i3;
+                vars->extr_v[0][i] = i1;
+                vars->extr_v[1][i] = i2;
+                vars->extr_v[2][i] = i3;
         }
 
         fclose(fp);
@@ -182,7 +195,8 @@ int readin(char fpath[256], char fname[16], int number_of_lines,
 
   /* read in faces */
 
-        sprintf(fname_tp, "%s%s.face", fpath, fname);
+        //sprintf(fname_tp, "%s%s.face", parm->fpath, parm->fname);
+        sprintf(fname_tp, "molecule.face");
         fp = fopen(fname_tp, "r");
         for (i = 1; i < 3; i++) {
                 while ((c = getc(fp)) != '\n') {
@@ -190,17 +204,21 @@ int readin(char fpath[256], char fname[16], int number_of_lines,
         }
 
 
-        if (mesh_flag == 0) {
+        if (parm->mesh_flag == 0) {
                 ierr=fscanf(fp,"%d %d %lf %lf ",&nface,&natm,&den,&prob_rds);
                 //printf("nface=%d, natm=%d, den=%lf, prob=%lf\n", nface,natm,den,prob_rds);
 
+<<<<<<< HEAD
         } else if (mesh_flag == 1 || mesh_flag == 2 || mesh_flag == 3) {
+=======
+        } else if (parm->mesh_flag == 1) {
+>>>>>>> jiahui_branch
                 ierr=fscanf(fp,"%d ",&nface);
                 //printf("nface=%d, natm=%d, den=%lf, prob=%lf\n", nface,natm,den,prob_rds);
         }
 
 
-        make_matrix(extr_f, 2, nface);
+        make_matrix(vars->extr_f, 2, nface);
         make_matrix(face, 3, nface);
 
 
@@ -209,8 +227,8 @@ int readin(char fpath[256], char fname[16], int number_of_lines,
                 face[0][i] = j1;
                 face[1][i] = j2;
                 face[2][i] = j3;
-                extr_f[0][i] = i1;
-                extr_f[1][i] = i2;
+                vars->extr_f[0][i] = i1;
+                vars->extr_f[1][i] = i2;
         }
 
         fclose(fp);
@@ -349,11 +367,14 @@ int readin(char fpath[256], char fname[16], int number_of_lines,
 
         printf("Total suface area = %.17f\n",sum);
 
-        sprintf(fname_tp, "rm -f %s%s.xyzr", fpath, fname);
+        //sprintf(fname_tp, "rm -f %s%s.xyzr", parm->fpath, parm->fname);
+        sprintf(fname_tp, "rm -f molecule.xyzr");
         ierr = system(fname_tp);
-        sprintf(fname_tp, "rm -f %s%s.vert", fpath, fname);
+        //sprintf(fname_tp, "rm -f %s%s.vert", parm->fpath, parm->fname);
+        sprintf(fname_tp, "rm -f molecule.vert");
         ierr = system(fname_tp);
-        sprintf(fname_tp, "rm -f %s%s.face", fpath, fname);
+        //sprintf(fname_tp, "rm -f %s%s.face", parm->fpath, parm->fname);
+        sprintf(fname_tp, "rm -f molecule.face");
         ierr = system(fname_tp);
 
         return 0;

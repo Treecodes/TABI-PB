@@ -1227,7 +1227,7 @@ int treecode_finalization(){
   free(orderarr);
 /*****************************************/
 
-  printf("Memory has been cleaned!\n");
+  printf("Memory has been cleaned for TABIPB!\n\n");
 
   return 0;
 }

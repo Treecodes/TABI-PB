@@ -23,20 +23,37 @@ int main(int argc, char *argv[]){
   char fname_tp[256];
   char c1[10], c2[10], c3[10], c4[10], c5[10];
   double a1, a2, a3, b1, b2, b3;
+<<<<<<< HEAD
   double epsp, epsw, bulk_strength, theta;
   int maxparnode,order,mesh_flag,ierr,i;
   double *t_chrpos, *t_atmchr, *t_atmrad;
+=======
+  double density, radius, epsp, epsw, bulk_strength, theta, temp;
+  int maxparnode,order,ierr,i;
+
+  /* time */
+  extern void timer_start();
+  extern void timer_end();
+
+  extern int output_print();
+
+  timer_start("TOTAL_TIME");
+>>>>>>> jiahui_branch
 
   TABIPBparm *main_parm;
   main_parm = (TABIPBparm*)calloc(1,sizeof(TABIPBparm));
+  TABIPBvars *main_vars;
+  main_vars = (TABIPBvars*)calloc(1,sizeof(TABIPBvars));
 
   extern int tabipb();
 /********************************************************/
 
   fp=fopen("usrdata.in","r");
     ierr=fscanf(fp,"%s %s",c,main_parm->fname);
-    ierr=fscanf(fp,"%s %s",c,main_parm->density);
-    ierr=fscanf(fp,"%s %s",c,main_parm->probe_radius);
+    ierr=fscanf(fp,"%s %lf",c,&density);
+    main_parm->density = density;
+    ierr=fscanf(fp,"%s %lf",c,&radius);
+    main_parm->probe_radius = radius;
     ierr=fscanf(fp,"%s %lf",c,&epsp);
     main_parm->epsp = epsp;
     ierr=fscanf(fp,"%s %lf",c,&epsw);
@@ -49,17 +66,29 @@ int main(int argc, char *argv[]){
     main_parm->maxparnode = maxparnode;
     ierr=fscanf(fp,"%s %lf",c,&theta);
     main_parm->theta = theta;
+<<<<<<< HEAD
     ierr=fscanf(fp,"%s %d",c,&mesh_flag);
     main_parm->mesh_flag = mesh_flag;
   fclose(fp);
 
+=======
+    ierr=fscanf(fp,"%s %lf",c,&temp);
+    main_parm->temp = temp;
+  fclose(fp);
+
+  main_parm->temp = 300;
+
+  main_parm->mesh_flag = 0;
+
+>>>>>>> jiahui_branch
 /********************************************************/
 
   sprintf(main_parm->fpath, "");
 
   sprintf(fname_tp, "%s%s.pqr", main_parm->fpath, main_parm->fname);
   fp = fopen(fname_tp, "r");
-  sprintf(fname_tp, "%s%s.xyzr", main_parm->fpath, main_parm->fname);
+  //sprintf(fname_tp, "%s%s.xyzr", main_parm->fpath, main_parm->fname);
+  sprintf(fname_tp,"molecule.xyzr");
   wfp=fopen(fname_tp, "w");
   int ch;// main_parm->number_of_lines = 0;
 
@@ -75,35 +104,45 @@ int main(int argc, char *argv[]){
   sprintf(fname_tp, "%s%s.pqr", main_parm->fpath, main_parm->fname);
   fp = fopen(fname_tp, "r");
 
-  if ((t_chrpos = (double *) malloc(3 * main_parm->number_of_lines * sizeof(double))) == NULL) {
-          printf("Error in allocating t_chrpos!\n");
+  if ((main_vars->chrpos = (double *) calloc(3 * main_parm->number_of_lines, sizeof(double))) == NULL) {
+    printf("Error in allocating t_chrpos!\n");
   }
-  if ((t_atmchr = (double *) malloc(main_parm->number_of_lines * sizeof(double))) == NULL) {
-          printf("Error in allocating t_atmchr!\n");
+  if ((main_vars->atmchr = (double *) calloc(main_parm->number_of_lines, sizeof(double))) == NULL) {
+    printf("Error in allocating t_atmchr!\n");
   }
-  if ((t_atmrad = (double *) malloc(main_parm->number_of_lines * sizeof(double))) == NULL) {
-          printf("Error in allocating t_atmrad!\n");
+  if ((main_vars->atmrad = (double *) calloc(main_parm->number_of_lines, sizeof(double))) == NULL) {
+    printf("Error in allocating t_atmrad!\n");
   }
 
   for (i = 0; i < main_parm->number_of_lines; i++) {
     ierr = fscanf(fp, "%s %s %s %s %s %lf %lf %lf %lf %lf",
                   c1,c2,c3,c4,c5,&a1,&a2,&a3,&b1,&b2);
-    t_chrpos[3*i] = a1;
-    t_chrpos[3*i + 1] = a2;
-    t_chrpos[3*i + 2] = a3;
-    t_atmchr[i] = b1;
-    t_atmrad[i] = b2;
+    main_vars->chrpos[3*i] = a1;
+    main_vars->chrpos[3*i + 1] = a2;
+    main_vars->chrpos[3*i + 2] = a3;
+    main_vars->atmchr[i] = b1;
+    main_vars->atmrad[i] = b2;
   }
 
   fclose(fp);
   printf("Finished assembling charge (.pqr) file...\n");
 
-  ierr=tabipb(main_parm,t_chrpos,t_atmchr,t_atmrad);
+  ierr=tabipb(main_parm, main_vars);
+
+  ierr=output_print(main_vars);
 
   free(main_parm);
-  free(t_atmchr);
-  free(t_chrpos);
-  free(t_atmrad);
+  free(main_vars->atmchr);
+  free(main_vars->chrpos);
+  free(main_vars->atmrad);
+  free(main_vars->vert_ptl); // allocate in output_potential()
+  free(main_vars->xvct);
+  free_matrix(main_vars->vert);
+  free_matrix(main_vars->snrm);
+  free_matrix(main_vars->face);
+  free(main_vars);
+
+  timer_end();
 
   return 0;
 }
