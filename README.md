@@ -17,11 +17,11 @@ cd example/
 
 # Building TABIPB on APBS_Sphinx
 
-This should be similar to the Geoflow build. To invoke TABIPB on Sphinx, you need to use the flag `-DENABLE_BEM_SPHINX=ON` when you run cmake. Command:
+This should be similar to the Geoflow build. To invoke TABIPB on Sphinx, you need to use the flag `-DENABLE_TABIPB_SPHINX=ON` when you run cmake. Command:
 
 1. `cd APBS_SPHINX/plugins/TABIPB/src`
 2. `mkdir build;cd build`
-3. `cmake -DENABLE_BEM_SPHINX=ON ..`
+3. `cmake -DENABLE_TABIPB_SPHINX=ON ..`
 4. `make`
 5. `cp tabipb_sph.so ../..`
 

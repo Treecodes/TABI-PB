@@ -10,7 +10,7 @@ set(EXECUTABLE_INSTALL_PATH bin)
 ################################################
 ##### For APBS Sphinx
 ################################################
-option(ENABLE_BEM_SPHINX "open boundary element method-tabipb SPHINX" OFF)
+option(ENABLE_TABIPB_SPHINX "open boundary element method-tabipb SPHINX" OFF)
 if(ENABLE_TABIPB_SPHINX)
 
   if(APPLE)
