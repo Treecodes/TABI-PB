@@ -116,15 +116,25 @@ int readin(TABIPBparm *parm, TABIPBvars *vars)
 
                 printf("Running NanoShaper...\n");
                 ierr = system("NanoShaper");
-                sprintf(fname_tp,"mv triangulatedSurf.face molecule.face\n");
-                ierr = system(fname_tp);
-                sprintf(fname_tp,"mv triangulatedSurf.vert molecule.vert\n");
-                ierr = system(fname_tp);
-                ierr = system("rm -f stderror.txt");
-                ierr = system("rm -f surfaceConfiguration.prm");
-                ierr = system("rm -f triangleAreas.txt");
-                ierr = system("rm -f exposed.xyz");
-                ierr = system("rm -f exposedIndices.txt");
+
+                rename("triangulatedSurf.face", "molecule.face");
+                rename("triangulatedSurf.vert", "molecule.vert");
+
+                remove("stderror.txt");
+                remove("surfaceConfiguration.prm");
+                remove("triangleAreas.txt");
+                remove("exposed.xyz");
+                remove("exposedIndices.txt");
+
+                //sprintf(fname_tp,"mv triangulatedSurf.face molecule.face\n");
+                //ierr = system(fname_tp);
+                //sprintf(fname_tp,"mv triangulatedSurf.vert molecule.vert\n");
+                //ierr = system(fname_tp);
+                //ierr = system("rm -f stderror.txt");
+                //ierr = system("rm -f surfaceConfiguration.prm");
+                //ierr = system("rm -f triangleAreas.txt");
+                //ierr = system("rm -f exposed.xyz");
+                //ierr = system("rm -f exposedIndices.txt");
         }
 
   /* read in vert */
@@ -352,14 +362,16 @@ int readin(TABIPBparm *parm, TABIPBvars *vars)
         printf("Total suface area = %.17f\n",sum);
 
 
-        sprintf(fname_tp, "rm -f molecule.xyzr");
-        ierr = system(fname_tp);
+        remove("molecule.xyzr");
+        remove("molecule.vert");
+        remove("molecule.face");
 
-        sprintf(fname_tp, "rm -f molecule.vert");
-        ierr = system(fname_tp);
-
-        sprintf(fname_tp, "rm -f molecule.face");
-        ierr = system(fname_tp);
+        //sprintf(fname_tp, "rm -f molecule.xyzr");
+        //ierr = system(fname_tp);
+        //sprintf(fname_tp, "rm -f molecule.vert");
+        //ierr = system(fname_tp);
+        //sprintf(fname_tp, "rm -f molecule.face");
+        //ierr = system(fname_tp);
 
         return 0;
 
