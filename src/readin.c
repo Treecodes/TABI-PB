@@ -11,7 +11,7 @@
  * Weihua Geng, Southern Methodist University, Dallas, TX
  * Robery Krasny, University of Michigan, Ann Arbor, MI
  *
- * Last changed at 6/29/2016
+ * Last changed at 8/05/2016: Adding Windows support for msms and NanoShaper
  */
 
 #include <time.h>
@@ -72,12 +72,19 @@ int readin(TABIPBparm *parm, TABIPBvars *vars)
 
   /* Run msms */
         if (parm->mesh_flag == 0) {
+
+        #ifdef _WIN32
+                sprintf(fname_tp, "msms.exe -if molecule.xyzr -prob %f -dens %f -of molecule",
+                        parm->probe_radius,parm->density);
+        #else
                 sprintf(fname_tp, "msms -if molecule.xyzr -prob %f -dens %f -of molecule",
                         parm->probe_radius,parm->density);
-                printf("%s\n", fname_tp);
+        #endif
 
-                printf("Running MSMS...\n");
-                ierr = system(fname_tp);
+        printf("%s\n", fname_tp);
+
+        printf("Running MSMS...\n");
+        ierr = system(fname_tp);
 
   /* Run NanoShaper */
         } else if (parm->mesh_flag == 1 || 
@@ -115,7 +122,12 @@ int readin(TABIPBparm *parm, TABIPBvars *vars)
                 fclose(nsfp);
 
                 printf("Running NanoShaper...\n");
+
+        #ifdef _WIN32
+                ierr = system("NanoShaper.exe");
+        #else
                 ierr = system("NanoShaper");
+        #endif
 
                 rename("triangulatedSurf.face", "molecule.face");
                 rename("triangulatedSurf.vert", "molecule.vert");

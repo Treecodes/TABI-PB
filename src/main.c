@@ -17,7 +17,8 @@
 
 #include "TABIPBstruct.h"
 
-int main(int argc, char *argv[]){
+int main(int argc, char **argv)
+{
   /* main reads the input file, writes xyzr file for msms and sets up position,
      raduis and charges */
 
