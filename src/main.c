@@ -28,46 +28,61 @@ int main(int argc, char **argv)
   char c1[10], c2[10], c3[10], c4[10], c5[10];
   double a1, a2, a3, b1, b2, b3;
   double density, radius, epsp, epsw, bulk_strength, theta, temp;
-  int maxparnode,order,mesh_flag,ierr,i;
+  int maxparnode, order, mesh_flag, output_datafile, ierr, i;
 
   /* time */
   extern void timer_start();
   extern void timer_end();
 
   extern int output_print();
+  extern int output_vtk();
 
   timer_start("TOTAL_TIME");
 
   TABIPBparm *main_parm;
-  main_parm = (TABIPBparm*)calloc(1,sizeof(TABIPBparm));
+  main_parm = (TABIPBparm*) calloc(1, sizeof(TABIPBparm));
+
   TABIPBvars *main_vars;
-  main_vars = (TABIPBvars*)calloc(1,sizeof(TABIPBvars));
+  main_vars = (TABIPBvars*) calloc(1, sizeof(TABIPBvars));
 
   extern int tabipb();
 /********************************************************/
 
-  fp=fopen("usrdata.in","r");
-    ierr=fscanf(fp,"%s %s",c,main_parm->fname);
-    ierr=fscanf(fp,"%s %lf",c,&density);
-    main_parm->density = density;
-    ierr=fscanf(fp,"%s %lf",c,&radius);
-    main_parm->probe_radius = radius;
-    ierr=fscanf(fp,"%s %lf",c,&epsp);
-    main_parm->epsp = epsp;
-    ierr=fscanf(fp,"%s %lf",c,&epsw);
-    main_parm->epsw = epsw;
-    ierr=fscanf(fp,"%s %lf",c,&bulk_strength);
-    main_parm->bulk_strength = bulk_strength;
-    ierr=fscanf(fp,"%s %d",c,&order);
-    main_parm->order = order;
-    ierr=fscanf(fp,"%s %d",c,&maxparnode);
-    main_parm->maxparnode = maxparnode;
-    ierr=fscanf(fp,"%s %lf",c,&theta);
-    main_parm->theta = theta;
-    ierr=fscanf(fp,"%s %d",c,&mesh_flag);
-    main_parm->mesh_flag = mesh_flag;
-    ierr=fscanf(fp,"%s %lf",c,&temp);
-    main_parm->temp = temp;
+  fp = fopen("usrdata.in", "r");
+        ierr = fscanf(fp, "%s %s", c, main_parm->fname);
+        
+        ierr = fscanf(fp, "%s %lf", c, &density);
+        main_parm->density = density;
+
+        ierr = fscanf(fp, "%s %lf", c, &radius);
+        main_parm->probe_radius = radius;
+        
+        ierr = fscanf(fp, "%s %lf", c, &epsp);
+        main_parm->epsp = epsp;
+
+        ierr = fscanf(fp, "%s %lf", c, &epsw);
+        main_parm->epsw = epsw;
+        
+        ierr = fscanf(fp, "%s %lf", c, &bulk_strength);
+        main_parm->bulk_strength = bulk_strength;
+
+        ierr = fscanf(fp, "%s %lf", c, &temp);
+        main_parm->temp = temp;
+        
+        ierr = fscanf(fp, "%s %d", c, &order);
+        main_parm->order = order;
+        
+        ierr = fscanf(fp, "%s %d", c, &maxparnode);
+        main_parm->maxparnode = maxparnode;
+        
+        ierr = fscanf(fp, "%s %lf", c, &theta);
+        main_parm->theta = theta;
+        
+        ierr = fscanf(fp, "%s %d", c, &mesh_flag);
+        main_parm->mesh_flag = mesh_flag;
+        
+        ierr = fscanf(fp, "%s %d", c, &output_datafile);
+        main_parm->output_datafile = output_datafile;
   fclose(fp);
 
 /********************************************************/
@@ -76,7 +91,7 @@ int main(int argc, char **argv)
 
   sprintf(fname_tp, "%s%s.pqr", main_parm->fpath, main_parm->fname);
   fp = fopen(fname_tp, "r");
-  sprintf(fname_tp,"molecule.xyzr");
+  sprintf(fname_tp, "molecule.xyzr");
   wfp=fopen(fname_tp, "w");
   int ch;// main_parm->number_of_lines = 0;
 
@@ -118,6 +133,7 @@ int main(int argc, char **argv)
   ierr=tabipb(main_parm, main_vars);
 
   ierr=output_print(main_vars);
+  if (output_datafile == 1) ierr=output_vtk(main_parm, main_vars);
 
   free(main_parm);
   free(main_vars->atmchr);
