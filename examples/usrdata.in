@@ -9,4 +9,4 @@ order 1
 maxparnode 500
 max 0.8
 mesh 1
-vtk 1
+outdata 1
