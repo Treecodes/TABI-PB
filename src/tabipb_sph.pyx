@@ -36,7 +36,7 @@ cdef class TABIPB_Solver:
     self.output_datafile_ = 0
 
   def __init__(self, density, probe_radius, epsp, epsw, bulk_strength,
-      order, maxparnode, theta, temp, mesh_flag): #, output_datafile):
+      order, maxparnode, theta, temp, mesh_flag, output_datafile):
     self.density_ = density
     self.probe_radius_ = probe_radius
     self.epsp_ = epsp
@@ -47,7 +47,7 @@ cdef class TABIPB_Solver:
     self.theta_ = theta
     self.temp_ = temp
     self.mesh_flag_ = mesh_flag
-    # self.output_datafile_ = output_datafile
+    self.output_datafile_ = output_datafile
 
     import os
     self._pid = os.getpid()
@@ -71,7 +71,7 @@ cdef class TABIPB_Solver:
     tabipbparm.theta = self.theta_;
     tabipbparm.mesh_flag = self.mesh_flag_;
     tabipbparm.number_of_lines = natm;
-    #tabipbparm.output_datafile = output_datafile_;
+    tabipbparm.output_datafile = output_datafile_;
 
     tabipbvars.chrpos = <double*> malloc(3 * natm * sizeof(double));
     tabipbvars.atmchr = <double*> malloc(natm * sizeof(double));
