@@ -16,13 +16,15 @@
 
 #include "TABIPBstruct.h"
 
-int apbs2tabipb_(TABIPBparm* parm, TABIPBvars* vars){
-
+int apbs2tabipb_(TABIPBparm *parm, TABIPBvars *vars)
+{
   FILE *wfp;
   char fname_tp[256];
   int i, ierr;
   extern int tabipb();
+
   extern int output_print();
+  extern int output_vtk();
 
   //sprintf(fname_tp, "%s%s.xyzr",parm->fpath, parm->fname);
   sprintf(fname_tp, "molecule.xyzr");
@@ -33,20 +35,23 @@ int apbs2tabipb_(TABIPBparm* parm, TABIPBvars* vars){
   }
   fclose(wfp);
 
-  ierr=tabipb(parm,vars);
+  ierr = tabipb(parm, vars);
 
-  ierr=output_print(vars);
+  ierr = output_print(vars);
+  if (parm->output_datafile == 1) ierr = output_vtk(parm, vars);
 
   return 0;
 }
 
-int sphinx2tabipb(TABIPBparm* parm, TABIPBvars* vars){
-
+int sphinx2tabipb(TABIPBparm *parm, TABIPBvars *vars)
+{
   FILE *wfp;
   char fname_tp[256];
   int i, ierr;
   extern int tabipb();
+
   extern int output_print();
+  extern int output_vtk();
 
   sprintf(fname_tp, "molecule.xyzr");
   wfp=fopen(fname_tp,"w");

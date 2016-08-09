@@ -14,6 +14,7 @@ cdef extern from "src/TABIPBstruct.h":
     double theta;
     int mesh_flag;
     int number_of_lines;
+    int output_datafile;
 
   ctypedef struct TABIPBvars:
     double soleng;

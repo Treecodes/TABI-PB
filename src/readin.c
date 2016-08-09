@@ -11,7 +11,7 @@
  * Weihua Geng, Southern Methodist University, Dallas, TX
  * Robery Krasny, University of Michigan, Ann Arbor, MI
  *
- * Last changed at 6/29/2016
+ * Last changed at 8/05/2016: Adding Windows support for msms and NanoShaper
  */
 
 #include <time.h>
@@ -72,12 +72,19 @@ int readin(TABIPBparm *parm, TABIPBvars *vars)
 
   /* Run msms */
         if (parm->mesh_flag == 0) {
+
+        #ifdef _WIN32
+                sprintf(fname_tp, "msms.exe -if molecule.xyzr -prob %f -dens %f -of molecule",
+                        parm->probe_radius,parm->density);
+        #else
                 sprintf(fname_tp, "msms -if molecule.xyzr -prob %f -dens %f -of molecule",
                         parm->probe_radius,parm->density);
-                printf("%s\n", fname_tp);
+        #endif
 
-                printf("Running MSMS...\n");
-                ierr = system(fname_tp);
+        printf("%s\n", fname_tp);
+
+        printf("Running MSMS...\n");
+        ierr = system(fname_tp);
 
   /* Run NanoShaper */
         } else if (parm->mesh_flag == 1 || 
@@ -115,16 +122,31 @@ int readin(TABIPBparm *parm, TABIPBvars *vars)
                 fclose(nsfp);
 
                 printf("Running NanoShaper...\n");
+
+        #ifdef _WIN32
+                ierr = system("NanoShaper.exe");
+        #else
                 ierr = system("NanoShaper");
-                sprintf(fname_tp,"mv triangulatedSurf.face molecule.face\n");
-                ierr = system(fname_tp);
-                sprintf(fname_tp,"mv triangulatedSurf.vert molecule.vert\n");
-                ierr = system(fname_tp);
-                ierr = system("rm -f stderror.txt");
-                ierr = system("rm -f surfaceConfiguration.prm");
-                ierr = system("rm -f triangleAreas.txt");
-                ierr = system("rm -f exposed.xyz");
-                ierr = system("rm -f exposedIndices.txt");
+        #endif
+
+                rename("triangulatedSurf.face", "molecule.face");
+                rename("triangulatedSurf.vert", "molecule.vert");
+
+                remove("stderror.txt");
+                remove("surfaceConfiguration.prm");
+                remove("triangleAreas.txt");
+                remove("exposed.xyz");
+                remove("exposedIndices.txt");
+
+                //sprintf(fname_tp,"mv triangulatedSurf.face molecule.face\n");
+                //ierr = system(fname_tp);
+                //sprintf(fname_tp,"mv triangulatedSurf.vert molecule.vert\n");
+                //ierr = system(fname_tp);
+                //ierr = system("rm -f stderror.txt");
+                //ierr = system("rm -f surfaceConfiguration.prm");
+                //ierr = system("rm -f triangleAreas.txt");
+                //ierr = system("rm -f exposed.xyz");
+                //ierr = system("rm -f exposedIndices.txt");
         }
 
   /* read in vert */
@@ -352,14 +374,16 @@ int readin(TABIPBparm *parm, TABIPBvars *vars)
         printf("Total suface area = %.17f\n",sum);
 
 
-        sprintf(fname_tp, "rm -f molecule.xyzr");
-        ierr = system(fname_tp);
+        remove("molecule.xyzr");
+        remove("molecule.vert");
+        remove("molecule.face");
 
-        sprintf(fname_tp, "rm -f molecule.vert");
-        ierr = system(fname_tp);
-
-        sprintf(fname_tp, "rm -f molecule.face");
-        ierr = system(fname_tp);
+        //sprintf(fname_tp, "rm -f molecule.xyzr");
+        //ierr = system(fname_tp);
+        //sprintf(fname_tp, "rm -f molecule.vert");
+        //ierr = system(fname_tp);
+        //sprintf(fname_tp, "rm -f molecule.face");
+        //ierr = system(fname_tp);
 
         return 0;
 

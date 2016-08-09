@@ -46,7 +46,6 @@ int tabipb(TABIPBparm *parm, TABIPBvars *vars) {
   extern int comp_source();
   extern int output_potential();
 
-
   /* variables used to compute potential solution */
   double units_para;
   double *chrptl;
@@ -122,7 +121,7 @@ int tabipb(TABIPBparm *parm, TABIPBvars *vars) {
 
   soleng = 0.0;
 
-  for (i = 0; i < nface; i++)
+  for (int i = 0; i < nface; i++)
           soleng = soleng + chrptl[i];
 
   soleng = soleng * units_para;
@@ -403,10 +402,14 @@ int output_potential(TABIPBvars *vars) {
 
         free(ind_vert);
         free(xyz_temp);
-}
-/************************************/
-int output_print(TABIPBvars *vars){
 
+        return 0;
+}
+
+
+/************************************/
+int output_print(TABIPBvars *vars)
+{
         int i;
 
         printf("\nSolvation energy = %f kcal/mol\n\n", vars->soleng);
@@ -436,9 +439,80 @@ int output_print(TABIPBvars *vars){
         return 0;
 }
 
-/************************************/
-int *matvec_direct(double *alpha, double *x, double *beta, double *y) {
 
+/************************************/
+int output_vtk(TABIPBparm *parm, TABIPBvars *vars)
+{
+        char i_char1[20], i_char2[20], i_char3[20], nspt_str[20], 
+             nface_str[20], nface4_str[20];
+        int i;
+
+        sprintf(nspt_str, "%d", vars->nspt);
+        sprintf(nface_str, "%d", vars->nface);
+        sprintf(nface4_str, "%d", vars->nface * 4);
+
+        sprintf(i_char1, "mesh flag: %d", parm->mesh_flag);
+
+        FILE *fp = fopen("surface_potential.vtk", "w");
+
+        fprintf(fp, "# vtk DataFile Version 1.0\n");
+        fprintf(fp, "mesh for protein %s, with %s\n", parm->fname, i_char1);
+        fprintf(fp, "ASCII\n");
+        fprintf(fp, "DATASET POLYDATA\n\n");
+
+        fprintf(fp, "POINTS %s double\n", nspt_str);
+        for (i = 0; i < vars->nspt; i++) {
+                fprintf(fp, "%f %f %f\n", vars->vert[0][i], vars->vert[1][i],
+                                      vars->vert[2][i]);
+        }
+
+        fprintf(fp, "POLYGONS %s %s\n", nface_str, nface4_str);
+        for (i = 0; i < vars->nface; i++) {
+                fprintf(fp, "3 %d %d %d\n", vars->face[0][i] - 1, vars->face[1][i] - 1,
+                                      vars->face[2][i] - 1);
+        }
+
+        fprintf(fp, "\nPOINT_DATA %s\n", nspt_str);
+        fprintf(fp, "SCALARS PotentialVert double\n");
+        fprintf(fp, "LOOKUP_TABLE default\n");
+        for (i = 0; i < vars->nspt; i++) {
+                fprintf(fp, "%f\n", vars->vert_ptl[i]);
+        }
+
+        fprintf(fp, "SCALARS NormalPotentialVert double\n");
+        fprintf(fp, "LOOKUP_TABLE default\n");
+        for (i = 0; i < vars->nspt; i++) {
+                fprintf(fp, "%f\n", vars->vert_ptl[nspt + i]);
+        }
+
+        //if we want induced surface charges, we can multiply vertnorm by (1/eps + 1)
+        fprintf(fp, "\nNORMALS VertNorms double\n");
+        for (i = 0; i < vars->nspt; i++) {
+                fprintf(fp, "%f %f %f\n", vars->snrm[0][i], vars->snrm[1][i],
+                                      vars->snrm[2][i]);
+        }
+
+        fprintf(fp, "\nCELL_DATA %s\n", nface_str);
+        fprintf(fp, "SCALARS PotentialFace double\n");
+        fprintf(fp, "LOOKUP_TABLE default\n");
+        for (i = 0; i < vars->nface; i++) {
+                fprintf(fp, "%f\n", vars->xvct[i]);
+        }
+
+        //if we want induced surface charges, we can multiply vertnorm by (1/eps + 1)
+        fprintf(fp, "SCALARS NormalPotentialFace double\n");
+        fprintf(fp, "LOOKUP_TABLE default\n");
+        for (i = 0; i < vars->nface; i++) {
+                fprintf(fp, "%f\n", vars->xvct[nface + i]);
+        }
+
+        fclose(fp);
+}
+
+
+/************************************/
+int *matvec_direct(double *alpha, double *x, double *beta, double *y)
+{
         int i, j;
         double pre1, pre2;
         double area, rs, irs, sumrs;

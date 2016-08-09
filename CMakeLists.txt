@@ -1,7 +1,7 @@
 cmake_minimum_required (VERSION 2.8)
 project(tabipb)
 
-set(CMAKE_VERBOSE_MAKEFILE ON)
+#set(CMAKE_VERBOSE_MAKEFILE ON)
 set(TABIPB_ROOT ${PROJECT_SOURCE_DIR})
 set(TABIPB_BUILD ${PROJECT_BINARY_DIR})
 set(EXECUTABLE_OUTPUT_PATH ${TABIPB_BUILD}/bin)
@@ -10,7 +10,7 @@ set(EXECUTABLE_INSTALL_PATH bin)
 ################################################
 ##### For APBS Sphinx
 ################################################
-option(ENABLE_TABIPB_SPHINX "tabipb SPHINX" OFF)
+option(ENABLE_TABIPB_SPHINX "open boundary element method-tabipb SPHINX" OFF)
 if(ENABLE_TABIPB_SPHINX)
 
   if(APPLE)

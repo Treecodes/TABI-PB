@@ -42,10 +42,14 @@ typedef struct sTABIPBparm {
   int maxparnode;
   double theta;
 
-  /* 0 msms and 1 NanoShaper */
+  /* 0 msms, 1 NanoShaper SES, 2 NanoShaper Skin */
   int mesh_flag;
 
+  /* number of atoms */
   int number_of_lines;
+
+  /* output of potential data: 1 output vtk */
+  int output_datafile;
 
 } TABIPBparm;
 
@@ -58,7 +62,7 @@ typedef struct sTABIPBvars {
   int nspt, nface, natm;
 
   /* msms variables */
-  int **extr_v, **extr_f; //[3][nspt],[2][nface]
+  int **extr_v, **extr_f; //[3][nspt], [2][nface]
 
   /*
   double *tr_xyz, *tr_q; //[3]*[nface]

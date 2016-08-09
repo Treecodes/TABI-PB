@@ -4,8 +4,9 @@ probe_radius 1.4
 epsp 1
 epsw 80
 bulk_strength 0.30
+temp 300
 order 1
 maxparnode 500
 max 0.8
 mesh 1
-temp 300
+outdata 1
