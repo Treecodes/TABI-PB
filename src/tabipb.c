@@ -39,7 +39,7 @@ int tabipb(TABIPBparm *parm, TABIPBvars *vars) {
   /* variables local to main */
   int i, j, k;
   double s[3], pot = 0.0, sum = 0.0, pot_temp = 0.0;
-  double ptl, soleng, t1, t2;
+  double ptl, soleng, couleng, t1, t2;
 
   extern void readin();
   extern double potential_molecule(double s[3]);
@@ -120,12 +120,33 @@ int tabipb(TABIPBparm *parm, TABIPBvars *vars) {
   comp_pot(chrptl);
 
   soleng = 0.0;
+  couleng = 0.0;
 
-  for (int i = 0; i < nface; i++)
-          soleng = soleng + chrptl[i];
+  double r[3], diff[k], dist;
+
+  for (int i = 0; i < nface; i++){
+    soleng += chrptl[i];
+  }
+
+  for (i = 0; i < natm; i++){
+    r[0] = chrpos[3*i];
+    r[1] = chrpos[3*i+1];
+    r[2] = chrpos[3*i+2];
+    for (j = i+1; j < natm; j++){
+      diff[0] = r[0] - chrpos[3*j];
+      diff[1] = r[1] - chrpos[3*j+1];
+      diff[2] = r[2] - chrpos[3*j+2];
+      dist = sqrt(diff[0]*diff[0]
+                + diff[1]*diff[1]
+                + diff[2]*diff[2]);
+      couleng += 1/parm->epsp/dist*atmchr[i]*atmchr[j];
+    }
+  }
 
   soleng = soleng * units_para;
+  couleng = couleng * units_coef;
   vars->soleng = soleng;
+  vars->couleng = couleng;
   //printf("\nSolvation energy = %f kcal/mol\n\n", soleng);
 
   output_potential(vars);
@@ -412,7 +433,8 @@ int output_print(TABIPBvars *vars)
 {
         int i;
 
-        printf("\nSolvation energy = %f kcal/mol\n\n", vars->soleng);
+        printf("\nSolvation energy = %f kcal/mol", vars->soleng);
+        printf("\nFree energy = %f kcal/mol\n\n", vars->soleng+vars->couleng);
         printf("The max and min potential and normal derivatives on elements area:\n");
         printf("potential %f %f\n", vars->max_xvct, vars->min_xvct);
         printf("norm derv %f %f\n\n", vars->max_der_xvct,

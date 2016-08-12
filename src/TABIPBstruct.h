@@ -56,7 +56,7 @@ typedef struct sTABIPBparm {
 typedef struct sTABIPBvars {
 
   /* solvation energy */
-  double soleng;
+  double soleng, couleng;
 
   /* number of nodes, number of triangles */
   int nspt, nface, natm;
