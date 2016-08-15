@@ -921,12 +921,11 @@ int comp_tcoeff(tnode *p, double kappa){
 /* COMP_TCOEFF computes the Taylor coefficients of the potential
  * using a recurrence formula.  The center of the expansion is the
  * midpoint of the node P.  TARPOS and TORDERLIM are globally defined. */
-  double dx,dy,dz,ddx,ddy,ddz,dist,fac,cf1_new[torderlim];
+  double dx,dy,dz,ddx,ddy,ddz,dist,fac;
   double kappax,kappay,kappaz;
   int i,j,k;
 
   /* setup variables */
-  for (i=0;i<torderlim;i++) cf1_new[i]=cf1[i]*kappa;
 
   dx=tarpos[0]-p->x_mid;
   dy=tarpos[1]-p->y_mid;

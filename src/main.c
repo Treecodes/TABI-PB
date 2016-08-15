@@ -30,14 +30,21 @@ int main(int argc, char **argv)
   double density, radius, epsp, epsw, bulk_strength, theta, temp;
   int maxparnode, order, mesh_flag, output_datafile, ierr, i;
 
-  /* time */
+  /* timing functions for *nix systems */
+#ifndef _WIN32                                                                     
   extern void timer_start();
   extern void timer_end();
+#endif  
+
 
   extern int output_print();
   extern int output_vtk();
 
+
+#ifndef _WIN32                                                                     
   timer_start("TOTAL_TIME");
+#endif  
+
 
   TABIPBparm *main_parm;
   main_parm = (TABIPBparm*) calloc(1, sizeof(TABIPBparm));
@@ -146,7 +153,9 @@ int main(int argc, char **argv)
   free_matrix(main_vars->face);
   free(main_vars);
 
+#ifndef _WIN32
   timer_end();
+#endif
 
   return 0;
 }
