@@ -69,4 +69,6 @@ int sphinx2tabipb(TABIPBparm *parm, TABIPBvars *vars)
   free_matrix(vars->snrm);
   free_matrix(vars->face);
 
+  return 0;
+
 }

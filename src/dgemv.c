@@ -170,7 +170,7 @@
 
 /*     Quick return if possible. */
 
-    if (*m == 0 || *n == 0 || *alpha == 0. && *beta == 1.) {
+    if (*m == 0 || *n == 0 || (*alpha == 0. && *beta == 1.)) {
 	return 0;
     }
 
@@ -395,12 +395,12 @@ r
  or   
           upper case 'Z'. */
 
-	if (inta >= 129 && inta <= 137 || inta >= 145 && inta <= 153 || inta 
-		>= 162 && inta <= 169) {
+	if ((inta >= 129 && inta <= 137) || (inta >= 145 && inta <= 153) || (inta 
+		>= 162 && inta <= 169)) {
 	    inta += 64;
 	}
-	if (intb >= 129 && intb <= 137 || intb >= 145 && intb <= 153 || intb 
-		>= 162 && intb <= 169) {
+	if ((intb >= 129 && intb <= 137) || (intb >= 145 && intb <= 153) || (intb 
+		>= 162 && intb <= 169)) {
 	    intb += 64;
 	}
 
@@ -461,7 +461,7 @@ e
    ===================================================================== 
 */
 
-    printf("** On entry to %6s, parameter number %2i had an illegal value\n",
+    printf("** On entry to %6s, parameter number %2ld had an illegal value\n",
 		srname, *info);
 
 /*     End of XERBLA */

@@ -507,6 +507,8 @@ int output_vtk(TABIPBparm *parm, TABIPBvars *vars)
         }
 
         fclose(fp);
+
+        return 0;
 }
 
 
