@@ -38,9 +38,9 @@ void timer_end(void){
     gettimeofday(&pp_tvEnd, NULL);
    my_timeval_subtract(&pp_tvDiff, &pp_tvEnd, &pp_tvBegin);
    if(someconstant!=0)
-   	printf("%d %ld.%06ld \n",someconstant,pp_tvDiff.tv_sec, pp_tvDiff.tv_usec);
+   	printf("%d %ld.%06d \n",someconstant,pp_tvDiff.tv_sec, pp_tvDiff.tv_usec);
    else
-   	printf("%s %ld.%06ld\n ",name,pp_tvDiff.tv_sec, pp_tvDiff.tv_usec);
+   	printf("%s %ld.%06d \n",name,pp_tvDiff.tv_sec, pp_tvDiff.tv_usec);
 
 }
 
