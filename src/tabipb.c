@@ -60,11 +60,11 @@ int tabipb(TABIPBparm *parm, TABIPBvars *vars) {
   long int RESTRT,ldw,ldh,iter,N;
   double resid;
 
-  extern int *matvec(),*psolve();
-  extern int gmres_(long int *n,double *b,double *x,long int *restrt,
-                    double *work,long int *ldw,double *h,long int *ldh,
-                    long int *iter,double *resid,int (*matvec) (),
-                    int (*psolve) (),long int *info);
+  extern int matvec(), psolve();
+  extern int gmres_(long int *n, double *b, double *x, long int *restrt,
+                    double *work, long int *ldw, double *h, long int *ldh,
+                    long int *iter, double *resid, int (*matvec)(),
+                    int (*psolve)(), long int *info);
 
   printf("\n Treecode order: %d", parm->order);
   printf("\n Max # of nodes: %d", parm->maxparnode);
@@ -109,7 +109,7 @@ int tabipb(TABIPBparm *parm, TABIPBvars *vars) {
   h = (double *) calloc(ldh * (RESTRT + 2), sizeof(double));
 
   gmres_(&N, bvct, xvct, &RESTRT, work, &ldw, h, &ldh, &iter,
-         &resid, matvec, psolve, &info);
+         &resid, &matvec, psolve, &info);
 
   /* the solvation energy computation */
   units_para = 2.0;
@@ -155,7 +155,7 @@ int tabipb(TABIPBparm *parm, TABIPBvars *vars) {
 }
 
 /************************************/
-int *psolve(double *z, double *r) {
+int psolve(double *z, double *r) {
 /* r as original while z as scaled */
 
         int i;

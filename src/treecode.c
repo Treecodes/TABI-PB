@@ -628,7 +628,7 @@ int partition(double *a,double *b,double *c,double *q,int *indarr,int ibeg,
   return (midind);
 }
 /********************************************************/
-int *matvec(double *alpha, double *tpoten_old, double *beta, double *tpoten){
+int matvec(double *alpha, double *tpoten_old, double *beta, double *tpoten){
 /* the main part of treecode */
 /* in gmres *matvec(Alpha, X, Beta, Y) where y := alpha*A*x + beta*y */
   /* local variables */
