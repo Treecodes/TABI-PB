@@ -28,7 +28,7 @@ typedef struct sTABIPBparm {
 
   /* molecule ID */
   char fpath[256];
-  char fname[5];
+  char fname[256];
   double density;
   double probe_radius;
 
