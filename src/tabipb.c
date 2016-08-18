@@ -129,6 +129,7 @@ int tabipb(TABIPBparm *parm, TABIPBvars *vars) {
   }
 
   for (i = 0; i < natm; i++){
+//  for (i = 0; i < 10; i++){
     r[0] = chrpos[3*i];
     r[1] = chrpos[3*i+1];
     r[2] = chrpos[3*i+2];
@@ -141,6 +142,7 @@ int tabipb(TABIPBparm *parm, TABIPBvars *vars) {
                 + diff[2]*diff[2]);
       couleng += 1/parm->epsp/dist*atmchr[i]*atmchr[j];
     }
+//    printf("the couleng is %f,%f\n",couleng,dist);
   }
 
   soleng = soleng * units_para;
@@ -399,10 +401,13 @@ int output_potential(TABIPBvars *vars) {
         vars->max_der_xvct = maxval(xvct + nface, nface);
         vars->min_der_xvct = minval(xvct + nface, nface);
 
-        vars->max_vert_ptl = maxval(vars->vert_ptl, nface);
-        vars->min_vert_ptl = minval(vars->vert_ptl, nface);
-        vars->max_der_vert_ptl = maxval(vars->vert_ptl + nface, nface);
-        vars->min_der_vert_ptl = minval(vars->vert_ptl + nface, nface);
+        vars->max_vert_ptl = maxval(vars->vert_ptl, nspt);
+        vars->min_vert_ptl = minval(vars->vert_ptl, nspt);
+        vars->max_der_vert_ptl = maxval(vars->vert_ptl + nspt, nspt);
+        vars->min_der_vert_ptl = minval(vars->vert_ptl + nspt, nspt);
+
+printf("the max and min is %f %f\n",maxval(vars->vert_ptl + nspt, nspt),
+       minval(vars->vert_ptl + nspt, nspt));
 
         vars->nface = nface;
         vars->nspt = nspt;
