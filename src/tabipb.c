@@ -43,7 +43,7 @@ int tabipb(TABIPBparm *parm, TABIPBvars *vars) {
 
   extern void readin();
   extern double potential_molecule(double s[3]);
-  extern int comp_source();
+  extern int comp_source(TABIPBparm *parm);
   extern int output_potential();
 
   /* variables used to compute potential solution */
@@ -89,7 +89,9 @@ int tabipb(TABIPBparm *parm, TABIPBvars *vars) {
 
   readin(parm, vars);
 
-  comp_source();
+  bvct = (double *) calloc(2*nface, sizeof(double));
+  comp_source(parm);
+
   /* tr_xyz=[x[i],y[i],z[i]] */
   /* tr_q=[qx[i],qy[i],qz[i]] */
 
@@ -195,7 +197,7 @@ int *psolve(double *z, double *r) {
 }
 
 /************************************/
-int comp_source() {
+int comp_source(TABIPBparm *parm) {
 /* this compute the source term where
  * S1=sum(qk*G0)/e1 S2=sim(qk*G0')/e1 */
 
@@ -230,8 +232,8 @@ int comp_source() {
                         G1 = cos_theta * tp1;
 
   /* update bvct */
-                        bvct[i] += atmchr[j] * G0;
-                        bvct[nface + i] += atmchr[j] * G1;
+                        bvct[i] += atmchr[j] * G0 / parm->epsp;
+                        bvct[nface + i] += atmchr[j] * G1 / parm->epsp;
                 }
         }
 
@@ -406,9 +408,6 @@ int output_potential(TABIPBvars *vars) {
         vars->max_der_vert_ptl = maxval(vars->vert_ptl + nspt, nspt);
         vars->min_der_vert_ptl = minval(vars->vert_ptl + nspt, nspt);
 
-printf("the max and min is %f %f\n",maxval(vars->vert_ptl + nspt, nspt),
-       minval(vars->vert_ptl + nspt, nspt));
-
         vars->nface = nface;
         vars->nspt = nspt;
         make_matrix(vars->vert, 3, nspt);
@@ -470,7 +469,7 @@ int output_print(TABIPBvars *vars)
 /************************************/
 int output_vtk(TABIPBparm *parm, TABIPBvars *vars)
 {
-        char i_char1[20], i_char2[20], i_char3[20], nspt_str[20], 
+        char i_char1[20], i_char2[20], i_char3[20], nspt_str[20],
              nface_str[20], nface4_str[20];
         int i;
 

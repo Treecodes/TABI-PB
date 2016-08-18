@@ -55,6 +55,7 @@ int readin(TABIPBparm *parm, TABIPBvars *vars)
 
         int i, j, k, i1, i2, i3, j1, j2, j3, ii, jj, kk;
         int nfacenew, ichanged, ierr;
+        int natm_msms;
 
         int namelength = 4;
 
@@ -87,8 +88,8 @@ int readin(TABIPBparm *parm, TABIPBvars *vars)
         ierr = system(fname_tp);
 
   /* Run NanoShaper */
-        } else if (parm->mesh_flag == 1 || 
-                   parm->mesh_flag == 2 || 
+        } else if (parm->mesh_flag == 1 ||
+                   parm->mesh_flag == 2 ||
                    parm->mesh_flag == 3) {
                 nsfp = fopen("surfaceConfiguration.prm", "w");
                 fprintf(nsfp, "Grid_scale = %f\n", parm->density);
@@ -99,7 +100,7 @@ int readin(TABIPBparm *parm, TABIPBvars *vars)
                 fprintf(nsfp, "Save_Mesh_MSMS_Format = true\n");
                 fprintf(nsfp, "Compute_Vertex_Normals = true\n");
 
-                if (parm->mesh_flag == 1) 
+                if (parm->mesh_flag == 1)
                         fprintf(nsfp, "Surface = ses\n");
                 else if (parm->mesh_flag == 2)
                         fprintf(nsfp, "Surface = skin\n");
@@ -161,9 +162,9 @@ int readin(TABIPBparm *parm, TABIPBvars *vars)
 
 
         if (parm->mesh_flag == 0) {
-                ierr = fscanf(fp,"%d %d %lf %lf ",&nspt,&natm,&den,&prob_rds);
+                ierr = fscanf(fp,"%d %d %lf %lf ",&nspt,&natm_msms,&den,&prob_rds);
         } else if (parm->mesh_flag == 1 ||
-                   parm->mesh_flag == 2 || 
+                   parm->mesh_flag == 2 ||
                    parm->mesh_flag == 3) {
                 ierr = fscanf(fp,"%d ",&nspt);
         }
@@ -213,11 +214,11 @@ int readin(TABIPBparm *parm, TABIPBvars *vars)
 
 
         if (parm->mesh_flag == 0) {
-                ierr=fscanf(fp,"%d %d %lf %lf ",&nface,&natm,&den,&prob_rds);
+                ierr=fscanf(fp,"%d %d %lf %lf ",&nface,&natm_msms,&den,&prob_rds);
                 //printf("nface=%d, natm=%d, den=%lf, prob=%lf\n", nface,natm,den,prob_rds);
 
-        } else if (parm->mesh_flag == 1 || 
-                   parm->mesh_flag == 2 || 
+        } else if (parm->mesh_flag == 1 ||
+                   parm->mesh_flag == 2 ||
                    parm->mesh_flag == 3) {
                 ierr=fscanf(fp,"%d ",&nface);
                 //printf("nface=%d, natm=%d, den=%lf, prob=%lf\n", nface,natm,den,prob_rds);
@@ -288,15 +289,15 @@ int readin(TABIPBparm *parm, TABIPBvars *vars)
                         dist_local = sqrt(dist_local);
 
                         if (dist_local < 1e-5) {
-                                printf("particles %d and %d are too close: %e\n",
-                                                i,j,dist_local);
+//                                printf("particles %d and %d are too close: %e\n",
+//                                                i,j,dist_local);
                                 goto exit;
                         }
                 }
 
                 if (area_local < 1e-5) {
-                        printf("Triangle %d has small area: %e\n",
-                               i, area_local);
+//                        printf("Triangle %d has small area: %e\n",
+//                               i, area_local);
                         goto exit;
                 }
 
@@ -332,7 +333,6 @@ int readin(TABIPBparm *parm, TABIPBvars *vars)
         tr_xyz = (double *) calloc(3*nface, sizeof(double));
         tr_q = (double *) calloc(3*nface, sizeof(double));
         tr_area = (double *) calloc(nface, sizeof(double));
-        bvct = (double *) calloc(2*nface, sizeof(double));
 
         for (i = 0; i < nface; i++) {
                 for (j = 0; j < 3; j++)

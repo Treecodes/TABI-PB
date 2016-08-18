@@ -12,7 +12,7 @@
  * Works for Sphinx by Jiahui at 7/14/2016
  * Rebuild the architecture of wrapper by Jiahui at 6/30/2016
  * Build matrix free and nanoshaper by Leighton at 6/23/2016
- * 
+ *
  */
 
 #include "TABIPBstruct.h"
@@ -50,43 +50,42 @@ int main(int argc, char **argv)
 
   fp = fopen("usrdata.in", "r");
         ierr = fscanf(fp, "%s %s", c, main_parm->fname);
-        
+
         ierr = fscanf(fp, "%s %lf", c, &density);
         main_parm->density = density;
 
         ierr = fscanf(fp, "%s %lf", c, &radius);
         main_parm->probe_radius = radius;
-        
+
         ierr = fscanf(fp, "%s %lf", c, &epsp);
         main_parm->epsp = epsp;
 
         ierr = fscanf(fp, "%s %lf", c, &epsw);
         main_parm->epsw = epsw;
-        
+
         ierr = fscanf(fp, "%s %lf", c, &bulk_strength);
         main_parm->bulk_strength = bulk_strength;
 
         ierr = fscanf(fp, "%s %lf", c, &temp);
         main_parm->temp = temp;
-        
+
         ierr = fscanf(fp, "%s %d", c, &order);
         main_parm->order = order;
-        
+
         ierr = fscanf(fp, "%s %d", c, &maxparnode);
         main_parm->maxparnode = maxparnode;
-        
+
         ierr = fscanf(fp, "%s %lf", c, &theta);
         main_parm->theta = theta;
-        
+
         ierr = fscanf(fp, "%s %d", c, &mesh_flag);
         main_parm->mesh_flag = mesh_flag;
-        
+
         ierr = fscanf(fp, "%s %d", c, &output_datafile);
         main_parm->output_datafile = output_datafile;
   fclose(fp);
 
 /********************************************************/
-
   sprintf(main_parm->fpath, "");
 
   sprintf(fname_tp, "%s%s.pqr", main_parm->fpath, main_parm->fname);
