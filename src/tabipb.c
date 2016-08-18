@@ -39,11 +39,11 @@ int tabipb(TABIPBparm *parm, TABIPBvars *vars) {
   /* variables local to main */
   int i, j, k;
   double s[3], pot = 0.0, sum = 0.0, pot_temp = 0.0;
-  double ptl, soleng, t1, t2;
+  double ptl, soleng, couleng, t1, t2;
 
   extern void readin();
   extern double potential_molecule(double s[3]);
-  extern int comp_source();
+  extern int comp_source(TABIPBparm *parm);
   extern int output_potential();
 
   /* variables used to compute potential solution */
@@ -89,7 +89,9 @@ int tabipb(TABIPBparm *parm, TABIPBvars *vars) {
 
   readin(parm, vars);
 
-  comp_source();
+  bvct = (double *) calloc(2*nface, sizeof(double));
+  comp_source(parm);
+
   /* tr_xyz=[x[i],y[i],z[i]] */
   /* tr_q=[qx[i],qy[i],qz[i]] */
 
@@ -120,12 +122,35 @@ int tabipb(TABIPBparm *parm, TABIPBvars *vars) {
   comp_pot(chrptl);
 
   soleng = 0.0;
+  couleng = 0.0;
 
-  for (int i = 0; i < nface; i++)
-          soleng = soleng + chrptl[i];
+  double r[3], diff[k], dist;
+
+  for (int i = 0; i < nface; i++){
+    soleng += chrptl[i];
+  }
+
+  for (i = 0; i < natm; i++){
+//  for (i = 0; i < 10; i++){
+    r[0] = chrpos[3*i];
+    r[1] = chrpos[3*i+1];
+    r[2] = chrpos[3*i+2];
+    for (j = i+1; j < natm; j++){
+      diff[0] = r[0] - chrpos[3*j];
+      diff[1] = r[1] - chrpos[3*j+1];
+      diff[2] = r[2] - chrpos[3*j+2];
+      dist = sqrt(diff[0]*diff[0]
+                + diff[1]*diff[1]
+                + diff[2]*diff[2]);
+      couleng += 1/parm->epsp/dist*atmchr[i]*atmchr[j];
+    }
+//    printf("the couleng is %f,%f\n",couleng,dist);
+  }
 
   soleng = soleng * units_para;
+  couleng = couleng * units_coef;
   vars->soleng = soleng;
+  vars->couleng = couleng;
   //printf("\nSolvation energy = %f kcal/mol\n\n", soleng);
 
   output_potential(vars);
@@ -172,7 +197,7 @@ int psolve(double *z, double *r) {
 }
 
 /************************************/
-int comp_source() {
+int comp_source(TABIPBparm *parm) {
 /* this compute the source term where
  * S1=sum(qk*G0)/e1 S2=sim(qk*G0')/e1 */
 
@@ -207,8 +232,8 @@ int comp_source() {
                         G1 = cos_theta * tp1;
 
   /* update bvct */
-                        bvct[i] += atmchr[j] * G0;
-                        bvct[nface + i] += atmchr[j] * G1;
+                        bvct[i] += atmchr[j] * G0 / parm->epsp;
+                        bvct[nface + i] += atmchr[j] * G1 / parm->epsp;
                 }
         }
 
@@ -378,10 +403,10 @@ int output_potential(TABIPBvars *vars) {
         vars->max_der_xvct = maxval(xvct + nface, nface);
         vars->min_der_xvct = minval(xvct + nface, nface);
 
-        vars->max_vert_ptl = maxval(vars->vert_ptl, nface);
-        vars->min_vert_ptl = minval(vars->vert_ptl, nface);
-        vars->max_der_vert_ptl = maxval(vars->vert_ptl + nface, nface);
-        vars->min_der_vert_ptl = minval(vars->vert_ptl + nface, nface);
+        vars->max_vert_ptl = maxval(vars->vert_ptl, nspt);
+        vars->min_vert_ptl = minval(vars->vert_ptl, nspt);
+        vars->max_der_vert_ptl = maxval(vars->vert_ptl + nspt, nspt);
+        vars->min_der_vert_ptl = minval(vars->vert_ptl + nspt, nspt);
 
         vars->nface = nface;
         vars->nspt = nspt;
@@ -412,7 +437,8 @@ int output_print(TABIPBvars *vars)
 {
         int i;
 
-        printf("\nSolvation energy = %f kcal/mol\n\n", vars->soleng);
+        printf("\nSolvation energy = %f kcal/mol", vars->soleng);
+        printf("\nFree energy = %f kcal/mol\n\n", vars->soleng+vars->couleng);
         printf("The max and min potential and normal derivatives on elements area:\n");
         printf("potential %f %f\n", vars->max_xvct, vars->min_xvct);
         printf("norm derv %f %f\n\n", vars->max_der_xvct,
@@ -443,7 +469,7 @@ int output_print(TABIPBvars *vars)
 /************************************/
 int output_vtk(TABIPBparm *parm, TABIPBvars *vars)
 {
-        char i_char1[20], i_char2[20], i_char3[20], nspt_str[20], 
+        char i_char1[20], i_char2[20], i_char3[20], nspt_str[20],
              nface_str[20], nface4_str[20];
         int i;
 
