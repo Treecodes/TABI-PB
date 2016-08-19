@@ -70,12 +70,20 @@ file(MAKE_DIRECTORY build/bin)
 
 include_directories("/src")
 
-# C code for standalone
-add_executable(tabipb
-  src/main.c src/tabipb.c src/gmres.c src/daxpy.c src/dcopy.c src/ddot.c
-  src/dgemv.c src/dnrm2.c src/drot.c src/drotg.c src/dscal.c src/d_sign.c
-  src/dtrsv.c src/readin.c src/pp_timer.c src/treecode.c
-  src/xmalloc.c)
+# C code for standalone; don't include pp_timer.c in Windows version
+  if(WIN32)
+        add_executable(tabipb
+          src/main.c src/tabipb.c src/gmres.c src/daxpy.c src/dcopy.c src/ddot.c
+          src/dgemv.c src/dnrm2.c src/drot.c src/drotg.c src/dscal.c src/d_sign.c
+          src/dtrsv.c src/readin.c src/treecode.c
+          src/xmalloc.c)
+  else()
+        add_executable(tabipb
+          src/main.c src/tabipb.c src/gmres.c src/daxpy.c src/dcopy.c src/ddot.c
+          src/dgemv.c src/dnrm2.c src/drot.c src/drotg.c src/dscal.c src/d_sign.c
+          src/dtrsv.c src/readin.c src/pp_timer.c src/treecode.c
+          src/xmalloc.c)
+  endif()
 
 
 ################################################
@@ -120,8 +128,7 @@ if(ENABLE_TABIPB_APBS)
   set (LIBFILES
     src/TABIPBWrap.c src/tabipb.c src/gmres.c src/daxpy.c src/dcopy.c src/ddot.c
     src/dgemv.c src/dnrm2.c src/drot.c src/drotg.c src/dscal.c src/d_sign.c
-    src/dtrsv.c src/readin.c src/pp_timer.c src/treecode.c
-    src/xmalloc.c)
+    src/dtrsv.c src/readin.c src/treecode.c src/xmalloc.c)
 
   message(***** ${CMAKE_INSTALL_PREFIX} *****)
 
@@ -150,7 +157,10 @@ if(ENABLE_TABIPB_APBS)
 
 endif()
 
-target_link_libraries(tabipb m)
+#Math linking is unnecessary for Windows
+if(NOT WIN32)
+    target_link_libraries(tabipb m)
+endif()
 
 ################################################
 ###### Install
