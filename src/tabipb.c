@@ -170,7 +170,7 @@ int tabipb(TABIPBparm *parm, TABIPBvars *vars) {
 //  free(atmchr);
 //  free(atmrad);
 //  free(chrpos);
-  free(chrptl);
+//  free(chrptl);
 
   /* dellocate treecode variables */
   treecode_finalization();
