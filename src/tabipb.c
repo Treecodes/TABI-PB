@@ -124,7 +124,7 @@ int tabipb(TABIPBparm *parm, TABIPBvars *vars) {
   soleng = 0.0;
   couleng = 0.0;
 
-  double r[3], diff[k], dist;
+  double r[3], diff[3], dist;
 
   for (int i = 0; i < nface; i++){
     soleng += chrptl[i];
