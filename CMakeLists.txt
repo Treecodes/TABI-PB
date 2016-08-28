@@ -70,6 +70,20 @@ file(MAKE_DIRECTORY build/bin)
 
 include_directories("/src")
 
+  # FFLAGS depend on the compiler
+#  get_filename_component (C_COMPILER_NAME ${CMAKE_C_COMPILER} NAME)
+#
+#  if (C_COMPILER_NAME MATCHES "gcc.*")
+#    set (CMAKE_C_FLAGS_RELEASE "-c -O3")
+#    set (CMAKE_C_FLAGS_DEBUG   "")
+#  elseif (C_COMPILER_NAME MATCHES "icc.*")
+#    set (CMAKE_C_FLAGS_RELEASE "-fast -c")
+#    set (CMAKE_C_FLAGS_DEBUG   "")
+#  else ()
+#    message ("CMAKE_C_COMPILER full path: " ${CMAKE_C_COMPILER})
+#    message ("C compiler: " ${C_COMPILER_NAME})
+#  endif ()
+
 # C code for standalone; don't include pp_timer.c in Windows version
   if(WIN32)
         add_executable(tabipb
