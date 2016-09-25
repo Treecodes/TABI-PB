@@ -15,6 +15,7 @@
  *
  */
 
+#include <string.h>
 #include "TABIPBstruct.h"
 
 int main(int argc, char **argv)
@@ -101,14 +102,17 @@ int main(int argc, char **argv)
   wfp=fopen(fname_tp, "w");
   int ch;// main_parm->number_of_lines = 0;
 
-  while(fscanf(fp, "%s %s %s %s %s %lf %lf %lf %lf %lf",
+  while (fscanf(fp, "%s %s %s %s %s %lf %lf %lf %lf %lf",
                c1, c2, c3, c4, c5, &a1, &a2, &a3, &b1, &b2) != EOF) {
-    fprintf(wfp, "%f %f %f %f\n", a1, a2, a3, b2);
-    main_parm->number_of_lines++;
+      if (strncmp(c1, "ATOM", 4) == 0) {
+          fprintf(wfp, "%f %f %f %f\n", a1, a2, a3, b2);
+          main_parm->number_of_lines++;
+      }
   }
 
   fclose(fp);
   fclose(wfp);
+  printf("Finished assembling atomic information (.xyzr) file...\n");
 
   sprintf(fname_tp, "%s%s.pqr", main_parm->fpath, main_parm->fname);
   fp = fopen(fname_tp, "r");
@@ -134,7 +138,7 @@ int main(int argc, char **argv)
   }
 
   fclose(fp);
-  printf("Finished assembling charge (.pqr) file...\n");
+  printf("Finished assembling charge structures from .pqr file...\n");
 
   ierr=tabipb(main_parm, main_vars);
 

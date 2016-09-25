@@ -38,26 +38,32 @@ int tabipb(TABIPBparm *parm, TABIPBvars *vars) {
 
   /* variables local to main */
   int i, j, k;
-  double s[3], pot = 0.0, sum = 0.0, pot_temp = 0.0;
-  double ptl, soleng, couleng, t1, t2;
+  double s[3];
+  double pot = 0.0; 
+  double sum = 0.0; 
+  double pot_temp = 0.0;
+  double ptl; 
+  double soleng = 0.0; 
+  double couleng = 0.0;
+  double t1, t2;
 
   extern void readin();
   extern double potential_molecule(double s[3]);
-  extern int comp_source(TABIPBparm *parm);
+  extern int comp_source(TABIPBparm *parm, TABIPBvars *vars);
   extern int output_potential();
 
   /* variables used to compute potential solution */
   double units_para;
   double *chrptl;
-  extern int comp_pot(double *chrptl);
+  extern int comp_pot(TABIPBvars *vars, double *chrptl);
 
   /* variables used in treecode */
-  extern int treecode_initialization(int order,int maxparnode,double theta);
+  extern int treecode_initialization(int order, int maxparnode, double theta);
   extern int treecode_finalization();
 
   /* GMRES related variables */
   static long int info;
-  long int RESTRT,ldw,ldh,iter,N;
+  long int RESTRT, ldw, ldh, iter, N;
   double resid;
 
   extern int matvec(), psolve();
@@ -83,17 +89,14 @@ int tabipb(TABIPBparm *parm, TABIPBvars *vars) {
   kappa = sqrt(kappa2);
 
   /*read charge coodinates, charges and radius*/
-  chrpos = &vars->chrpos[0];
-  atmchr = &vars->atmchr[0];
-  atmrad = &vars->atmrad[0];
+  //chrpos = &vars->chrpos[0];
+  //atmchr = &vars->atmchr[0];
+  //atmrad = &vars->atmrad[0];
 
   readin(parm, vars);
 
   bvct = (double *) calloc(2*nface, sizeof(double));
-  comp_source(parm);
-
-  /* tr_xyz=[x[i],y[i],z[i]] */
-  /* tr_q=[qx[i],qy[i],qz[i]] */
+  comp_source(parm, vars);
 
   /* set up treecode */
   treecode_initialization(parm->order, parm->maxparnode, parm->theta);
@@ -114,12 +117,10 @@ int tabipb(TABIPBparm *parm, TABIPBvars *vars) {
          &resid, &matvec, psolve, &info);
 
   /* the solvation energy computation */
-  units_para = 2.0;
-  units_para = units_para * units_coef;
-  units_para = units_para * pi;
+  units_para = 2.0 * units_coef * pi;
 
   chrptl = (double *) calloc(nface, sizeof(double));
-  comp_pot(chrptl);
+  comp_pot(vars, chrptl);
 
   soleng = 0.0;
   couleng = 0.0;
@@ -132,17 +133,17 @@ int tabipb(TABIPBparm *parm, TABIPBvars *vars) {
 
   for (i = 0; i < natm; i++){
 //  for (i = 0; i < 10; i++){
-    r[0] = chrpos[3*i];
-    r[1] = chrpos[3*i+1];
-    r[2] = chrpos[3*i+2];
+    r[0] = vars->chrpos[3*i];
+    r[1] = vars->chrpos[3*i+1];
+    r[2] = vars->chrpos[3*i+2];
     for (j = i+1; j < natm; j++){
-      diff[0] = r[0] - chrpos[3*j];
-      diff[1] = r[1] - chrpos[3*j+1];
-      diff[2] = r[2] - chrpos[3*j+2];
+      diff[0] = r[0] - vars->chrpos[3*j];
+      diff[1] = r[1] - vars->chrpos[3*j+1];
+      diff[2] = r[2] - vars->chrpos[3*j+2];
       dist = sqrt(diff[0]*diff[0]
                 + diff[1]*diff[1]
                 + diff[2]*diff[2]);
-      couleng += 1/parm->epsp/dist*atmchr[i]*atmchr[j];
+      couleng += 1 / parm->epsp / dist * vars->atmchr[i] * vars->atmchr[j];
     }
 //    printf("the couleng is %f,%f\n",couleng,dist);
   }
@@ -167,10 +168,6 @@ int tabipb(TABIPBparm *parm, TABIPBvars *vars) {
   free(tr_area);
   free(bvct);
   free(xvct);
-//  free(atmchr);
-//  free(atmrad);
-//  free(chrpos);
-//  free(chrptl);
 
   /* dellocate treecode variables */
   treecode_finalization();
@@ -197,8 +194,8 @@ int psolve(double *z, double *r) {
 }
 
 /************************************/
-int comp_source(TABIPBparm *parm) {
-/* this compute the source term where
+int comp_source(TABIPBparm *parm, TABIPBvars *vars) {
+/* this computes the source term where
  * S1=sum(qk*G0)/e1 S2=sim(qk*G0')/e1 */
 
 /* local variables */
@@ -206,15 +203,21 @@ int comp_source(TABIPBparm *parm) {
         double sumrs, cos_theta, irs, G0, G1, tp1;
         double r_s[3];
 
+/* global variables located in gl_variables.h 
+        double *tr_xyz;
+        double *tr_q;  
+        double *bvct;
+ */
+
         for (i = 0; i < nface; i++) {
                 bvct[i] = 0.0;
                 bvct[i + nface] = 0.0;
                 for (j = 0; j < natm; j++) {
 
   /* r_s = distance of charge position to triangular */
-                        r_s[0] = chrpos[3*j] - tr_xyz[3*i];
-                        r_s[1] = chrpos[3*j + 1] - tr_xyz[3*i + 1];
-                        r_s[2] = chrpos[3*j + 2] - tr_xyz[3*i + 2];
+                        r_s[0] = vars->chrpos[3*j] - tr_xyz[3*i];
+                        r_s[1] = vars->chrpos[3*j + 1] - tr_xyz[3*i + 1];
+                        r_s[2] = vars->chrpos[3*j + 2] - tr_xyz[3*i + 2];
                         sumrs = r_s[0]*r_s[0] + r_s[1]*r_s[1] + r_s[2]*r_s[2];
 
   /* cos_theta = <tr_q,r_s>/||r_s||_2 */
@@ -232,8 +235,8 @@ int comp_source(TABIPBparm *parm) {
                         G1 = cos_theta * tp1;
 
   /* update bvct */
-                        bvct[i] += atmchr[j] * G0 / parm->epsp;
-                        bvct[nface + i] += atmchr[j] * G1 / parm->epsp;
+                        bvct[i] += vars->atmchr[j] * G0 / parm->epsp;
+                        bvct[nface + i] += vars->atmchr[j] * G1 / parm->epsp;
                 }
         }
 
@@ -243,12 +246,19 @@ int comp_source(TABIPBparm *parm) {
 /************************************/
 
 /************************************/
-int comp_pot(double *chrptl) {
+int comp_pot(TABIPBvars *vars, double *chrptl) {
   /* local variables */
         int i, j;
         double sumrs, irs, rs, G0, Gk, kappa_rs, exp_kappa_rs;
         double cos_theta, G1, G2, L1, L2, tp1, tp2;
         double r[3], v[3], s[3], r_s[3];
+
+  /* global variables from gl_variables.h 
+        double *xvct;
+        double *tr_area;
+        double *tr_xyz;
+        double *tr_q
+  */
 
         for (j = 0; j < nface; j++) {
                 chrptl[j] = 0.0;
@@ -264,9 +274,9 @@ int comp_pot(double *chrptl) {
 
                 for (i = 0; i < natm; i++) {
   /* s = chrpos[] & r_s = r[]-s[] */
-                        s[0] = chrpos[3*i];
-                        s[1] = chrpos[3*i + 1];
-                        s[2] = chrpos[3*i + 2];
+                        s[0] = vars->chrpos[3*i];
+                        s[1] = vars->chrpos[3*i + 1];
+                        s[2] = vars->chrpos[3*i + 2];
 
                         r_s[0] = r[0] - s[0];
                         r_s[1] = r[1] - s[1];
@@ -293,7 +303,7 @@ int comp_pot(double *chrptl) {
                         L1 = G1 - eps * G2;
                         L2 = G0 - Gk;
 
-                        chrptl[j] = chrptl[j] + atmchr[i]
+                        chrptl[j] = chrptl[j] + vars->atmchr[i]
                                     * (L1 * xvct[j] + L2 * xvct[nface+j]) * tr_area[j];
                 }
         }
