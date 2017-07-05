@@ -144,7 +144,7 @@ int tabipb(TABIPBparm *parm, TABIPBvars *vars) {
                 + diff[2]*diff[2]);
       couleng += 1/parm->epsp/dist*atmchr[i]*atmchr[j];
     }
-//    printf("the couleng is %f,%f\n",couleng,dist);
+    printf("the couleng is %f,%f\n",couleng,dist);
   }
 
   soleng = soleng * units_para;
@@ -436,26 +436,27 @@ int output_potential(TABIPBvars *vars) {
 int output_print(TABIPBvars *vars)
 {
         int i;
+        double cal2j = 4.184;
 
-        printf("\nSolvation energy = %f kcal/mol", vars->soleng);
-        printf("\nFree energy = %f kcal/mol\n\n", vars->soleng+vars->couleng);
+        printf("\nSolvation energy = %f kj/mol", cal2j*vars->soleng);
+        printf("\nFree energy = %f kj/mol\n\n", cal2j*(vars->soleng+vars->couleng));
         printf("The max and min potential and normal derivatives on elements area:\n");
-        printf("potential %f %f\n", vars->max_xvct, vars->min_xvct);
-        printf("norm derv %f %f\n\n", vars->max_der_xvct,
-                                      vars->min_der_xvct);
+        printf("potential %f %f\n", cal2j*vars->max_xvct, cal2j*vars->min_xvct);
+        printf("norm derv %f %f\n\n", cal2j*vars->max_der_xvct,
+                                      cal2j*vars->min_der_xvct);
         printf("The max and min potential and normal derivatives on vertices area:\n");
-        printf("potential %f %f\n", vars->max_vert_ptl, vars->min_vert_ptl);
-        printf("norm derv %f %f\n\n", vars->max_der_vert_ptl,
-                                      vars->min_der_vert_ptl);
+        printf("potential %f %f\n", cal2j*vars->max_vert_ptl, cal2j*vars->min_vert_ptl);
+        printf("norm derv %f %f\n\n", cal2j*vars->max_der_vert_ptl,
+                                      cal2j*vars->min_der_vert_ptl);
 
         FILE *fp = fopen("surface_potential.dat", "w");
         fprintf(fp, "%d %d\n", vars->nspt, vars->nface);
 
         for (i = 0; i < nspt; i++)
                 fprintf(fp, "%d %f %f %f %f %f %f %f %f\n", i,
-                        vars->vert[0][i], vars->vert[1][i], vars->vert[2][i],
-                        vars->snrm[0][i], vars->snrm[1][i], vars->snrm[2][i],
-                        vars->vert_ptl[i], vars->vert_ptl[i + nspt]);
+                        cal2j*vars->vert[0][i], cal2j*vars->vert[1][i], cal2j*vars->vert[2][i],
+                        cal2j*vars->snrm[0][i], cal2j*vars->snrm[1][i], cal2j*vars->snrm[2][i],
+                        cal2j*vars->vert_ptl[i], cal2j*vars->vert_ptl[i + nspt]);
 
         for (i = 0; i < nface; i++)
                 fprintf(fp, "%d %d %d\n", vars->face[0][i], vars->face[1][i], vars->face[2][i]);
@@ -472,6 +473,7 @@ int output_vtk(TABIPBparm *parm, TABIPBvars *vars)
         char i_char1[20], i_char2[20], i_char3[20], nspt_str[20],
              nface_str[20], nface4_str[20];
         int i;
+        double cal2j=4.184;
 
         sprintf(nspt_str, "%d", vars->nspt);
         sprintf(nface_str, "%d", vars->nface);
@@ -502,13 +504,13 @@ int output_vtk(TABIPBparm *parm, TABIPBvars *vars)
         fprintf(fp, "SCALARS PotentialVert double\n");
         fprintf(fp, "LOOKUP_TABLE default\n");
         for (i = 0; i < vars->nspt; i++) {
-                fprintf(fp, "%f\n", vars->vert_ptl[i]);
+                fprintf(fp, "%f\n", cal2j*vars->vert_ptl[i]);
         }
 
         fprintf(fp, "SCALARS NormalPotentialVert double\n");
         fprintf(fp, "LOOKUP_TABLE default\n");
         for (i = 0; i < vars->nspt; i++) {
-                fprintf(fp, "%f\n", vars->vert_ptl[nspt + i]);
+                fprintf(fp, "%f\n", cal2j*vars->vert_ptl[nspt + i]);
         }
 
         //if we want induced surface charges, we can multiply vertnorm by (1/eps + 1)
@@ -522,14 +524,14 @@ int output_vtk(TABIPBparm *parm, TABIPBvars *vars)
         fprintf(fp, "SCALARS PotentialFace double\n");
         fprintf(fp, "LOOKUP_TABLE default\n");
         for (i = 0; i < vars->nface; i++) {
-                fprintf(fp, "%f\n", vars->xvct[i]);
+                fprintf(fp, "%f\n", cal2j*vars->xvct[i]);
         }
 
         //if we want induced surface charges, we can multiply vertnorm by (1/eps + 1)
         fprintf(fp, "SCALARS NormalPotentialFace double\n");
         fprintf(fp, "LOOKUP_TABLE default\n");
         for (i = 0; i < vars->nface; i++) {
-                fprintf(fp, "%f\n", vars->xvct[nface + i]);
+                fprintf(fp, "%f\n", cal2j*vars->xvct[nface + i]);
         }
 
         fclose(fp);
