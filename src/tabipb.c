@@ -464,8 +464,8 @@ int output_print(TABIPBvars *vars)
 
         for (i = 0; i < nspt; i++)
                 fprintf(fp, "%d %f %f %f %f %f %f %f %f\n", i,
-                        cal2j*vars->vert[0][i], cal2j*vars->vert[1][i], cal2j*vars->vert[2][i],
-                        cal2j*vars->snrm[0][i], cal2j*vars->snrm[1][i], cal2j*vars->snrm[2][i],
+                        vars->vert[0][i], vars->vert[1][i], vars->vert[2][i],
+                        vars->snrm[0][i], vars->snrm[1][i], vars->snrm[2][i],
                         cal2j*vars->vert_ptl[i], cal2j*vars->vert_ptl[i + nspt]);
 
         for (i = 0; i < nface; i++)
