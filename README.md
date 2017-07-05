@@ -1,7 +1,7 @@
 # TABIPB
 This TABIPB repo serves as a submodule to APBS, and also works as a standalone distribution.
 
-##Build Instructions
+## Build Instructions
 To build as an independent executable:
 ```
 mkdir build
