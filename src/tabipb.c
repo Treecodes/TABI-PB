@@ -82,8 +82,9 @@ int tabipb(TABIPBparm *parm, TABIPBvars *vars) {
   /***************constant*****************/
   pi = 3.14159265358979324;
   one_over_4pi = 0.079577471545948;
+  kcal2j = 4.184;
   bulk_coef = 2529.12179861515279; /* constant without temperature */
-  units_coef = 332.0716;
+  units_coef = 332.0716 * kcal2j;
   eps = parm->epsw/parm->epsp;
   kappa2 = bulk_coef * parm->bulk_strength / parm->epsw / parm->temp;
   kappa = sqrt(kappa2);
@@ -152,7 +153,6 @@ int tabipb(TABIPBparm *parm, TABIPBvars *vars) {
   couleng = couleng * units_coef;
   vars->soleng = soleng;
   vars->couleng = couleng;
-  //printf("\nSolvation energy = %f kcal/mol\n\n", soleng);
 
   output_potential(vars);
 
@@ -446,18 +446,17 @@ int output_potential(TABIPBvars *vars) {
 int output_print(TABIPBvars *vars)
 {
         int i;
-        double cal2j = 4.184;
 
-        printf("\nSolvation energy = %f kj/mol", cal2j*vars->soleng);
-        printf("\nFree energy = %f kj/mol\n\n", cal2j*(vars->soleng+vars->couleng));
+        printf("\nSolvation energy = %f kJ/mol", vars->soleng);
+        printf("\nFree energy = %f kJ/mol\n\n", vars->soleng+vars->couleng);
         printf("The max and min potential and normal derivatives on elements area:\n");
-        printf("potential %f %f\n", cal2j*vars->max_xvct, cal2j*vars->min_xvct);
-        printf("norm derv %f %f\n\n", cal2j*vars->max_der_xvct,
-                                      cal2j*vars->min_der_xvct);
+        printf("potential %f %f\n", vars->max_xvct, vars->min_xvct);
+        printf("norm derv %f %f\n\n", vars->max_der_xvct,
+                                      vars->min_der_xvct);
         printf("The max and min potential and normal derivatives on vertices area:\n");
-        printf("potential %f %f\n", cal2j*vars->max_vert_ptl, cal2j*vars->min_vert_ptl);
-        printf("norm derv %f %f\n\n", cal2j*vars->max_der_vert_ptl,
-                                      cal2j*vars->min_der_vert_ptl);
+        printf("potential %f %f\n", vars->max_vert_ptl, vars->min_vert_ptl);
+        printf("norm derv %f %f\n\n", vars->max_der_vert_ptl,
+                                      vars->min_der_vert_ptl);
 
         FILE *fp = fopen("surface_potential.dat", "w");
         fprintf(fp, "%d %d\n", vars->nspt, vars->nface);
@@ -466,7 +465,7 @@ int output_print(TABIPBvars *vars)
                 fprintf(fp, "%d %f %f %f %f %f %f %f %f\n", i,
                         vars->vert[0][i], vars->vert[1][i], vars->vert[2][i],
                         vars->snrm[0][i], vars->snrm[1][i], vars->snrm[2][i],
-                        cal2j*vars->vert_ptl[i], cal2j*vars->vert_ptl[i + nspt]);
+                        vars->vert_ptl[i], vars->vert_ptl[i + nspt]);
 
         for (i = 0; i < nface; i++)
                 fprintf(fp, "%d %d %d\n", vars->face[0][i], vars->face[1][i], vars->face[2][i]);
