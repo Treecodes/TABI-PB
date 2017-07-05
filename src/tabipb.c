@@ -144,7 +144,7 @@ int tabipb(TABIPBparm *parm, TABIPBvars *vars) {
                 + diff[2]*diff[2]);
       couleng += 1/parm->epsp/dist*atmchr[i]*atmchr[j];
     }
-    printf("the couleng is %f,%f\n",couleng,dist);
+    //printf("the couleng is %f,%f\n",couleng,dist);
   }
 
   soleng = soleng * units_para;
