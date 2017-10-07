@@ -23,248 +23,235 @@
 #include "treecode.h"
 
 
-int treecode_initialization(int main_order,int main_maxparnode,double main_theta) {
-  /* set up variables used in treecode */
-  /* local variables*/
-  int level, ierr, err, i, j, k, mm, nn, idx, ijk[3];
+int treecode_initialization(int main_order, int main_maxparnode, double main_theta) {
+    /* set up variables used in treecode */
+    /* local variables*/
+    int level, ierr, err, i, j, k, mm, nn, idx, ijk[3];
 
-  /* variables needed for cpu time */
-  double totaltime, timetree;
-  double *temp_a, *temp_b;
-  double *temp_q;
+    /* variables needed for cpu time */
+    double totaltime, timetree;
+    double *temp_a, *temp_b;
+    double *temp_q;
 
-  extern int setup();
-  extern int create_tree();
+    extern int setup();
+    extern int create_tree();
 
-  printf("\nInitializing treecode...\n");
+    printf("\nInitializing treecode...\n");
 
-  numpars=nface;
-  order=main_order;
+    numpars=nface;
+    order=main_order;
 
-  /* creating tree */
-  level=0;
-  minlevel=50000;
-  maxlevel=0;
-  maxparnode=main_maxparnode;
-  theta=main_theta;
+    /* creating tree */
+    level=0;
+    minlevel=50000;
+    maxlevel=0;
+    maxparnode=main_maxparnode;
+    theta=main_theta;
 
 
-  /* initialize kk */
-  kk[0][0]=0; kk[0][1]=0; kk[0][2]=0; /* Original Kernel */
 
-  kk[1][0]=1; kk[1][1]=0; kk[1][2]=0; /* 1st Order */
-  kk[2][0]=0; kk[2][1]=1; kk[2][2]=0;
-  kk[3][0]=0; kk[3][1]=0; kk[3][2]=1;
-
-  kk[4][0]=1; kk[4][1]=0; kk[4][2]=0;
-  kk[5][0]=0; kk[5][1]=1; kk[5][2]=0;
-  kk[6][0]=0; kk[6][1]=0; kk[6][2]=1;
-
-  kk[7][0]=2; kk[7][1]=0; kk[7][2]=0;
-  kk[8][0]=1; kk[8][1]=1; kk[8][2]=0;
-  kk[9][0]=1; kk[9][1]=0; kk[9][2]=1;
-  kk[10][0]=1; kk[10][1]=1; kk[10][2]=0;
-  kk[11][0]=0; kk[11][1]=2; kk[11][2]=0;
-  kk[12][0]=0; kk[12][1]=1; kk[12][2]=1;
-  kk[13][0]=1; kk[13][1]=0; kk[13][2]=1;
-  kk[14][0]=0; kk[14][1]=1; kk[14][2]=1;
-  kk[15][0]=0; kk[15][1]=0; kk[15][2]=2;
-
-  /* allocate der_cof */
-  der_cof = (double****) calloc(order+1,sizeof(double***));
-  if (der_cof==NULL){
-    fprintf(stderr, "setup error in treecode_initialization: der_cof");
-    return 1;
-  }
-  for (i=0;i<order+1;i++){
-    der_cof[i] = (double***) calloc(order+1,sizeof(double**));
-    if (der_cof[i]==NULL){
-      fprintf(stderr, "setup error in treecode_initialization: der_cof");
-      return 1;
-    }
-    for (j=0;j<order+1;j++){
-      der_cof[i][j] = (double**) calloc(order+1,sizeof(double*));
-      if (der_cof[i][j]==NULL){
+    /* allocate der_cof */
+    der_cof = (double****) calloc(order+1,sizeof(double***));
+    if (der_cof == NULL) {
         fprintf(stderr, "setup error in treecode_initialization: der_cof");
         return 1;
-      }
-      for (k=0;k<order+1;k++){
-        der_cof[i][j][k] = (double*) calloc(16,sizeof(double));
-        if (der_cof[i][j][k]==NULL){
-          fprintf(stderr, "setup error in treecode_initialization: der_cof");
-          return 1;
-        }
-      }
     }
-  }
-
-  /* the adjustment of der_cof for the recurrance relation */
-
-  for (i=0;i<order+1;i++){
-    for (j=0;j<order+1;j++){
-      for (k=0;k<order+1;k++){
-        for (idx=0;idx<16;idx++){
-          der_cof[i][j][k][idx]=1.0;
+    for (i = 0; i < order+1; i++) {
+        der_cof[i] = (double***) calloc(order+1,sizeof(double**));
+        if (der_cof[i] == NULL) {
+            fprintf(stderr, "setup error in treecode_initialization: der_cof");
+            return 1;
         }
-      }
-    }
-  }
-
-  for (i=0;i<order+1;i++){
-    for (j=0;j<order+1;j++){
-      for (k=0;k<order+1;k++){
-        ijk[0]=i; ijk[1]=j; ijk[2]=k;
-        for (idx=0;idx<16;idx++){
-          for (mm=0;mm<3;mm++){
-            if (kk[idx][mm]!=0){
-              for (nn=0;nn<kk[idx][mm];nn++)
-              /* nn in fortran */
-              der_cof[i][j][k][idx]=der_cof[i][j][k][idx]*(ijk[mm]+(nn+1));
+        for (j = 0; j < order+1; j++) {
+            der_cof[i][j] = (double**) calloc(order+1,sizeof(double*));
+            if (der_cof[i][j] == NULL) {
+                fprintf(stderr, "setup error in treecode_initialization: der_cof");
+                return 1;
             }
-          }
+            for (k = 0; k < order+1; k++) {
+                der_cof[i][j][k] = (double*) calloc(16,sizeof(double));
+                if (der_cof[i][j][k]==NULL){
+                    fprintf(stderr, "setup error in treecode_initialization: der_cof");
+                    return 1;
+                }
+            }
         }
-      }
     }
-  }
 
+    /* the adjustment of der_cof for the recurrence relation */
 
-  for (i=0;i<order+1;i++){
-    for (j=0;j<order+1;j++){
-      for (k=0;k<order+1;k++){
-        for (idx=0;idx<16;idx++){
-          der_cof[i][j][k][idx]=der_cof[i][j][k][idx]*one_over_4pi;
+    for (i = 0; i < order+1; i++) {
+        for (j = 0; j < order+1; j++) {
+            for (k = 0; k < order+1; k++) {
+                for (idx = 0; idx < 16; idx++) {
+                    der_cof[i][j][k][idx] = 1.0;
+                }
+            }
         }
-      }
     }
-  }
 
-  /* set x y z q orderind for treecode */
-  x = (double*)calloc(numpars, sizeof(double));
-  y = (double*)calloc(numpars, sizeof(double));
-  z = (double*)calloc(numpars, sizeof(double));
-  q = (double*)calloc(numpars, sizeof(double));
-  orderind = (int*)calloc(numpars,sizeof(int));
-  if (x==NULL){
-    fprintf(stderr, "setup error in treecode_initialization: x empty data array");
-    return 1;
-  }
-  if (y==NULL){
-    fprintf(stderr, "setup error in treecode_initialization: y empty data array");
-    return 1;
-  }
-  if (z==NULL){
-    fprintf(stderr, "setup error in treecode_initialization: z empty data array");
-    return 1;
-  }
-  if (q==NULL){
-    fprintf(stderr, "setup error in treecode_initialization: q empty data array");
-    return 1;
-  }
-  if (orderind==NULL){
-    fprintf(stderr, "setup error in treecode_initialization: orderind empty data array");
-    return 1;
-  }
-  for (i=0;i<numpars;i++){
-    x[i]=tr_xyz[i*3];
-    y[i]=tr_xyz[i*3+1];
-    z[i]=tr_xyz[i*3+2];
-    q[i]=1.0;
-  }
+    for (i = 0; i < order+1; i++) {
+        ijk[0] = i;
+        for (j = 0; j < order+1; j++) {
+            ijk[1] = j;
+            for (k = 0; k < order+1; k++) {
+                ijk[2] = k;
+                for (idx = 0; idx < 16; idx++) {
+                    for (mm = 0; mm < 3; mm++) {
+                        if (kk[idx][mm] != 0) {
+                            for (nn = 0; nn < kk[idx][mm]; nn++)
+                                /* nn in fortran */
+                                der_cof[i][j][k][idx] *= (ijk[mm] + (nn+1));
+                        }
+                    }
+                }
+            }   
+        }
+    }
 
-  /* set temporary temp_a(numpars), temp_b(2*numpars), temp_q(3*numpars) */
-  temp_a = (double*)calloc(numpars, sizeof(double));
-  temp_b = (double*)calloc(2*numpars, sizeof(double));
-  temp_q = (double*)calloc(3*numpars, sizeof(double));
-  if (temp_a==NULL){
-    fprintf(stderr, "setup error in treecode_initialization: temp_a empty data array");
-    return 1;
-  }
-  if (temp_b==NULL){
-    fprintf(stderr, "setup error in treecode_initialization: temp_b empty data array");
-    return 1;
-  }
-  if (temp_q==NULL){
-    fprintf(stderr, "setup error in treecode_initialization: temp_q empty data array");
-    return 1;
-  }
+
+    for (i = 0; i < order+1; i++) {
+        for (j = 0; j < order+1; j++) {
+            for (k = 0; k < order+1; k++) {
+                for (idx = 0; idx < 16; idx++) {
+                    der_cof[i][j][k][idx] *= one_over_4pi;
+                }
+            }
+        }
+    }
+
+    /* set x y z q orderind for treecode */
+    x = (double*)calloc(numpars, sizeof(double));
+    y = (double*)calloc(numpars, sizeof(double));
+    z = (double*)calloc(numpars, sizeof(double));
+    q = (double*)calloc(numpars, sizeof(double));
+    orderind = (int*)calloc(numpars,sizeof(int));
+  
+    if (x == NULL) {
+        fprintf(stderr, "setup error in treecode_initialization: x empty data array");
+        return 1;
+    }
+    if (y == NULL) {
+        fprintf(stderr, "setup error in treecode_initialization: y empty data array");
+        return 1;
+    }
+    if (z == NULL) {
+        fprintf(stderr, "setup error in treecode_initialization: z empty data array");
+        return 1;
+    }
+    if (q == NULL) {
+        fprintf(stderr, "setup error in treecode_initialization: q empty data array");
+        return 1;
+    }
+    if (orderind == NULL) {
+        fprintf(stderr, "setup error in treecode_initialization: orderind empty data array");
+        return 1;
+    }
+
+    for (i = 0; i < numpars; i++) {
+        x[i] = tr_xyz[i*3];
+        y[i] = tr_xyz[i*3 + 1];
+        z[i] = tr_xyz[i*3 + 2];
+        q[i] = 1.0;
+    }
+
+    /* set temporary temp_a(numpars), temp_b(2*numpars), temp_q(3*numpars) */
+    temp_a = (double*)calloc(numpars, sizeof(double));
+    temp_b = (double*)calloc(2*numpars, sizeof(double));
+    temp_q = (double*)calloc(3*numpars, sizeof(double));
+    
+    if (temp_a == NULL) {
+        fprintf(stderr, "setup error in treecode_initialization: temp_a empty data array");
+        return 1;
+    }
+    if (temp_b == NULL) {
+        fprintf(stderr, "setup error in treecode_initialization: temp_b empty data array");
+        return 1;
+    }
+    if (temp_q == NULL) {
+        fprintf(stderr, "setup error in treecode_initialization: temp_q empty data array");
+        return 1;
+    }
 
 /* Call SETUP to allocate arrays for Taylor expansions */
 /* and setup global variables. Also, copy variables into global copy arrays. */
-  setup(x,y,z,q,numpars,order,iflag,xyzminmax);
+    setup(x, y, z, q, numpars, order, iflag, xyzminmax);
 
-  troot = (tnode*)calloc(1,sizeof(tnode));
-  printf("Creating tree for %d particles with max %d per node\n",numpars,maxparnode);
+    troot = (tnode*)calloc(1,sizeof(tnode));
+    printf("Creating tree for %d particles with max %d per node\n",numpars,maxparnode);
 
-  create_tree(troot,0,numpars-1,xyzminmax,level);
+    create_tree(troot, 0, numpars-1, xyzminmax, level);
 
-  for (i=0;i<numpars;i++){
-    temp_a[i] = tr_area[i];
-    temp_q[3*i] = tr_q[3*i];
-    temp_q[3*i+1] = tr_q[3*i+1];
-    temp_q[3*i+2] = tr_q[3*i+2];
-    temp_b[i] = bvct[i];
-    temp_b[i+numpars] = bvct[i+numpars];
-  }
-  for (i=0;i<numpars;i++){
-    tr_area[i]=temp_a[orderarr[i]];
-    tr_q[3*i]=temp_q[3*orderarr[i]];
-    tr_q[3*i+1]=temp_q[3*orderarr[i]+1];
-    tr_q[3*i+2]=temp_q[3*orderarr[i]+2];
-    bvct[i]=temp_b[orderarr[i]];
-
-    bvct[i+numpars]=temp_b[orderarr[i]+numpars];
-    tr_xyz[3*i]=x[i];
-    tr_xyz[3*i+1]=y[i];
-    tr_xyz[3*i+2]=z[i];
-  }
-
-  free(temp_a);
-  free(temp_b);
-  free(temp_q);
-
-  tchg = (double***) calloc(nface,sizeof(double**));
-  for (i=0;i<nface;i++){
-    tchg[i] = (double**) calloc(2,sizeof(double*));
-    for (j=0;j<2;j++){
-      tchg[i][j] = (double*) calloc(16,sizeof(double));
+    memcpy(temp_a, tr_area, numpars*sizeof(double));
+    memcpy(temp_q, tr_q, 3*numpars*sizeof(double));
+    memcpy(temp_b, bvct, 2*numpars*sizeof(double));
+    
+    for (i = 0; i < numpars; i++) {
+        tr_area[i]        = temp_a[orderarr[i]];
+        tr_q[3*i]         = temp_q[3*orderarr[i]];
+        tr_q[3*i + 1]     = temp_q[3*orderarr[i] + 1];
+        tr_q[3*i + 2]     = temp_q[3*orderarr[i] + 2];
+        bvct[i]           = temp_b[orderarr[i]];
+        bvct[i + numpars] = temp_b[orderarr[i] + numpars];
+        tr_xyz[3*i]       = x[i];
+        tr_xyz[3*i + 1]   = y[i];
+        tr_xyz[3*i + 2]   = z[i];
     }
-  }
 
-  schg = (double***) calloc(nface,sizeof(double**));
-  for (i=0;i<nface;i++){
-    schg[i] = (double**) calloc(2,sizeof(double*));
-    for (j=0;j<2;j++){
-      schg[i][j] = (double*) calloc(16,sizeof(double));
+    free(temp_a);
+    free(temp_b);
+    free(temp_q);
+
+    tchg = (double***) calloc(nface,sizeof(double**));
+    for (i = 0; i < nface; i++) {
+        tchg[i] = (double**) calloc(2,sizeof(double*));
+        for (j = 0; j < 2; j++) {
+            tchg[i][j] = (double*) calloc(16,sizeof(double));
+        }
     }
-  }
 
-  return 0;
+    schg = (double***) calloc(nface,sizeof(double**));
+    for (i = 0; i < nface; i ++) {
+        schg[i] = (double**) calloc(2,sizeof(double*));
+        for (j = 0; j < 2; j++)
+            schg[i][j] = (double*) calloc(16,sizeof(double));
+    }
+
+    return 0;
 }
+
+
+
 /********************************************************/
-double minval(double* variables, int number){
-  int i;
-  double MinVal;
-  MinVal = variables[0];
-  for(i=1;i<number;i++){
-    if(MinVal>variables[i]){
-      MinVal = variables[i];
-    }else{
-      MinVal = MinVal;
+double minval(double *variables, int number) {
+    int i;
+    double MinVal;
+
+    MinVal = variables[0];
+    for (i = 1; i < number; i++) {
+        if (MinVal > variables[i]) {
+            MinVal = variables[i];
+        }
     }
-  }
-  return MinVal;
+    
+    return MinVal;
 }
 
-double maxval(double* variables, int number){
-  int i;
-  double MaxVal;
-  MaxVal = variables[0];
-  for(i=1;i<number;i++){
-    if(MaxVal<variables[i])
-      MaxVal = variables[i];
-  }
-  return MaxVal;
+double maxval(double *variables, int number) {
+    int i;
+    double MaxVal;
+  
+    MaxVal = variables[0];
+    for (i = 1; i < number; i++) {
+        if (MaxVal < variables[i])
+            MaxVal = variables[i];
+    }
+    
+    return MaxVal;
 }
+
+
+
 /********************************************************/
 int setup(double* x,double* y,double* z,double* q,int numpars,
            int order,int iflag,double xyzminmax[6]){
@@ -1073,176 +1060,182 @@ int comp_tcoeff(tnode *p, double kappa){
   return 0;
 }
 /********************************************************/
-int compp_direct_pb(double peng[2],int ibeg,int iend,double *tpoten_old){
+int compp_direct_pb(double peng[2], int ibeg, int iend, double *tpoten_old) {
   /* COMPF_DIRECT directly computes the force on the current target
  * particle determined by the global variable TARPOS.*/
-  int i,j;
-  double dist,dist2,tx,ty,tz,soupos[3],souq[3];
-  double peng_old[2],L1,L2,L3,L4,area,temp_area;
-  double tp[3],tq[3],sp[3],sq[3],r_s[3];
-  double rs,irs,sumrs;
-  double G0,kappa_rs,exp_kappa_rs,Gk;
-  double cos_theta,cos_theta0,tp1,tp2,dot_tqsq;
-  double G10,G20,G1,G2,G3,G4;
+    int i, j;
+    double dist, dist2, tx, ty, tz, soupos[3], souq[3];
+    double peng_old[2], L1, L2, L3, L4, area, temp_area;
+    double tp[3], tq[3], sp[3], sq[3], r_s[3];
+    double rs, irs, sumrs;
+    double G0, kappa_rs, exp_kappa_rs, Gk;
+    double cos_theta, cos_theta0, tp1, tp2, dot_tqsq;
+    double G10, G20, G1, G2, G3, G4;
 
-  peng[0]=0.0;peng[1]=0.0;
+    peng[0] = 0.0;
+    peng[1] = 0.0;
 
-  for (j=ibeg;j<iend+1;j++){
-    tp[0]=tarpos[0];tp[1]=tarpos[1];tp[2]=tarpos[2];
-    tq[0]=tarq[0];tq[1]=tarq[1];tq[2]=tarq[2];
+    for (j = ibeg; j < iend+1; j++) {
+        tp[0] = tarpos[0];  tp[1] = tarpos[1];    tp[2] = tarpos[2];
+        tq[0] = tarq[0];    tq[1] = tarq[1];      tq[2] = tarq[2];
 
-    sp[0]=x[j];sp[1]=y[j];sp[2]=z[j];
-    sq[0]=tr_q[3*j];sq[1]=tr_q[3*j+1];sq[2]=tr_q[3*j+2];
+        sp[0] = x[j];       sp[1] = y[j];         sp[2] = z[j];
+        sq[0] = tr_q[3*j];  sq[1]=tr_q[3*j + 1];  sq[2] = tr_q[3*j + 2];
 
-    r_s[0]=sp[0]-tp[0];r_s[1]=sp[1]-tp[1];r_s[2]=sp[2]-tp[2];
-    sumrs=r_s[0]*r_s[0]+r_s[1]*r_s[1]+r_s[2]*r_s[2];
-    rs=sqrt(sumrs);
-    irs=1/rs;
-    G0=one_over_4pi*irs;
-    kappa_rs=kappa*rs;
-    exp_kappa_rs=exp(-kappa_rs);
-    Gk=exp_kappa_rs*G0;
+        r_s[0] = sp[0]-tp[0];  r_s[1] = sp[1]-tp[1];  r_s[2] = sp[2]-tp[2];
+        sumrs = r_s[0]*r_s[0] + r_s[1]*r_s[1] + r_s[2]*r_s[2];
+        rs = sqrt(sumrs);
+        irs = 1.0/rs;
+        G0 = one_over_4pi * irs;
+        kappa_rs = kappa * rs;
+        exp_kappa_rs = exp(-kappa_rs);
+        Gk = exp_kappa_rs * G0;
 
-    cos_theta =(sq[0]*r_s[0]+sq[1]*r_s[1]+sq[2]*r_s[2])*irs;
-    cos_theta0=(tq[0]*r_s[0]+tq[1]*r_s[1]+tq[2]*r_s[2])*irs;
-    tp1=G0*irs;
-    tp2=(1.0+kappa_rs)*exp_kappa_rs;
+        cos_theta  = (sq[0]*r_s[0] + sq[1]*r_s[1] + sq[2]*r_s[2]) * irs;
+        cos_theta0 = (tq[0]*r_s[0] + tq[1]*r_s[1] + tq[2]*r_s[2]) * irs;
+        tp1 = G0* irs;
+        tp2 = (1.0 + kappa_rs) * exp_kappa_rs;
 
-    G10=cos_theta0*tp1;
-    G20=tp2*G10;
+        G10 = cos_theta0 * tp1;
+        G20 = tp2 * G10;
 
-    G1=cos_theta*tp1;
-    G2=tp2*G1;
+        G1 = cos_theta * tp1;
+        G2 = tp2 * G1;
 
-    dot_tqsq=sq[0]*tq[0]+sq[1]*tq[1]+sq[2]*tq[2];
-    G3=(dot_tqsq-3.0*cos_theta0*cos_theta)*irs*tp1;
-    G4=tp2*G3-kappa2*cos_theta0*cos_theta*Gk;
+        dot_tqsq = sq[0]*tq[0] + sq[1]*tq[1] + sq[2]*tq[2];
+        G3 = (dot_tqsq - 3.0*cos_theta0*cos_theta) * irs*tp1;
+        G4 = tp2*G3 - kappa2*cos_theta0*cos_theta*Gk;
 
-    L1=G1-eps*G2;
-    L2=G0-Gk;
-    L3=G4-G3;
-    L4=G10-G20/eps;
+        L1 = G1 - eps*G2;
+        L2 = G0 - Gk;
+        L3 = G4 - G3;
+        L4 = G10 - G20/eps;
 
-    peng_old[0]=tpoten_old[j];peng_old[1]=tpoten_old[j+numpars];
-    area=tr_area[j];
+        peng_old[0] = tpoten_old[j];  
+        peng_old[1] = tpoten_old[j + numpars];
+        area = tr_area[j];
 
-    peng[0]=peng[0]+(L1*peng_old[0]+L2*peng_old[1])*area;
-    peng[1]=peng[1]+(L3*peng_old[0]+L4*peng_old[1])*area;
-  }
+        peng[0] += (L1*peng_old[0] + L2*peng_old[1]) * area;
+        peng[1] += (L3*peng_old[0] + L4*peng_old[1]) * area;
+    }
 
-  return 0;
+    return 0;
 }
+
+
+
 /********************************************************/
-int remove_mmt(tnode *p){
+int remove_mmt(tnode *p) {
 /* REMOVE_NODE recursively removes each node from the
  * tree and deallocates its memory for MS array if it exits. */
-  int i,j,k,n;
+    int i, j, k, n;
 
-  if (p->exist_ms == 1){
-    for (n=0;n<16;n++){
-      for (i=0;i<torder+1;i++){
-        for (j=0;j<torder+1;j++){
-          free(p->ms[n][i][j]);
+    if (p->exist_ms == 1) {
+        for (n = 0; n < 16; n++) {
+            for (i = 0; i < torder+1; i++) {
+                for (j = 0; j < torder+1; j++)
+                    free(p->ms[n][i][j]);
+                free(p->ms[n][i]);
+            }
+            free(p->ms[n]);
         }
-        free(p->ms[n][i]);
-      }
-      free(p->ms[n]);
+        free(p->ms);
+        p->exist_ms = 0;
     }
-    free(p->ms);
 
-    p->exist_ms=0;
-  }
+    if (p->num_children > 0) {
+        for (i = 0; i < p->num_children; i++)
+            remove_mmt(p->child[i]);
+    }
 
-  if (p->num_children > 0){
-    for (i=0;i<p->num_children;i++)
-      remove_mmt(p->child[i]);
-  }
-
-  return 0;
+    return 0;
 }
+
+
+
 /********************************************************/
 int treecode_finalization(){
 
-  extern int remove_node();
+    extern int remove_node();
 
-  int i, j, k, m;
+    int i, j, k, m;
 
 /***********treecode_initialization*******/
-  for(i=0;i<order+1;i++){
-    for(j=0;j<order+1;j++){
-      for(k=0;k<order+1;k++){
-        free(der_cof[i][j][k]);
-      }
-      free(der_cof[i][j]);
+    for (i = 0; i < order+1; i++) {
+        for (j = 0; j < order+1; j++) {
+            for (k = 0; k < order+1; k++)
+                free(der_cof[i][j][k]);
+            free(der_cof[i][j]);
+        }
+        free(der_cof[i]);
     }
-    free(der_cof[i]);
-  }
-  free(der_cof);
+    free(der_cof);
 
-  free(x);
-  free(y);
-  free(z);
-  free(q);
-  free(orderind);
+    free(x);
+    free(y);
+    free(z);
+    free(q);
+    free(orderind);
 
-  for (i=0;i<nface;i++){
-    for (j=0;j<2;j++) {
-      free(tchg[i][j]);
+    for (i = 0; i < nface; i++) {
+        for (j = 0; j < 2; j++)
+            free(tchg[i][j]);
+        free(tchg[i]);
     }
-    free(tchg[i]);
-  }
-  free(tchg);
+    free(tchg);
 
-  for (i=0;i<nface;i++){
-    for (j=0;j<2;j++) {
-      free(schg[i][j]);
+    for (i = 0; i < nface; i++) {
+        for (j = 0; j < 2; j++)
+            free(schg[i][j]);
+        free(schg[i]);
     }
-    free(schg[i]);
-  }
-  free(schg);
+    free(schg);
 /***********clean tree structure**********/
 
-  remove_node(troot);
-  free(troot);
-  printf("Cleaning up the tree structure...\n");
+    remove_node(troot);
+    free(troot);
+    printf("Cleaning up the tree structure...\n");
 
 /***********variables in setup************/
-  free(cf);
-  free(cf1);
-  free(cf2);
-  free(cf3);
+    free(cf);
+    free(cf1);
+    free(cf2);
+    free(cf3);
 
-  for (i=0;i<torderlim+3;i++){
-    for (j=0;j<torderlim+3;j++){
-      free(a[i][j]);
-      free(b[i][j]);
+    for (i=0;i<torderlim+3;i++){
+        for (j=0;j<torderlim+3;j++){
+            free(a[i][j]);
+            free(b[i][j]);
+        }
+        free(a[i]);
+        free(b[i]);
     }
-    free(a[i]);
-    free(b[i]);
-  }
-  free(a);
-  free(b);
+    free(a);
+    free(b);
 
-  free(orderarr);
+    free(orderarr);
 /*****************************************/
 
-  printf("Memory has been cleaned for TABIPB!\n\n");
+    printf("Memory has been cleaned for TABIPB!\n\n");
 
-  return 0;
+    return 0;
 }
+
+
+
 /**************************************************************/
-int remove_node(tnode* p){
+int remove_node(tnode* p) {
 /* REMOVE_NODE recursively removes each node from the
  * tree and deallocates its memory for MS array if it exits. */
-  int i;
+    int i;
 
-  if (p->num_children > 0){
-    for (i=0;i<8;i++){
-      remove_node(p->child[i]);
-      free(p->child[i]);
+    if (p->num_children > 0) {
+        for (i = 0; i < 8; i++) {
+            remove_node(p->child[i]);
+            free(p->child[i]);
+        }
+        free(p->child);
     }
-    free(p->child);
-  }
 
-  return 0;
+    return 0;
 }
