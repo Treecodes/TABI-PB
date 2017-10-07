@@ -21,6 +21,7 @@
 
 #include "gl_variables.h"
 #include "treecode.h"
+#include "array.h"
 
 
 int treecode_initialization(int main_order, int main_maxparnode, double main_theta) {
@@ -253,130 +254,133 @@ double maxval(double *variables, int number) {
 
 
 /********************************************************/
-int setup(double* x,double* y,double* z,double* q,int numpars,
-           int order,int iflag,double xyzminmax[6]){
+int setup(double *x, double *y, double *z, double *q, int numpars,
+          int order, int iflag, double xyzminmax[6]) {
 
 /* SETUP allocates and initializes arrays needed for the Taylor expansion.
  Also, global variables are set and the Cartesian coordinates of
  the smallest box containing the particles is determined. The particle
  postions and charges are copied so that they can be restored upon exit.*/
-  int err,i,j,k;
-  double t1;
+    int err, i, j, k;
+    double t1;
 
-  printf("Setting up arrays for Taylor expansion...\n");
+    printf("Setting up arrays for Taylor expansion...\n");
 
 /* global integers and reals:  TORDER, TORDERLIM and THETASQ */
   /* keep the accuracy of first and second derivative of funtion G */
-  torder = order+2;
-  torder2 = order;
-  if (iflag == 1)  orderoffset=0;
-  else orderoffset = 1;
-  torderlim = torder+orderoffset;
+    torder = order+2;
+    torder2 = order;
+    if (iflag == 1)  orderoffset=0;
+    else orderoffset = 1;
+    torderlim = torder+orderoffset;
 
 /* allocate global Taylor expansion variables */
   /* cf(0:torder) */
-  cf = (double*)calloc(torder+1, sizeof(double));
-  if (cf == NULL){
-    fprintf(stderr, "setup error: cf empty data array\n");
-    return 1;
-  }
-  cf1 = (double*)calloc(torderlim, sizeof(double));
-  if (cf1 == NULL){
-    fprintf(stderr, "setup error: cf1 empty data array\n");
-    return 1;
-  }
-  cf2 = (double*)calloc(torderlim, sizeof(double));
-  if (cf2 == NULL){
-    fprintf(stderr, "setup error: cf2 empty data array\n");
-    return 1;
-  }
-  cf3 = (double*)calloc(torderlim, sizeof(double));
-  if (cf3 == NULL){
-    fprintf(stderr, "setup error: cf3 empty data array\n");
-    return 1;
-  }
+    cf = (double*)calloc(torder+1, sizeof(double));
+    if (cf == NULL) {
+        fprintf(stderr, "setup error: cf empty data array\n");
+        return 1;
+    }
+    cf1 = (double*)calloc(torderlim, sizeof(double));
+    if (cf1 == NULL) {
+        fprintf(stderr, "setup error: cf1 empty data array\n");
+        return 1;
+    }
+    cf2 = (double*)calloc(torderlim, sizeof(double));
+    if (cf2 == NULL) {
+        fprintf(stderr, "setup error: cf2 empty data array\n");
+        return 1;
+    }
+    cf3 = (double*)calloc(torderlim, sizeof(double));
+    if (cf3 == NULL) {
+        fprintf(stderr, "setup error: cf3 empty data array\n");
+        return 1;
+    }
 
-  /* a(-2:torderlim,-2:torderlim,-2:torderlim) */
-  a = (double***)calloc(torderlim+3, sizeof(double**));
-  b = (double***)calloc(torderlim+3, sizeof(double**));
-  if (a == NULL){
-    fprintf(stderr, "setup error: a empty data array\n");
-    return 1;
-  }
-  if (b == NULL){
-    fprintf(stderr, "setup error: b empty data array\n");
-    return 1;
-  }
-  for (i=0;i<torderlim+3;i++){
-    a[i] = (double**)calloc(torderlim+3, sizeof(double*));
-    b[i] = (double**)calloc(torderlim+3, sizeof(double*));
-    if (a == NULL){
-      fprintf(stderr, "setup error: a empty data array\n");
-      return 1;
-    }
-    if (b == NULL){
-      fprintf(stderr, "setup error: b empty data array\n");
-      return 1;
-    }
-    for (j=0;j<torderlim+3;j++){
-      a[i][j]=(double*)calloc(torderlim+3, sizeof(double));
-      b[i][j]=(double*)calloc(torderlim+3, sizeof(double));
-      if (a == NULL){
+    /* a(-2:torderlim,-2:torderlim,-2:torderlim) */
+    a = (double***)calloc(torderlim+3, sizeof(double**));
+    b = (double***)calloc(torderlim+3, sizeof(double**));
+    if (a == NULL) {
         fprintf(stderr, "setup error: a empty data array\n");
         return 1;
-      }
-      if (b == NULL){
+    }
+    if (b == NULL) {
         fprintf(stderr, "setup error: b empty data array\n");
         return 1;
-      }
     }
-  }
-
-
-  for (i=0;i<torderlim+3;i++){
-    for (j=0;j<torderlim+3;j++){
-      for (k=0;k<torderlim+3;k++){
-        a[i][j][k]=0.0;
-        b[i][j][k]=0.0;
-      }
+    for (i = 0; i < torderlim+3; i++) {
+        a[i] = (double**)calloc(torderlim+3, sizeof(double*));
+        b[i] = (double**)calloc(torderlim+3, sizeof(double*));
+        if (a == NULL) {
+            fprintf(stderr, "setup error: a empty data array\n");
+            return 1;
+        }
+        if (b == NULL) {
+            fprintf(stderr, "setup error: b empty data array\n");
+            return 1;
+        }
+        for (j = 0; j < torderlim+3; j++) {
+            a[i][j] = (double*)calloc(torderlim+3, sizeof(double));
+            b[i][j] = (double*)calloc(torderlim+3, sizeof(double));
+            if (a == NULL) {
+                fprintf(stderr, "setup error: a empty data array\n");
+                return 1;
+            }
+            if (b == NULL){
+                fprintf(stderr, "setup error: b empty data array\n");
+                return 1;
+            }
+        }
     }
-  }
 
-  for (i=0;i<torder+1;i++)
-    cf[i] = i+1.0;
 
-  for (i=0;i<torderlim;i++){
-    t1=1.0/(i+1.0);
-    cf1[i]=t1;
-    cf2[i]=1.0-0.5*t1;
-    cf3[i]=1.0-t1;
-  }
+    for (i = 0; i < torderlim+3; i++) {
+        for (j = 0; j < torderlim+3; j++) {
+            for (k = 0; k < torderlim+3; k++) {
+                a[i][j][k] = 0.0;
+                b[i][j][k] = 0.0;
+            }
+        }
+    }
+
+    for (i = 0; i < torder+1; i++)
+        cf[i] = i+1.0;
+
+    for (i = 0; i < torderlim; i++) {
+        t1 = 1.0 / (i+1.0);
+        cf1[i] = t1;
+        cf2[i] = 1.0 - 0.5*t1;
+        cf3[i] = 1.0 - t1;
+    }
 
 /* find bounds of Cartesion box enclosing the particles */
 
-  xyzminmax[0]=minval(x,numpars);
-  xyzminmax[1]=maxval(x,numpars);
-  xyzminmax[2]=minval(y,numpars);
-  xyzminmax[3]=maxval(y,numpars);
-  xyzminmax[4]=minval(z,numpars);
-  xyzminmax[5]=maxval(z,numpars);
+    xyzminmax[0] = minval(x, numpars);
+    xyzminmax[1] = maxval(x, numpars);
+    xyzminmax[2] = minval(y, numpars);
+    xyzminmax[3] = maxval(y, numpars);
+    xyzminmax[4] = minval(z, numpars);
+    xyzminmax[5] = maxval(z, numpars);
 
-printf("x-limits of box: %f, %f\n", xyzminmax[0], xyzminmax[1]);
-printf("y-limits of box: %f, %f\n", xyzminmax[2], xyzminmax[3]);
-printf("z-limits of box: %f, %f\n", xyzminmax[4], xyzminmax[5]);
+    printf("x-limits of box: %f, %f\n", xyzminmax[0], xyzminmax[1]);
+    printf("y-limits of box: %f, %f\n", xyzminmax[2], xyzminmax[3]);
+    printf("z-limits of box: %f, %f\n", xyzminmax[4], xyzminmax[5]);
 
-  orderarr = (int*)calloc(numpars, sizeof(int));
-  if (orderarr == NULL){
-    fprintf(stderr, "setup error: orderarr empty data array\n");
-    return 1;
-  }
-  for (i=0;i<numpars;i++)
-    orderarr[i]=i;
+    orderarr = (int*)calloc(numpars, sizeof(int));
+    if (orderarr == NULL) {
+        fprintf(stderr, "setup error: orderarr empty data array\n");
+        return 1;
+    }
+    for (i = 0; i < numpars; i++)
+        orderarr[i] = i;
 
   return 0;
 }
+
+
+
 /********************************************************/
-int create_tree(tnode* p,int ibeg,int iend,double xyzmm[6],int level){
+int create_tree(tnode *p, int ibeg, int iend, double xyzmm[6], int level) {
 /*CREATE_TREE recursively create the tree structure. Node P is
   input, which contains particles indexed from IBEG to IEND. After
   the node parameters are set subdivision occurs if IEND-IBEG+1 > MAXPARNODE.
@@ -384,113 +388,112 @@ int create_tree(tnode* p,int ibeg,int iend,double xyzmm[6],int level){
   of the particle in P, thus defining the box. */
 
   /* local variables */
-  double x_mid,y_mid,z_mid,xl,yl,zl,lmax,t1,t2,t3;
-  int ind[8][2];
-  double xyzmms[6][8];
-  int i,j,limin,limax,err,loclev,numposchild;
-  double lxyzmm[6];
+    double x_mid, y_mid, z_mid, xl, yl, zl, lmax, t1, t2, t3;
+    int ind[8][2];
+    double xyzmms[6][8];
+    int i, j, limin, limax, err, loclev, numposchild;
+    double lxyzmm[6];
 
-  extern int partition_8();
+    extern int partition_8();
 
 /* set node fields: number of particles, exist_ms and xyz bounds */
-  p->numpar=iend-ibeg+1;
-  p->exist_ms=0;
+    p->numpar=iend-ibeg+1;
+    p->exist_ms=0;
 
-  p->x_min=xyzmm[0];
-  p->x_max=xyzmm[1];
-  p->y_min=xyzmm[2];
-  p->y_max=xyzmm[3];
-  p->z_min=xyzmm[4];
-  p->z_max=xyzmm[5];
+    p->x_min=xyzmm[0];
+    p->x_max=xyzmm[1];
+    p->y_min=xyzmm[2];
+    p->y_max=xyzmm[3];
+    p->z_min=xyzmm[4];
+    p->z_max=xyzmm[5];
 /* compute aspect ratio */
-  xl=p->x_max-p->x_min;
-  yl=p->y_max-p->y_min;
-  zl=p->z_max-p->z_min;
+    xl=p->x_max-p->x_min;
+    yl=p->y_max-p->y_min;
+    zl=p->z_max-p->z_min;
 
-  lmax = xl;
-  if (lmax<yl) lmax = yl;
-  if (lmax<zl) lmax = zl;
+    lmax = xl;
+    if (lmax<yl) lmax = yl;
+    if (lmax<zl) lmax = zl;
 
-  t1 = lmax;
-  t2 = xl;
-  if (t2>yl) t2 = yl;
-  if (t2>zl) t2 = zl;
+    t1 = lmax;
+    t2 = xl;
+    if (t2>yl) t2 = yl;
+    if (t2>zl) t2 = zl;
 
-  if (t2!=0.0) p->aspect=t1/t2;
-  else p->aspect=0.0;
+    if (t2!=0.0) p->aspect=t1/t2;
+    else p->aspect=0.0;
 /* midpoint coordinates, RADIUS and SQRADIUS */
-  p->x_mid = (p->x_max+p->x_min)/2.0;
-  p->y_mid = (p->y_max+p->y_min)/2.0;
-  p->z_mid = (p->z_max+p->z_min)/2.0;
-  t1=p->x_max-p->x_mid;
-  t2=p->y_max-p->y_mid;
-  t3=p->z_max-p->z_mid;
-  p->radius=sqrt(t1*t1+t2*t2+t3*t3);
+    p->x_mid = (p->x_max+p->x_min)/2.0;
+    p->y_mid = (p->y_max+p->y_min)/2.0;
+    p->z_mid = (p->z_max+p->z_min)/2.0;
+    t1=p->x_max-p->x_mid;
+    t2=p->y_max-p->y_mid;
+    t3=p->z_max-p->z_mid;
+    p->radius=sqrt(t1*t1+t2*t2+t3*t3);
 
 /* set particle limits, tree level of node, and nullify children pointers */
-  p->ibeg=ibeg;
-  p->iend=iend;
-  p->level=level;
-  if (maxlevel < level) maxlevel=level;
-  p->num_children = 0;
+    p->ibeg=ibeg;
+    p->iend=iend;
+    p->level=level;
+    if (maxlevel < level) maxlevel=level;
+        p->num_children = 0;
 /* old version */  /* struct tnode* child[8] */
-  p->child=(tnode**)calloc(8,sizeof(tnode*));
-  for (i=0;i<8;i++) p->child[i]=(tnode*)calloc(1,sizeof(tnode));
+    p->child=(tnode**)calloc(8,sizeof(tnode*));
+    for (i=0;i<8;i++) p->child[i]=(tnode*)calloc(1,sizeof(tnode));
 
-  if (p->numpar > maxparnode){
+    if (p->numpar > maxparnode){
 /* set IND array to 0 and then call PARTITION routine. IND array holds indices
  * of the eight new subregions. Also, setup XYZMMS array in case SHRINK=1 */
 
-    xyzmms[0][0]=p->x_min;
-    xyzmms[1][0]=p->x_max;
-    xyzmms[2][0]=p->y_min;
-    xyzmms[3][0]=p->y_max;
-    xyzmms[4][0]=p->z_min;
-    xyzmms[5][0]=p->z_max;
-    for (i=0;i<8;i++){
-      ind[i][0]=0;
-      ind[i][1]=0;
-    }
-    ind[0][0]=ibeg;
-    ind[0][1]=iend;
-    x_mid=p->x_mid;
-    y_mid=p->y_mid;
-    z_mid=p->z_mid;
-
-    numposchild = partition_8(xyzmms,xl,yl,zl,lmax,x_mid,y_mid,z_mid,ind);
-/* Shrink the box */
-  for (i=0;i<8;i++){
-    if (ind[i][0] < ind[i][1]){
-      xyzmms[0][i]=minval(&x[ind[i][0]],ind[i][1]-ind[i][0]);
-      xyzmms[1][i]=maxval(&x[ind[i][0]],ind[i][1]-ind[i][0]);
-      xyzmms[2][i]=minval(&y[ind[i][0]],ind[i][1]-ind[i][0]);
-      xyzmms[3][i]=maxval(&y[ind[i][0]],ind[i][1]-ind[i][0]);
-      xyzmms[4][i]=minval(&z[ind[i][0]],ind[i][1]-ind[i][0]);
-      xyzmms[5][i]=maxval(&z[ind[i][0]],ind[i][1]-ind[i][0]);
-    }
-  }
-/* create children if indicated and store info in parent */
-    loclev = level+1;
-
-    for (i=0;i<numposchild;i++){
-      if (ind[i][0] <= ind[i][1]){
-        p->num_children = p->num_children+1;
-        for (j=0;j<6;j++) {
-          lxyzmm[j]=xyzmms[j][i];
+        xyzmms[0][0]=p->x_min;
+        xyzmms[1][0]=p->x_max;
+        xyzmms[2][0]=p->y_min;
+        xyzmms[3][0]=p->y_max;
+        xyzmms[4][0]=p->z_min;
+        xyzmms[5][0]=p->z_max;
+        for (i=0;i<8;i++){
+            ind[i][0]=0;
+            ind[i][1]=0;
         }
-        create_tree(p->child[p->num_children-1],ind[i][0],ind[i][1],lxyzmm,loclev);
-      }
-    }
-  }
-  else {
-    if(level < minlevel) minlevel = level;
-  }
+        ind[0][0]=ibeg;
+        ind[0][1]=iend;
+        x_mid=p->x_mid;
+        y_mid=p->y_mid;
+        z_mid=p->z_mid;
 
-  return 0;
+        numposchild = partition_8(xyzmms,xl,yl,zl,lmax,x_mid,y_mid,z_mid,ind);
+/* Shrink the box */
+        for (i=0;i<8;i++){
+            if (ind[i][0] < ind[i][1]){
+                xyzmms[0][i]=minval(&x[ind[i][0]],ind[i][1]-ind[i][0]);
+                xyzmms[1][i]=maxval(&x[ind[i][0]],ind[i][1]-ind[i][0]);
+                xyzmms[2][i]=minval(&y[ind[i][0]],ind[i][1]-ind[i][0]);
+                xyzmms[3][i]=maxval(&y[ind[i][0]],ind[i][1]-ind[i][0]);
+                xyzmms[4][i]=minval(&z[ind[i][0]],ind[i][1]-ind[i][0]);
+                xyzmms[5][i]=maxval(&z[ind[i][0]],ind[i][1]-ind[i][0]);
+            }
+        }
+/* create children if indicated and store info in parent */
+        loclev = level+1;
+
+        for (i=0;i<numposchild;i++){
+            if (ind[i][0] <= ind[i][1]){
+                p->num_children = p->num_children+1;
+                for (j=0;j<6;j++) {
+                    lxyzmm[j]=xyzmms[j][i];
+                }
+                create_tree(p->child[p->num_children-1],ind[i][0],ind[i][1],lxyzmm,loclev);
+            }
+        }
+    } else {
+        if(level < minlevel) minlevel = level;
+    }
+
+    return 0;
 }
 /********************************************************/
-int partition_8(double xyzmms[6][8],double xl,double yl,double zl,double lmax,
-                double x_mid,double y_mid, double z_mid,int ind[8][2]){
+int partition_8(double xyzmms[6][8], double xl, double yl, double zl, double lmax,
+                double x_mid, double y_mid, double z_mid, int ind[8][2]) {
 /* PARTITION_8 determines the particle indices of the eight sub boxes
  * containing the particles after the box defined by particles I_BEG
  * to I_END is divided by its midpoints in each coordinate direction.
@@ -502,117 +505,117 @@ int partition_8(double xyzmms[6][8],double xl,double yl,double zl,double lmax,
  * the indice limits of each new box (node) and NUMPOSCHILD the number
  * of possible children.  If IND(J,1) > IND(J,2) for a given J this indicates
  * that box J is empty.*/
-  int temp_ind,i,j;
-  double critlen;
-  int numposchild;
+    int temp_ind,i,j;
+    double critlen;
+    int numposchild;
 
-extern int partition();
+    extern int partition();
 
-  numposchild = 1;
-  critlen = lmax/sqrt(2.0);
+    numposchild = 1;
+    critlen = lmax/sqrt(2.0);
 
-  if (xl >= critlen) {
-    temp_ind = partition(x,y,z,q,orderarr,ind[0][0],ind[0][1],x_mid,
-                         numpars);
-    ind[1][0]=temp_ind+1;
-    ind[1][1]=ind[0][1];
-    ind[0][1]=temp_ind;
-    for (i=0;i<6;i++) xyzmms[i][1]=xyzmms[i][0];
-    xyzmms[1][0]=x_mid;
-    xyzmms[0][1]=x_mid;
-    numposchild=2*numposchild;
-  }
-
-  if (yl >= critlen) {
-    for (i=0;i<numposchild;i++){
-      temp_ind = partition(y,x,z,q,orderarr,ind[i][0],ind[i][1],y_mid,
-                           numpars);
-      ind[numposchild+i][0]=temp_ind+1;
-      ind[numposchild+i][1]=ind[i][1];
-      ind[i][1]=temp_ind;
-      for (j=0;j<6;j++) xyzmms[j][numposchild+i]=xyzmms[j][i];
-      xyzmms[3][i]=y_mid;
-      xyzmms[2][numposchild+i]=y_mid;
+    if (xl >= critlen) {
+        temp_ind = partition(x,y,z,q,orderarr,ind[0][0],ind[0][1],x_mid,
+                             numpars);
+        ind[1][0]=temp_ind+1;
+        ind[1][1]=ind[0][1];
+        ind[0][1]=temp_ind;
+        for (i=0;i<6;i++) xyzmms[i][1]=xyzmms[i][0];
+        xyzmms[1][0]=x_mid;
+        xyzmms[0][1]=x_mid;
+        numposchild=2*numposchild;
     }
-    numposchild = 2*numposchild;
-  }
 
-  if (zl >= critlen) {
-    for (i=0;i<numposchild;i++){
-      temp_ind = partition(z,x,y,q,orderarr,ind[i][0],ind[i][1],z_mid,
-                           numpars);
-      ind[numposchild+i][0]=temp_ind+1;
-      ind[numposchild+i][1]=ind[i][1];
-      ind[i][1]=temp_ind;
-      for (j=0;j<6;j++) xyzmms[j][numposchild+i]=xyzmms[j][i];
-      xyzmms[5][i]=z_mid;
-      xyzmms[4][numposchild+i]=z_mid;
+    if (yl >= critlen) {
+        for (i=0;i<numposchild;i++){
+            temp_ind = partition(y,x,z,q,orderarr,ind[i][0],ind[i][1],y_mid,
+                                 numpars);
+            ind[numposchild+i][0]=temp_ind+1;
+            ind[numposchild+i][1]=ind[i][1];
+            ind[i][1]=temp_ind;
+            for (j=0;j<6;j++) xyzmms[j][numposchild+i]=xyzmms[j][i];
+            xyzmms[3][i]=y_mid;
+            xyzmms[2][numposchild+i]=y_mid;
+        }
+        numposchild = 2*numposchild;
     }
-    numposchild=2*numposchild;
-  }
 
-  return (numposchild);
+    if (zl >= critlen) {
+        for (i=0;i<numposchild;i++){
+            temp_ind = partition(z,x,y,q,orderarr,ind[i][0],ind[i][1],z_mid,
+                                 numpars);
+            ind[numposchild+i][0]=temp_ind+1;
+            ind[numposchild+i][1]=ind[i][1];
+            ind[i][1]=temp_ind;
+            for (j=0;j<6;j++) xyzmms[j][numposchild+i]=xyzmms[j][i];
+            xyzmms[5][i]=z_mid;
+            xyzmms[4][numposchild+i]=z_mid;
+        }
+        numposchild=2*numposchild;
+    }
+
+    return (numposchild);
 }
 /********************************************************/
-int partition(double *a,double *b,double *c,double *q,int *indarr,int ibeg,
-              int iend,double val,int numpars){
+int partition(double *a, double *b, double *c, double *q, int *indarr, int ibeg,
+              int iend, double val, int numpars) {
 /* PARTITION determines the index MIDIND, after partitioning
  * in place the  arrays A,B,C and Q,  such that
  * A(IBEG:MIDIND) <= VAL and  A(MIDIND+1:IEND) > VAL.
  * If on entry IBEG > IEND or  A(IBEG:IEND) > VAL then MIDIND
  * is returned as IBEG-1.  */
-  double ta,tb,tc,tq;
-  int lower,upper,tind;
-  int midind;
+    double ta, tb, tc, tq;
+    int lower, upper, tind;
+    int midind;
 
-  if (ibeg<iend){
+    if (ibeg < iend) {
 /* temporarily store IBEG entries and set A(IBEG)=VAL for
  * the partitoning algorithm.  */
-    ta=a[ibeg];
-    tb=b[ibeg];
-    tc=c[ibeg];
-    tq=q[ibeg];
-    tind=indarr[ibeg];
-    a[ibeg]=val;/*val=mid val on that direction*/
-    upper=ibeg;
-    lower=iend;
+        ta=a[ibeg];
+        tb=b[ibeg];
+        tc=c[ibeg];
+        tq=q[ibeg];
+        tind=indarr[ibeg];
+        a[ibeg]=val;/*val=mid val on that direction*/
+        upper=ibeg;
+        lower=iend;
 
-    while(upper!=lower){
-      while(upper < lower && val < a[lower])
-        lower=lower-1;
-      if(upper != lower){
-        a[upper] = a[lower];
-        b[upper] = b[lower];
-        c[upper] = c[lower];
-        q[upper] = q[lower];
-        indarr[upper]=indarr[lower];
-      }
-      while(upper < lower && val >= a[upper])
-        upper=upper+1;
-      if (upper != lower){
-        a[lower]=a[upper];
-        b[lower]=b[upper];
-        c[lower]=c[upper];
-        q[lower]=q[upper];
-        indarr[lower]=indarr[upper];
-      }
-    }
-    midind = upper;
+        while(upper!=lower){
+            while(upper < lower && val < a[lower])
+                lower=lower-1;
+            if(upper != lower){
+                a[upper] = a[lower];
+                b[upper] = b[lower];
+                c[upper] = c[lower];
+                q[upper] = q[lower];
+                indarr[upper]=indarr[lower];
+            }
+            while(upper < lower && val >= a[upper])
+            upper++;
+            if (upper != lower){
+                a[lower]=a[upper];
+                b[lower]=b[upper];
+                c[lower]=c[upper];
+                q[lower]=q[upper];
+                indarr[lower]=indarr[upper];
+            }
+        }
+        midind = upper;
 /* replace TA in position UPPER and change MIDIND if TA > VAL */
-    if (ta > val)
-      midind = upper - 1;
-    a[upper]=ta;
-    b[upper]=tb;
-    c[upper]=tc;
-    q[upper]=tq;
-    indarr[upper]=tind;
-  }
-  else if (ibeg == iend){
-    if (a[ibeg] <= val) midind = ibeg;
+        if (ta > val)
+            midind = upper - 1;
+        a[upper]=ta;
+        b[upper]=tb;
+        c[upper]=tc;
+        q[upper]=tq;
+        indarr[upper]=tind;
+    } else if (ibeg == iend) {
+        if (a[ibeg] <= val) midind = ibeg;
+        else midind = ibeg - 1;
+    }
     else midind = ibeg - 1;
-  }
-  else midind = ibeg - 1;
-  return (midind);
+
+    return (midind);
 }
 /********************************************************/
 int matvec(double *alpha, double *tpoten_old, double *beta, double *tpoten){
@@ -904,161 +907,164 @@ int compp_tree_pb(tnode* p,double peng[2],double tempq[2][16]){
   return 0;
 }
 /********************************************************/
-int comp_tcoeff(tnode *p, double kappa){
+int comp_tcoeff(tnode *p, double kappa) {
 /* COMP_TCOEFF computes the Taylor coefficients of the potential
  * using a recurrence formula.  The center of the expansion is the
  * midpoint of the node P.  TARPOS and TORDERLIM are globally defined. */
-  double dx,dy,dz,ddx,ddy,ddz,dist,fac;
-  double kappax,kappay,kappaz;
-  int i,j,k;
+    double dx, dy, dz, ddx, ddy, ddz, dist, fac;
+    double kappax, kappay, kappaz;
+    int i, j, k;
 
   /* setup variables */
 
-  dx=tarpos[0]-p->x_mid;
-  dy=tarpos[1]-p->y_mid;
-  dz=tarpos[2]-p->z_mid;
+    dx = tarpos[0]-p->x_mid;
+    dy = tarpos[1]-p->y_mid;
+    dz = tarpos[2]-p->z_mid;
 
-  ddx=2.0*dx;
-  ddy=2.0*dy;
-  ddz=2.0*dz;
+    ddx = 2.0*dx;
+    ddy = 2.0*dy;
+    ddz = 2.0*dz;
 
-  kappax=kappa*dx;
-  kappay=kappa*dy;
-  kappaz=kappa*dz;
+    kappax = kappa*dx;
+    kappay = kappa*dy;
+    kappaz = kappa*dz;
 
-  dist=dx*dx+dy*dy+dz*dz;
-  fac=1.0/dist;
-  dist=sqrt(dist);
+    dist = dx*dx + dy*dy + dz*dz;
+    fac = 1.0/dist;
+    dist = sqrt(dist);
 
   /* 0th coeff or function val */
-  b[2][2][2]=exp(-kappa*dist);
-  a[2][2][2]=b[2][2][2]/dist;
+    b[2][2][2]=exp(-kappa*dist);
+    a[2][2][2]=b[2][2][2]/dist;
 
   /* 2 indices are 0 */
 
-  b[3][2][2]=kappax*a[2][2][2];
-  b[2][3][2]=kappay*a[2][2][2];
-  b[2][2][3]=kappaz*a[2][2][2];
+    b[3][2][2]=kappax*a[2][2][2];
+    b[2][3][2]=kappay*a[2][2][2];
+    b[2][2][3]=kappaz*a[2][2][2];
 
-  a[3][2][2]=fac*dx*(a[2][2][2]+kappa*b[2][2][2]);
-  a[2][3][2]=fac*dy*(a[2][2][2]+kappa*b[2][2][2]);
-  a[2][2][3]=fac*dz*(a[2][2][2]+kappa*b[2][2][2]);
+    a[3][2][2]=fac*dx*(a[2][2][2]+kappa*b[2][2][2]);
+    a[2][3][2]=fac*dy*(a[2][2][2]+kappa*b[2][2][2]);
+    a[2][2][3]=fac*dz*(a[2][2][2]+kappa*b[2][2][2]);
 
-  for (i=2;i<torderlim+1;i++){
-    b[i+2][2][2]=cf1[i-1]*kappa*(dx*a[i+1][2][2]-a[i][2][2]);
-    b[2][i+2][2]=cf1[i-1]*kappa*(dy*a[2][i+1][2]-a[2][i][2]);
-    b[2][2][i+2]=cf1[i-1]*kappa*(dz*a[2][2][i+1]-a[2][2][i]);
+    for (i=2;i<torderlim+1;i++){
+        b[i+2][2][2]=cf1[i-1]*kappa*(dx*a[i+1][2][2]-a[i][2][2]);
+        b[2][i+2][2]=cf1[i-1]*kappa*(dy*a[2][i+1][2]-a[2][i][2]);
+        b[2][2][i+2]=cf1[i-1]*kappa*(dz*a[2][2][i+1]-a[2][2][i]);
 
-    a[i+2][2][2]=fac*(ddx*cf2[i-1]*a[i+1][2][2]-cf3[i-1]*a[i][2][2]+
-                 cf1[i-1]*kappa*(dx*b[i+1][2][2]-b[i][2][2]));
-    a[2][i+2][2]=fac*(ddy*cf2[i-1]*a[2][i+1][2]-cf3[i-1]*a[2][i][2]+
-                 cf1[i-1]*kappa*(dy*b[2][i+1][2]-b[2][i][2]));
-    a[2][2][i+2]=fac*(ddz*cf2[i-1]*a[2][2][i+1]-cf3[i-1]*a[2][2][i]+
-                 cf1[i-1]*kappa*(dz*b[2][2][i+1]-b[2][2][i]));
-  }
+        a[i+2][2][2]=fac*(ddx*cf2[i-1]*a[i+1][2][2]-cf3[i-1]*a[i][2][2]+
+                     cf1[i-1]*kappa*(dx*b[i+1][2][2]-b[i][2][2]));
+        a[2][i+2][2]=fac*(ddy*cf2[i-1]*a[2][i+1][2]-cf3[i-1]*a[2][i][2]+
+                     cf1[i-1]*kappa*(dy*b[2][i+1][2]-b[2][i][2]));
+        a[2][2][i+2]=fac*(ddz*cf2[i-1]*a[2][2][i+1]-cf3[i-1]*a[2][2][i]+
+                     cf1[i-1]*kappa*(dz*b[2][2][i+1]-b[2][2][i]));
+    }
 
   /* 1 index 0, 1 index 1, other >=1 */
-  b[3][3][2]=kappax*a[2][3][2];
-  b[3][2][3]=kappax*a[2][2][3];
-  b[2][3][3]=kappay*a[2][2][3];
+    b[3][3][2]=kappax*a[2][3][2];
+    b[3][2][3]=kappax*a[2][2][3];
+    b[2][3][3]=kappay*a[2][2][3];
 
-  a[3][3][2]=fac*(dx*a[2][3][2]+ddy*a[3][2][2]+kappax*b[2][3][2]);
-  a[3][2][3]=fac*(dx*a[2][2][3]+ddz*a[3][2][2]+kappax*b[2][2][3]);
-  a[2][3][3]=fac*(dy*a[2][2][3]+ddz*a[2][3][2]+kappay*b[2][2][3]);
+    a[3][3][2]=fac*(dx*a[2][3][2]+ddy*a[3][2][2]+kappax*b[2][3][2]);
+    a[3][2][3]=fac*(dx*a[2][2][3]+ddz*a[3][2][2]+kappax*b[2][2][3]);
+    a[2][3][3]=fac*(dy*a[2][2][3]+ddz*a[2][3][2]+kappay*b[2][2][3]);
 
-  for (i=2;i<torderlim;i++){
-    b[3][2][i+2]=kappax*a[2][2][i+2];
-    b[2][3][i+2]=kappay*a[2][2][i+2];
-    b[2][i+2][3]=kappaz*a[2][i+2][2];
-    b[3][i+2][2]=kappax*a[2][i+2][2];
-    b[i+2][3][2]=kappay*a[i+2][2][2];
-    b[i+2][2][3]=kappaz*a[i+2][2][2];
+    for (i=2;i<torderlim;i++){
+        b[3][2][i+2]=kappax*a[2][2][i+2];
+        b[2][3][i+2]=kappay*a[2][2][i+2];
+        b[2][i+2][3]=kappaz*a[2][i+2][2];
+        b[3][i+2][2]=kappax*a[2][i+2][2];
+        b[i+2][3][2]=kappay*a[i+2][2][2];
+        b[i+2][2][3]=kappaz*a[i+2][2][2];
 
-    a[3][2][i+2]=fac*(dx*a[2][2][i+2]+ddz*a[3][2][i+1]-a[3][2][i]+
-                 kappax*b[2][2][i+2]);
-    a[2][3][i+2]=fac*(dy*a[2][2][i+2]+ddz*a[2][3][i+1]-a[2][3][i]+
-                 kappay*b[2][2][i+2]);
-    a[2][i+2][3]=fac*(dz*a[2][i+2][2]+ddy*a[2][i+1][3]-a[2][i][3]+
-                 kappaz*b[2][i+2][2]);
-    a[3][i+2][2]=fac*(dx*a[2][i+2][2]+ddy*a[3][i+1][2]-a[3][i][2]+
-                 kappax*b[2][i+2][2]);
-    a[i+2][3][2]=fac*(dy*a[i+2][2][2]+ddx*a[i+1][3][2]-a[i][3][2]+
-                 kappay*b[i+2][2][2]);
-    a[i+2][2][3]=fac*(dz*a[i+2][2][2]+ddx*a[i+1][2][3]-a[i][2][3]+
-                 kappaz*b[i+2][2][2]);
-  }
-
-  /* 1 index 0, others >=2 */
-  for (i=2;i<torderlim-1;i++){
-   for (j=2;j<torderlim-i+1;j++){
-      b[i+2][j+2][2]=cf1[i-1]*kappa*(dx*a[i+1][j+2][2]-a[i][j+2][2]);
-      b[i+2][2][j+2]=cf1[i-1]*kappa*(dx*a[i+1][2][j+2]-a[i][2][j+2]);
-      b[2][i+2][j+2]=cf1[i-1]*kappa*(dy*a[2][i+1][j+2]-a[2][i][j+2]);
-
-      a[i+2][j+2][2]=fac*(ddx*cf2[i-1]*a[i+1][j+2][2]+ddy*a[i+2][j+1][2]
-                     -cf3[i-1]*a[i][j+2][2]-a[i+2][j][2]+
-                     cf1[i-1]*kappa*(dx*b[i+1][j+2][2]-b[i][j+2][2]));
-      a[i+2][2][j+2]=fac*(ddx*cf2[i-1]*a[i+1][2][j+2]+ddz*a[i+2][2][j+1]
-                     -cf3[i-1]*a[i][2][j+2]-a[i+2][2][j]+
-                     cf1[i-1]*kappa*(dx*b[i+1][2][j+2]-b[i][2][j+2]));
-      a[2][i+2][j+2]=fac*(ddy*cf2[i-1]*a[2][i+1][j+2]+ddz*a[2][i+2][j+1]
-                     -cf3[i-1]*a[2][i][j+2]-a[2][i+2][j]+
-                     cf1[i-1]*kappa*(dy*b[2][i+1][j+2]-b[2][i][j+2]));
+        a[3][2][i+2]=fac*(dx*a[2][2][i+2]+ddz*a[3][2][i+1]-a[3][2][i]+
+                     kappax*b[2][2][i+2]);
+        a[2][3][i+2]=fac*(dy*a[2][2][i+2]+ddz*a[2][3][i+1]-a[2][3][i]+
+                     kappay*b[2][2][i+2]);
+        a[2][i+2][3]=fac*(dz*a[2][i+2][2]+ddy*a[2][i+1][3]-a[2][i][3]+
+                     kappaz*b[2][i+2][2]);
+        a[3][i+2][2]=fac*(dx*a[2][i+2][2]+ddy*a[3][i+1][2]-a[3][i][2]+
+                     kappax*b[2][i+2][2]);
+        a[i+2][3][2]=fac*(dy*a[i+2][2][2]+ddx*a[i+1][3][2]-a[i][3][2]+
+                     kappay*b[i+2][2][2]);
+        a[i+2][2][3]=fac*(dz*a[i+2][2][2]+ddx*a[i+1][2][3]-a[i][2][3]+
+                     kappaz*b[i+2][2][2]);
     }
-  }
+
+    /* 1 index 0, others >=2 */
+    for (i=2;i<torderlim-1;i++){
+        for (j=2;j<torderlim-i+1;j++){
+            b[i+2][j+2][2]=cf1[i-1]*kappa*(dx*a[i+1][j+2][2]-a[i][j+2][2]);
+            b[i+2][2][j+2]=cf1[i-1]*kappa*(dx*a[i+1][2][j+2]-a[i][2][j+2]);
+            b[2][i+2][j+2]=cf1[i-1]*kappa*(dy*a[2][i+1][j+2]-a[2][i][j+2]);
+
+            a[i+2][j+2][2]=fac*(ddx*cf2[i-1]*a[i+1][j+2][2]+ddy*a[i+2][j+1][2]
+                           -cf3[i-1]*a[i][j+2][2]-a[i+2][j][2]+
+                           cf1[i-1]*kappa*(dx*b[i+1][j+2][2]-b[i][j+2][2]));
+            a[i+2][2][j+2]=fac*(ddx*cf2[i-1]*a[i+1][2][j+2]+ddz*a[i+2][2][j+1]
+                           -cf3[i-1]*a[i][2][j+2]-a[i+2][2][j]+
+                           cf1[i-1]*kappa*(dx*b[i+1][2][j+2]-b[i][2][j+2]));
+            a[2][i+2][j+2]=fac*(ddy*cf2[i-1]*a[2][i+1][j+2]+ddz*a[2][i+2][j+1]
+                           -cf3[i-1]*a[2][i][j+2]-a[2][i+2][j]+
+                           cf1[i-1]*kappa*(dy*b[2][i+1][j+2]-b[2][i][j+2]));
+        }
+    }
 
   /* 2 indices 1,other >= 1 */
-  b[3][3][3]=kappax*a[2][3][3];
-  a[3][3][3]=fac*(dx*a[2][3][3]+ddy*a[3][2][3]+ddz*a[3][3][2]+
-             kappax*b[2][3][3]);
+    b[3][3][3]=kappax*a[2][3][3];
+    a[3][3][3]=fac*(dx*a[2][3][3]+ddy*a[3][2][3]+ddz*a[3][3][2]+
+               kappax*b[2][3][3]);
 
-  for (i=2;i<torderlim-1;i++){
-    b[3][3][i+2]=kappax*a[2][3][i+2];
-    b[3][i+2][3]=kappax*a[2][i+2][3];
-    b[i+2][3][3]=kappay*a[i+2][2][3];
+    for (i=2;i<torderlim-1;i++){
+        b[3][3][i+2]=kappax*a[2][3][i+2];
+        b[3][i+2][3]=kappax*a[2][i+2][3];
+        b[i+2][3][3]=kappay*a[i+2][2][3];
 
-    a[3][3][i+2]=fac*(dx*a[2][3][i+2]+ddy*a[3][2][i+2]+ddz*a[3][3][i+1]
-                 -a[3][3][i]+kappax*b[2][3][i+2]);
-    a[3][i+2][3]=fac*(dx*a[2][i+2][3]+ddy*a[3][i+1][3]+ddz*a[3][i+2][2]
-                 -a[3][i][3]+kappax*b[2][i+2][3]);
-    a[i+2][3][3]=fac*(dy*a[i+2][2][3]+ddx*a[i+1][3][3]+ddz*a[i+2][3][2]
-                 -a[i][3][3]+kappay*b[i+2][2][3]);
-  }
+        a[3][3][i+2]=fac*(dx*a[2][3][i+2]+ddy*a[3][2][i+2]+ddz*a[3][3][i+1]
+                     -a[3][3][i]+kappax*b[2][3][i+2]);
+        a[3][i+2][3]=fac*(dx*a[2][i+2][3]+ddy*a[3][i+1][3]+ddz*a[3][i+2][2]
+                     -a[3][i][3]+kappax*b[2][i+2][3]);
+        a[i+2][3][3]=fac*(dy*a[i+2][2][3]+ddx*a[i+1][3][3]+ddz*a[i+2][3][2]
+                     -a[i][3][3]+kappay*b[i+2][2][3]);
+    }
 
   /* 1 index 1, others >=2 */
-  for (i=2;i<torderlim-2;i++){
-    for (j=2;j<torderlim-i+1;j++){
-      b[3][i+2][j+2]=kappax*a[2][i+2][j+2];
-      b[i+2][3][j+2]=kappay*a[i+2][2][j+2];
-      b[i+2][j+2][3]=kappaz*a[i+2][j+2][2];
+    for (i=2;i<torderlim-2;i++){
+        for (j=2;j<torderlim-i+1;j++){
+            b[3][i+2][j+2]=kappax*a[2][i+2][j+2];
+            b[i+2][3][j+2]=kappay*a[i+2][2][j+2];
+            b[i+2][j+2][3]=kappaz*a[i+2][j+2][2];
 
-      a[3][i+2][j+2]=fac*(dx*a[2][i+2][j+2]+ddy*a[3][i+1][j+2]
-                     +ddz*a[3][i+2][j+1]-a[3][i][j+2]
-                     -a[3][i+2][j]+kappax*b[2][i+2][j+2]);
-      a[i+2][3][j+2]=fac*(dy*a[i+2][2][j+2]+ddx*a[i+1][3][j+2]
-                     +ddz*a[i+2][3][j+1]-a[i][3][j+2]
-                     -a[i+2][3][j]+kappay*b[i+2][2][j+2]);
-      a[i+2][j+2][3]=fac*(dz*a[i+2][j+2][2]+ddx*a[i+1][j+2][3]
-                     +ddy*a[i+2][j+1][3]-a[i][j+2][3]
-                     -a[i+2][j][3]+kappaz*b[i+2][j+2][2]);
+            a[3][i+2][j+2]=fac*(dx*a[2][i+2][j+2]+ddy*a[3][i+1][j+2]
+                           +ddz*a[3][i+2][j+1]-a[3][i][j+2]
+                           -a[3][i+2][j]+kappax*b[2][i+2][j+2]);
+            a[i+2][3][j+2]=fac*(dy*a[i+2][2][j+2]+ddx*a[i+1][3][j+2]
+                           +ddz*a[i+2][3][j+1]-a[i][3][j+2]
+                           -a[i+2][3][j]+kappay*b[i+2][2][j+2]);
+            a[i+2][j+2][3]=fac*(dz*a[i+2][j+2][2]+ddx*a[i+1][j+2][3]
+                           +ddy*a[i+2][j+1][3]-a[i][j+2][3]
+                           -a[i+2][j][3]+kappaz*b[i+2][j+2][2]);
+        }
     }
-  }
 
   /* all indices >=2 */
-  for (k=2;k<torderlim-3;k++){
-    for (j=2;j<torderlim-1-k;j++){
-      for (i=2;i<torderlim+1-k-j;i++){
-        b[i+2][j+2][k+2]=cf1[i-1]*kappa*(dx*a[i+1][j+2][k+2]-a[i][j+2][k+2]);
-        a[i+2][j+2][k+2]=fac*(ddx*cf2[i-1]*a[i+1][j+2][k+2]
-                         +ddy*a[i+2][j+1][k+2]+ddz*a[i+2][j+2][k+1]
-                         -cf3[i-1]*a[i][j+2][k+2]-a[i+2][j][k+2]-a[i+2][j+2][k]
-                         +cf1[i-1]*kappa*(dx*b[i+1][j+2][k+2]-b[i][j+2][k+2]));
-      }
+    for (k=2;k<torderlim-3;k++){
+        for (j=2;j<torderlim-1-k;j++){
+            for (i=2;i<torderlim+1-k-j;i++){
+                b[i+2][j+2][k+2]=cf1[i-1]*kappa*(dx*a[i+1][j+2][k+2]-a[i][j+2][k+2]);
+                a[i+2][j+2][k+2]=fac*(ddx*cf2[i-1]*a[i+1][j+2][k+2]
+                                 +ddy*a[i+2][j+1][k+2]+ddz*a[i+2][j+2][k+1]
+                                 -cf3[i-1]*a[i][j+2][k+2]-a[i+2][j][k+2]-a[i+2][j+2][k]
+                                 +cf1[i-1]*kappa*(dx*b[i+1][j+2][k+2]-b[i][j+2][k+2]));
+            }
+        }
     }
-  }
 
-  return 0;
+    return 0;
 }
+
+
+
 /********************************************************/
 int compp_direct_pb(double peng[2], int ibeg, int iend, double *tpoten_old) {
   /* COMPF_DIRECT directly computes the force on the current target

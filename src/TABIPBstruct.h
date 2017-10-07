@@ -26,67 +26,69 @@
 
 typedef struct sTABIPBparm {
 
-  /* molecule ID */
-  char fpath[256];
-  char fname[256];
-  double density;
-  double probe_radius;
+   /* molecule ID */
+    char fpath[256];
+    char fname[256];
+    double density;
+    double probe_radius;
 
-  double temp;
-  double epsp;
-  double epsw;
-  double bulk_strength;
+    double temp;
+    double epsp;
+    double epsw;
+    double bulk_strength;
 
-  /* treecode_parm */
-  int order;
-  int maxparnode;
-  double theta;
+   /* treecode_parm */
+    int order;
+    int maxparnode;
+    double theta;
 
-  /* 0 msms, 1 NanoShaper SES, 2 NanoShaper Skin */
-  int mesh_flag;
+   /* 0 msms, 1 NanoShaper SES, 2 NanoShaper Skin */
+    int mesh_flag;
 
-  /* number of atoms */
-  int number_of_lines;
+   /* number of atoms */
+    int number_of_lines;
 
-  /* output of potential data: 1 output vtk */
-  int output_datafile;
+   /* output of potential data: 1 output vtk */
+    int output_datafile;
 
 } TABIPBparm;
 
+
 typedef struct sTABIPBvars {
 
-  /* solvation energy */
-  double soleng, couleng;
+   /* solvation energy */
+   double soleng, couleng;
 
-  /* number of nodes, number of triangles */
-  int nspt, nface, natm;
+   /* number of nodes, number of triangles */
+   int nspt, nface, natm;
 
-  /* msms variables */
-  int **extr_v, **extr_f; //[3][nspt], [2][nface]
+   /* msms variables */
+   int **extr_v, **extr_f; //[3][nspt], [2][nface]
 
-  /*
-  double *tr_xyz, *tr_q; //[3]*[nface]
-  double *tr_area, *bvct;
-   */
-  double *atmrad, *atmchr, *chrpos;
+   /*
+    double *tr_xyz, *tr_q; //[3]*[nface]
+    double *tr_area, *bvct;
+    */
+    double *atmrad, *atmchr, *chrpos;
 
-  /* vertices, normal vector*/
-  double **vert, **snrm;
+    /* vertices, normal vector*/
+    double **vert, **snrm;
 
-  /* surface potential on vertices area */
-  double *vert_ptl;
-  double max_vert_ptl, min_vert_ptl;
-  double max_der_vert_ptl, min_der_vert_ptl;
+    /* surface potential on vertices area */
+    double *vert_ptl;
+    double max_vert_ptl, min_vert_ptl;
+    double max_der_vert_ptl, min_der_vert_ptl;
 
-  /* surface potential on elements area */
-  double *xvct;
-  double max_xvct, min_xvct;
-  double max_der_xvct, min_der_xvct;
+    /* surface potential on elements area */
+    double *xvct;
+    double max_xvct, min_xvct;
+    double max_der_xvct, min_der_xvct;
 
-  /* connectivity data for MSMS surface triangulation */
-  int **face;
+    /* connectivity data for MSMS surface triangulation */
+    int **face;
 
 } TABIPBvars;
+
 
 int sphinx2tabipb(TABIPBparm *parm, TABIPBvars *vars);
 

@@ -65,23 +65,23 @@ double ***tchg, ***schg;
 /* global variables for position and charge storage */
 /* arrays are not copied in this version!! orderarr is till valid*/
 int *orderarr;
-double *xcopy,*ycopy,*zcopy,*qcopy;
+double *xcopy, *ycopy, *zcopy, *qcopy;
 
 
 /* node pointer and node struct declarations */
-typedef struct tnode{
-  int node_idx;
-  int numpar, ibeg, iend;
-  double x_min, y_min, z_min;
-  double x_max, y_max, z_max;
-  double x_mid, y_mid, z_mid;
-  double radius, aspect;
-  int level, num_children, exist_ms;
-  double ****ms;
-  struct tnode** child;
-}tnode;
+typedef struct tnode {
+    int node_idx;
+    int numpar, ibeg, iend;
+    double x_min, y_min, z_min;
+    double x_max, y_max, z_max;
+    double x_mid, y_mid, z_mid;
+    double radius, aspect;
+    int level, num_children, exist_ms;
+    double ****ms;
+    struct tnode **child;
+} tnode;
 
-tnode* troot;
+tnode *troot;
 
 
 #endif /* H_TREECODE_H */
