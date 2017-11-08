@@ -15,7 +15,7 @@ mkdir build; cd build
 cmake ..
 make
 ```
-This creates a tabipb executable located at tabipb/build/bin/tabipb. To run an example, navigate to the examples directory, and run ../build/bin/tabipb:
+This creates a tabipb executable located at TABI-PB/build/bin/tabipb. To run an example, navigate to the examples directory, and run ../build/bin/tabipb:
 ```
 cd example/
 ./../build/bin/tabipb
