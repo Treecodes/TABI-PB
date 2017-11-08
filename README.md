@@ -1,7 +1,7 @@
-# TABIPB
-TABI (treecode-accelerated boundary integral) solves the linear Poisson-Boltzmann equation. The solver employs a well-conditioned boundary integral formulation for the electrostatic potential and its normal derivative on the molecular surface, which is triangulated and the integral equations are discretized by centroid collocation. The linear system is solved by GMRES iteration and the matrix-vector product is carried out by a Cartesian terraced which reduces the cost from O(N^2) to O(N\*logN), where N is the number elements.
+# TABI-PB
+TABI-PB (treecode-accelerated boundary integral) solves the linear Poisson-Boltzmann equation. The solver employs a well-conditioned boundary integral formulation for the electrostatic potential and its normal derivative on the molecular surface, which is triangulated and the integral equations are discretized by centroid collocation. The linear system is solved by GMRES iteration and the matrix-vector product is carried out by a Cartesian terraced which reduces the cost from O(N^2) to O(N\*logN), where N is the number elements.
 
-This TABIPB repo serves as a submodule to APBS, and also works as a standalone distribution. For more information on building APBS, [visit this repository](https://github.com/Electrostatics/apbs-pdb2pqr/tree/master/apbs).
+This TABI-PB repo serves as a submodule to APBS, and also works as a standalone distribution. For more information on building APBS, [visit this repository](https://github.com/Electrostatics/apbs-pdb2pqr/tree/master/apbs).
 
 
 REFERENCE: W.H. Geng and R. Krasny, A treecode-accelerated boundary integral Poisson-Boltzmann solver for continuum electrostatics of solvated biomolecules, J. Comput. Phys. 247, 62-87 (2013)
@@ -21,9 +21,9 @@ cd example/
 ./../build/bin/tabipb
 ```
 
-## Building TABIPB on APBS_Sphinx
+## Building TABI-PB on APBS_Sphinx
 
-This is similar to the APBS Geoflow build. To invoke TABIPB on Sphinx, you need to use the flag `-DENABLE_TABIPB_SPHINX=ON` when you run cmake. Command:
+This is similar to the APBS Geoflow build. To invoke TABI-PB on Sphinx, you need to use the flag `-DENABLE_TABIPB_SPHINX=ON` when you run cmake. Command:
 
 1. `cd APBS_SPHINX/plugins/TABIPB/src`
 2. `mkdir build; cd build`
