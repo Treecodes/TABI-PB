@@ -464,26 +464,27 @@ int create_tree(tnode *p, int ibeg, int iend, double xyzmm[6], int level) {
 
         numposchild = partition_8(xyzmms,xl,yl,zl,lmax,x_mid,y_mid,z_mid,ind);
 /* Shrink the box */
-        for (i=0;i<8;i++){
-            if (ind[i][0] < ind[i][1]){
-                xyzmms[0][i]=minval(&x[ind[i][0]],ind[i][1]-ind[i][0]);
-                xyzmms[1][i]=maxval(&x[ind[i][0]],ind[i][1]-ind[i][0]);
-                xyzmms[2][i]=minval(&y[ind[i][0]],ind[i][1]-ind[i][0]);
-                xyzmms[3][i]=maxval(&y[ind[i][0]],ind[i][1]-ind[i][0]);
-                xyzmms[4][i]=minval(&z[ind[i][0]],ind[i][1]-ind[i][0]);
-                xyzmms[5][i]=maxval(&z[ind[i][0]],ind[i][1]-ind[i][0]);
+        for (i = 0; i < 8; i++) {
+            if (ind[i][0] < ind[i][1]) {
+                xyzmms[0][i] = minval(&x[ind[i][0]], ind[i][1]-ind[i][0]);
+                xyzmms[1][i] = maxval(&x[ind[i][0]], ind[i][1]-ind[i][0]);
+                xyzmms[2][i] = minval(&y[ind[i][0]], ind[i][1]-ind[i][0]);
+                xyzmms[3][i] = maxval(&y[ind[i][0]], ind[i][1]-ind[i][0]);
+                xyzmms[4][i] = minval(&z[ind[i][0]], ind[i][1]-ind[i][0]);
+                xyzmms[5][i] = maxval(&z[ind[i][0]], ind[i][1]-ind[i][0]);
             }
         }
 /* create children if indicated and store info in parent */
-        loclev = level+1;
+        loclev = level + 1;
 
-        for (i=0;i<numposchild;i++){
-            if (ind[i][0] <= ind[i][1]){
-                p->num_children = p->num_children+1;
-                for (j=0;j<6;j++) {
-                    lxyzmm[j]=xyzmms[j][i];
+        for (i = 0; i < numposchild; i++) {
+            if (ind[i][0] <= ind[i][1]) {
+                p->num_children = p->num_children + 1;
+                for (j = 0; j < 6; j++) {
+                    lxyzmm[j] = xyzmms[j][i];
                 }
-                create_tree(p->child[p->num_children-1],ind[i][0],ind[i][1],lxyzmm,loclev);
+                create_tree(p->child[p->num_children-1],
+                            ind[i][0], ind[i][1], lxyzmm, loclev);
             }
         }
     } else {
@@ -518,45 +519,54 @@ int partition_8(double xyzmms[6][8], double xl, double yl, double zl, double lma
     if (xl >= critlen) {
         temp_ind = partition(x,y,z,q,orderarr,ind[0][0],ind[0][1],x_mid,
                              numpars);
-        ind[1][0]=temp_ind+1;
-        ind[1][1]=ind[0][1];
-        ind[0][1]=temp_ind;
-        for (i=0;i<6;i++) xyzmms[i][1]=xyzmms[i][0];
-        xyzmms[1][0]=x_mid;
-        xyzmms[0][1]=x_mid;
-        numposchild=2*numposchild;
+        ind[1][0] = temp_ind+1;
+        ind[1][1] = ind[0][1];
+        ind[0][1] = temp_ind;
+        for (i = 0; i < 6; i++) {
+            xyzmms[i][1] = xyzmms[i][0];
+        }
+        xyzmms[1][0] = x_mid;
+        xyzmms[0][1] = x_mid;
+        numposchild *= 2;
     }
 
     if (yl >= critlen) {
-        for (i=0;i<numposchild;i++){
+        for (i = 0; i < numposchild; i++) {
             temp_ind = partition(y,x,z,q,orderarr,ind[i][0],ind[i][1],y_mid,
                                  numpars);
-            ind[numposchild+i][0]=temp_ind+1;
-            ind[numposchild+i][1]=ind[i][1];
-            ind[i][1]=temp_ind;
-            for (j=0;j<6;j++) xyzmms[j][numposchild+i]=xyzmms[j][i];
-            xyzmms[3][i]=y_mid;
-            xyzmms[2][numposchild+i]=y_mid;
+            ind[numposchild+i][0] = temp_ind+1;
+            ind[numposchild+i][1] = ind[i][1];
+            ind[i][1] = temp_ind;
+            for (j = 0; j < 6; j++) {
+                xyzmms[j][numposchild+i] = xyzmms[j][i];
+            }
+            xyzmms[3][i] = y_mid;
+            xyzmms[2][numposchild+i] = y_mid;
         }
-        numposchild = 2*numposchild;
+        numposchild *= 2;
     }
 
     if (zl >= critlen) {
-        for (i=0;i<numposchild;i++){
+        for (i = 0; i < numposchild; i++) {
             temp_ind = partition(z,x,y,q,orderarr,ind[i][0],ind[i][1],z_mid,
                                  numpars);
-            ind[numposchild+i][0]=temp_ind+1;
-            ind[numposchild+i][1]=ind[i][1];
-            ind[i][1]=temp_ind;
-            for (j=0;j<6;j++) xyzmms[j][numposchild+i]=xyzmms[j][i];
-            xyzmms[5][i]=z_mid;
-            xyzmms[4][numposchild+i]=z_mid;
+            ind[numposchild+i][0] = temp_ind+1;
+            ind[numposchild+i][1] = ind[i][1];
+            ind[i][1] = temp_ind;
+            for (j = 0; j < 6; j++) {
+                xyzmms[j][numposchild+i] = xyzmms[j][i];
+            }
+            xyzmms[5][i] = z_mid;
+            xyzmms[4][numposchild+i] = z_mid;
         }
-        numposchild=2*numposchild;
+        numposchild *= 2;
     }
 
     return (numposchild);
 }
+
+
+
 /********************************************************/
 int partition(double *a, double *b, double *c, double *q, int *indarr, int ibeg,
               int iend, double val, int numpars) {
@@ -572,52 +582,64 @@ int partition(double *a, double *b, double *c, double *q, int *indarr, int ibeg,
     if (ibeg < iend) {
 /* temporarily store IBEG entries and set A(IBEG)=VAL for
  * the partitoning algorithm.  */
-        ta=a[ibeg];
-        tb=b[ibeg];
-        tc=c[ibeg];
-        tq=q[ibeg];
-        tind=indarr[ibeg];
-        a[ibeg]=val;/*val=mid val on that direction*/
-        upper=ibeg;
-        lower=iend;
+        ta = a[ibeg];
+        tb = b[ibeg];
+        tc = c[ibeg];
+        tq = q[ibeg];
+        tind = indarr[ibeg];
+        a[ibeg] = val;/*val=mid val on that direction*/
+        upper = ibeg;
+        lower = iend;
 
-        while(upper!=lower){
-            while(upper < lower && val < a[lower])
-                lower=lower-1;
-            if(upper != lower){
+        while (upper != lower) {
+            while (upper < lower && val < a[lower])
+                lower -= 1;
+            if (upper != lower) {
                 a[upper] = a[lower];
                 b[upper] = b[lower];
                 c[upper] = c[lower];
                 q[upper] = q[lower];
-                indarr[upper]=indarr[lower];
+                indarr[upper] = indarr[lower];
             }
-            while(upper < lower && val >= a[upper])
-            upper++;
-            if (upper != lower){
-                a[lower]=a[upper];
-                b[lower]=b[upper];
-                c[lower]=c[upper];
-                q[lower]=q[upper];
-                indarr[lower]=indarr[upper];
+            while (upper < lower && val >= a[upper])
+            upper += 1;
+            if (upper != lower) {
+                a[lower] = a[upper];
+                b[lower] = b[upper];
+                c[lower] = c[upper];
+                q[lower] = q[upper];
+                indarr[lower] = indarr[upper];
             }
         }
         midind = upper;
 /* replace TA in position UPPER and change MIDIND if TA > VAL */
-        if (ta > val)
+        if (ta > val) {
             midind = upper - 1;
-        a[upper]=ta;
-        b[upper]=tb;
-        c[upper]=tc;
-        q[upper]=tq;
-        indarr[upper]=tind;
+        }
+
+        a[upper] = ta;
+        b[upper] = tb;
+        c[upper] = tc;
+        q[upper] = tq;
+        indarr[upper] = tind;
+    
     } else if (ibeg == iend) {
-        if (a[ibeg] <= val) midind = ibeg;
-        else midind = ibeg - 1;
+    
+        if (a[ibeg] <= val) {
+            midind = ibeg;
+        } else {
+            midind = ibeg - 1;
+        }
+    
+    } else {
+        midind = ibeg - 1;
     }
-    else midind = ibeg - 1;
 
     return (midind);
 }
+
+
+
 /********************************************************/
 int matvec(double *alpha, double *tpoten_old, double *beta, double *tpoten) {
 /* the main part of treecode */
@@ -637,41 +659,42 @@ int matvec(double *alpha, double *tpoten_old, double *beta, double *tpoten) {
   /* Generate the moments if not allocated yet */
     comp_ms_all(troot, 1);
 
-    pre1 = 0.50 * (1.0+eps);
-    pre2 = 0.50 * (1.0+1.0/eps);
+    pre1 = 0.50 * (1.0 + eps);
+    pre2 = 0.50 * (1.0 + 1.0/eps);
 
-    for (i=0;i<numpars;i++){
-
-        peng[0]=0.0; peng[1]=0.0;
-        peng_old[0]=tpoten_old[i];
-        peng_old[1]=tpoten_old[i+numpars];
-        tarpos[0]=x[i];
-        tarpos[1]=y[i];
-        tarpos[2]=z[i];
-        tarq[0]=tr_q[3*i];
-        tarq[1]=tr_q[3*i+1];
-        tarq[2]=tr_q[3*i+2];
+    for (i = 0; i < numpars; i++) {
+        peng[0] = 0.0; 
+        peng[1] = 0.0;
+        peng_old[0] = tpoten_old[i];
+        peng_old[1] = tpoten_old[i+numpars];
+        tarpos[0] = x[i];
+        tarpos[1] = y[i];
+        tarpos[2] = z[i];
+        tarq[0] = tr_q[3*i];
+        tarq[1] = tr_q[3*i+1];
+        tarq[2] = tr_q[3*i+2];
         
-        for (j=0;j<2;j++){
-            for (k=0;k<16;k++){
-                tempq[j][k]=tchg[i][j][k];
+        for (j = 0; j<2; j++) {
+            for (k = 0; k<16; k++) {
+                tempq[j][k] = tchg[i][j][k];
             }
         }
 
       /* remove the singularity */
-        tempx=x[i];
-        temp_area=tr_area[i];
-        x[i]+=100.123456789;
-        tr_area[i]=0.0;
+        tempx = x[i];
+        temp_area = tr_area[i];
+        x[i] += 100.123456789;
+        tr_area[i] = 0.0;
 
     /* start to use Treecode */
-        compp_tree(troot,peng,tpoten_old,tempq);
+        compp_tree(troot, peng, tpoten_old, tempq);
 
-        tpoten[i]=tpoten[i]* *beta+(pre1*peng_old[0]-peng[0])* *alpha;
-        tpoten[numpars+i]=tpoten[numpars+i]* *beta+(pre2*peng_old[1]-peng[1])* *alpha;
+        tpoten[i] = tpoten[i] * *beta + (pre1 * peng_old[0] - peng[0]) * *alpha;
+        tpoten[numpars+i] = tpoten[numpars+i] * *beta 
+                          + (pre2 * peng_old[1] - peng[1]) * *alpha;
 
-        x[i]=tempx;
-        tr_area[i]=temp_area;
+        x[i] = tempx;
+        tr_area[i] = temp_area;
     }
 
     remove_mmt(troot);
@@ -687,30 +710,29 @@ int pb_kernel(double *phi) {
     int i, j, ikp, iknl, ixyz, jxyz, indx;
 
     for (i = 0; i < numpars; i++) {
-
-        indx=0;
-        for (ikp=0;ikp<2;ikp++){
-            tchg[i][ikp][indx]=1.0;
-            schg[i][ikp][indx]=tr_area[i]*phi[numpars+i];
+        indx = 0;
+        for (ikp = 0; ikp < 2; ikp++) {
+            tchg[i][ikp][indx] = 1.0;
+            schg[i][ikp][indx] = tr_area[i] * phi[numpars+i];
         }
 
-        for (iknl=0;iknl<2;iknl++){
-            for (ixyz=0;ixyz<3;ixyz++){
-                indx+=1;
-                for (ikp=0;ikp<2;ikp++){
-                    tchg[i][ikp][indx]=1.0*(1-iknl)+tr_q[3*i+ixyz]*iknl;
-                    schg[i][ikp][indx]=(tr_q[3*i+ixyz]*(1-iknl)+1.0*iknl)*
-                                       tr_area[i]*phi[iknl*numpars+i];
+        for (iknl = 0; iknl < 2; iknl++) {
+            for (ixyz = 0; ixyz < 3; ixyz++) {
+                indx += 1;
+                for (ikp = 0; ikp < 2; ikp++) {
+                    tchg[i][ikp][indx] = 1.0 * (1-iknl) + tr_q[3*i+ixyz] * iknl;
+                    schg[i][ikp][indx] = (tr_q[3*i+ixyz] * (1-iknl) + 1.0 * iknl)
+                                       * tr_area[i] * phi[iknl*numpars+i];
                 }
             }
         }
 
-        for (ixyz=0;ixyz<3;ixyz++){
-            for (jxyz=0;jxyz<3;jxyz++){
-                indx+=1;
-                for (ikp=0;ikp<2;ikp++){
-                    tchg[i][ikp][indx]=tr_q[3*i+jxyz];
-                    schg[i][ikp][indx]=-tr_q[3*i+ixyz]*tr_area[i]*phi[i];
+        for (ixyz = 0; ixyz < 3; ixyz++) {
+            for (jxyz = 0; jxyz < 3; jxyz++) {
+                indx += 1;
+                for (ikp = 0; ikp < 2; ikp++) {
+                    tchg[i][ikp][indx] =  tr_q[3*i + jxyz];
+                    schg[i][ikp][indx] = -tr_q[3*i + ixyz] * tr_area[i] * phi[i];
                 }
             }
         }
@@ -735,22 +757,22 @@ int comp_ms_all(tnode *p, int ifirst) {
 
     if (p->exist_ms == 0 && ifirst == 0){
         p->ms = (double****)calloc(16, sizeof(double***));
-        for (i=0;i<16;i++){
+        for (i=0; i<16; i++){
             p->ms[i] = (double***)calloc(torder+1, sizeof(double**));
-            for (j=0;j<torder+1;j++){
+            for (j=0; j<torder+1; j++){
                 p->ms[i][j]=(double**)calloc(torder+1, sizeof(double*));
-                for (k=0;k<torder+1;k++)
+                for (k=0; k<torder+1; k++)
                     p->ms[i][j][k]=(double*)calloc(torder+1, sizeof(double));
             }
         }
             /* if null */
         comp_ms(p);
-        p->exist_ms=1;
+        p->exist_ms = 1;
     }
 
-    if(p->num_children > 0){
-        for (i=0;i<p->num_children;i++){
-            comp_ms_all(p->child[i],0);
+    if (p->num_children > 0){
+        for (i = 0; i < p->num_children; i++) {
+            comp_ms_all(p->child[i], 0);
         }
     }
 
@@ -767,68 +789,70 @@ int comp_ms(tnode *p) {
     int i, j, k1, k2, k3, n, m, k;
     double dx, dy, dz, tx, ty, tz, txyz;
 
-    for (n=0;n<16;n++){
-        for (i=0;i<torder+1;i++){
-            for (j=0;j<torder+1;j++){
-                for (k=0;k<torder+1;k++)
+    for (n = 0; n < 16; n++) {
+        for (i = 0; i < torder+1; i++) {
+            for (j = 0; j < torder+1; j++) {
+                for (k = 0; k < torder+1; k++) {
                     p->ms[n][i][j][k] = 0.0;
+                }
             }
         }
     }
 
-    for (i=p->ibeg;i<p->iend+1;i++){
-        dx=x[i]-p->x_mid;
-        dy=y[i]-p->y_mid;
-        dz=z[i]-p->z_mid;
-        for (j=0;j<7;j++){
-
-            tx=1.0;
-            for (k1=0;k1<torder+1;k1++){
+    for (i = p->ibeg; i < p->iend+1; i++) {
+        dx = x[i]-p->x_mid;
+        dy = y[i]-p->y_mid;
+        dz = z[i]-p->z_mid;
+        for (j = 0; j < 7; j++) {
+            tx = 1.0;
+            for (k1 = 0; k1 < torder+1; k1++) {
                 ty=1.0;
-                for (k2=0;k2<torder+1-k1;k2++){
+                for (k2 = 0; k2 < torder+1-k1; k2++) {
                     tz=1.0;
-                    for (k3=0;k3<torder+1-k1-k2;k3++){
+                    for (k3 = 0; k3 < torder+1-k1-k2; k3++) {
   /*****************************************/
-                        txyz=tx*ty*tz;
-                        p->ms[j][k1][k2][k3]+=schg[i][0][j]*txyz;
+                        txyz = tx*ty*tz;
+                        p->ms[j][k1][k2][k3] += schg[i][0][j] * txyz;
 
   /*****************************************/
-                        tz=tz*dz;
+                        tz = tz*dz;
                     }
-                    ty=ty*dy;
+                    ty = ty*dy;
                 }
-                tx=tx*dx;
+                tx = tx*dx;
             }
         }
-        tx=1.0;
-        for (k1=0;k1<torder+1;k1++){
-            ty=1.0;
-            for (k2=0;k2<torder+1-k1;k2++){
-                tz=1.0;
-                for (k3=0;k3<torder+1-k1-k2;k3++){
+
+        tx = 1.0;
+        for (k1 = 0; k1 < torder+1; k1++) {
+            ty = 1.0;
+            for (k2 = 0; k2 < torder+1-k1; k2++) {
+                tz = 1.0;
+                for (k3 = 0; k3 < torder+1-k1-k2; k3++) {
   /*****************************************/
-                    txyz=tx*ty*tz;
-                    p->ms[7][k1][k2][k3]+=schg[i][0][7]*txyz;
-                    p->ms[10][k1][k2][k3]+=schg[i][0][10]*txyz;
-                    p->ms[13][k1][k2][k3]+=schg[i][0][13]*txyz;
+                    txyz = tx*ty*tz;
+                    p->ms[7][k1][k2][k3] += schg[i][0][7] * txyz;
+                    p->ms[10][k1][k2][k3] += schg[i][0][10] * txyz;
+                    p->ms[13][k1][k2][k3] += schg[i][0][13] * txyz;
   /*****************************************/
-                    tz=tz*dz;
+                    tz *= dz;
                 }
-                ty=ty*dy;
+                ty *= dy;
             }
-            tx=tx*dx;
+            tx *= dx;
         }
     }
+
   /*****************************************/
-    for (k1=0;k1<torder+1;k1++){
-        for (k2=0;k2<torder+1-k1;k2++){
-            for (k3=0;k3<torder+1-k1-k2;k3++){
-                p->ms[8][k1][k2][k3]=p->ms[7][k1][k2][k3];
-                p->ms[9][k1][k2][k3]=p->ms[7][k1][k2][k3];
-                p->ms[11][k1][k2][k3]=p->ms[10][k1][k2][k3];
-                p->ms[12][k1][k2][k3]=p->ms[10][k1][k2][k3];
-                p->ms[14][k1][k2][k3]=p->ms[13][k1][k2][k3];
-                p->ms[15][k1][k2][k3]=p->ms[13][k1][k2][k3];
+    for (k1 = 0; k1 < torder+1; k1++) {
+        for (k2 = 0; k2 < torder+1-k1; k2++) {
+            for (k3 = 0; k3 < torder+1-k1-k2; k3++) {
+                p->ms[8][k1][k2][k3] = p->ms[7][k1][k2][k3];
+                p->ms[9][k1][k2][k3] = p->ms[7][k1][k2][k3];
+                p->ms[11][k1][k2][k3] = p->ms[10][k1][k2][k3];
+                p->ms[12][k1][k2][k3] = p->ms[10][k1][k2][k3];
+                p->ms[14][k1][k2][k3] = p->ms[13][k1][k2][k3];
+                p->ms[15][k1][k2][k3] = p->ms[13][k1][k2][k3];
             }
         }
     }
@@ -844,7 +868,7 @@ int compp_tree(tnode *p, double peng[2], double *tpoten_old, double tempq[2][16]
     double tx, ty, tz, dist, penglocal[2], pengchild[2];
     int i;
 
-    extern int compp_tree_pb(),compp_direct_pb();
+    extern int compp_tree_pb(), compp_direct_pb();
 
   /* determine DISTSQ for MAC test */
     tx = p->x_mid - tarpos[0];
@@ -853,25 +877,28 @@ int compp_tree(tnode *p, double peng[2], double *tpoten_old, double tempq[2][16]
     dist = sqrt(tx*tx+ty*ty+tz*tz);
 
   /* initialize potential energy */
-    peng[0]=0.0; peng[1]=0.0;
+    peng[0] = 0.0; 
+    peng[1] = 0.0;
 
 /* If MAC is accepted and there is more than 1 particale in the */
 /* box use the expansion for the approximation. */
 
-    if (p->radius < dist*theta && p->numpar > 40){
-        compp_tree_pb(p,peng,tempq);
+    if (p->radius < dist*theta && p->numpar > 40) {
+        compp_tree_pb(p, peng, tempq);
     } else {
-        if (p->num_children == 0){
-            penglocal[0]=0.0;penglocal[0]=0.0;
-            compp_direct_pb(penglocal,p->ibeg,p->iend,tpoten_old);
-            peng[0]=penglocal[0];peng[1]=penglocal[1];
+        if (p->num_children == 0) {
+            penglocal[0] = 0.0; 
+            compp_direct_pb(penglocal, p->ibeg, p->iend, tpoten_old);
+            peng[0] = penglocal[0];
+            peng[1] = penglocal[1];
         } else {
       /* If MAC fails check to see if there are children. If not, perform */
       /* direct calculation.  If there are children, call routine */
       /* recursively for each. */
-            for (i=0;i<p->num_children;i++){
-                pengchild[0]=0.0; pengchild[1]=0.0;
-                compp_tree(p->child[i],pengchild,tpoten_old,tempq);
+            for (i = 0; i < p->num_children; i++) {
+                pengchild[0] = 0.0; 
+                pengchild[1] = 0.0;
+                compp_tree(p->child[i], pengchild, tpoten_old, tempq);
                 peng[0] += pengchild[0];
                 peng[1] += pengchild[1];
             }
@@ -887,37 +914,40 @@ int compp_tree_pb(tnode *p, double peng[2], double tempq[2][16]) {
 
     extern int comp_tcoeff();
 
-    kapa[0]=0.0; kapa[1]=kappa;
-    for (ikp=0;ikp<2;ikp++){
+    kapa[0] = 0.0; 
+    kapa[1] = kappa;
+
+    for (ikp = 0; ikp < 2; ikp++) {
         comp_tcoeff(p, kapa[ikp]);
 
-        for (indx=0;indx<16;indx++){
-            peng[ikp]=0.0;
-            for (i=0;i<torder2+1;i++){
-                for (j=0;j<torder2+1-i;j++){
-                    for (k=0;k<torder2+1-i-j;k++){
-                        peng[ikp]+=der_cof[i][j][k][indx]
-                        *a[i+2+kk[indx][0]][j+2+kk[indx][1]][k+2+kk[indx][2]]
-                        *p->ms[indx][i][j][k];
+        for (indx = 0; indx < 16; indx++) {
+            peng[ikp] = 0.0;
+            for (i = 0; i < torder2+1; i++) {
+                for (j = 0;j < torder2+1-i; j++) {
+                    for (k = 0; k < torder2+1-i-j; k++) {
+                        peng[ikp] = peng[ikp] + der_cof[i][j][k][indx]
+                                  * a[i+2+kk[indx][0]][j+2+kk[indx][1]][k+2+kk[indx][2]]
+                                  * p->ms[indx][i][j][k];
                     }
                 }
             }
-            pt_comp[ikp][indx]=tempq[ikp][indx]*peng[ikp];
+            pt_comp[ikp][indx] = tempq[ikp][indx] * peng[ikp];
         }
     }
 
-    sl[0] = pt_comp[0][0]-pt_comp[1][0];
-    sl[1] = eps*(pt_comp[1][1]+pt_comp[1][2]+pt_comp[1][3])
-            -(pt_comp[0][1]+pt_comp[0][2]+pt_comp[0][3]);
-    sl[2] = -(pt_comp[0][4]+pt_comp[0][5]+pt_comp[0][6])
-            +(pt_comp[1][4]+pt_comp[1][5]+pt_comp[1][6])/eps;
+    sl[0] = pt_comp[0][0] - pt_comp[1][0];
+    sl[1] = eps * (pt_comp[1][1] + pt_comp[1][2] + pt_comp[1][3])
+            - (pt_comp[0][1] + pt_comp[0][2] + pt_comp[0][3]);
+    sl[2] = - (pt_comp[0][4] + pt_comp[0][5] + pt_comp[0][6])
+            + (pt_comp[1][4] + pt_comp[1][5] + pt_comp[1][6]) / eps;
     sl[3] = 0.0;
 
-    for (i=7;i<16;i++)
-        sl[3] += pt_comp[1][i]-pt_comp[0][i];
+    for (i = 7; i < 16; i++) {
+        sl[3] += pt_comp[1][i] - pt_comp[0][i];
+    }
 
-    peng[0]=sl[0]+sl[1];
-    peng[1]=sl[2]+sl[3];
+    peng[0] = sl[0] + sl[1];
+    peng[1] = sl[2] + sl[3];
 
     return 0;
 }
@@ -939,141 +969,190 @@ int comp_tcoeff(tnode *p, double kappa) {
     dy = tarpos[1]-p->y_mid;
     dz = tarpos[2]-p->z_mid;
 
-    ddx = 2.0*dx;
-    ddy = 2.0*dy;
-    ddz = 2.0*dz;
+    ddx = 2.0 * dx;
+    ddy = 2.0 * dy;
+    ddz = 2.0 * dz;
 
-    kappax = kappa*dx;
-    kappay = kappa*dy;
-    kappaz = kappa*dz;
+    kappax = kappa * dx;
+    kappay = kappa * dy;
+    kappaz = kappa * dz;
 
     dist = dx*dx + dy*dy + dz*dz;
     fac = 1.0/dist;
     dist = sqrt(dist);
 
   /* 0th coeff or function val */
-    b[2][2][2]=exp(-kappa*dist);
-    a[2][2][2]=b[2][2][2]/dist;
+    b[2][2][2] = exp(-kappa * dist);
+    a[2][2][2] = b[2][2][2] / dist;
 
   /* 2 indices are 0 */
 
-    b[3][2][2]=kappax*a[2][2][2];
-    b[2][3][2]=kappay*a[2][2][2];
-    b[2][2][3]=kappaz*a[2][2][2];
+    b[3][2][2]=kappax * a[2][2][2];
+    b[2][3][2]=kappay * a[2][2][2];
+    b[2][2][3]=kappaz * a[2][2][2];
 
-    a[3][2][2]=fac*dx*(a[2][2][2]+kappa*b[2][2][2]);
-    a[2][3][2]=fac*dy*(a[2][2][2]+kappa*b[2][2][2]);
-    a[2][2][3]=fac*dz*(a[2][2][2]+kappa*b[2][2][2]);
+    a[3][2][2] = fac * dx * (a[2][2][2] + kappa * b[2][2][2]);
+    a[2][3][2] = fac * dy * (a[2][2][2] + kappa * b[2][2][2]);
+    a[2][2][3] = fac * dz * (a[2][2][2] + kappa * b[2][2][2]);
 
-    for (i=2;i<torderlim+1;i++){
-        b[i+2][2][2]=cf1[i-1]*kappa*(dx*a[i+1][2][2]-a[i][2][2]);
-        b[2][i+2][2]=cf1[i-1]*kappa*(dy*a[2][i+1][2]-a[2][i][2]);
-        b[2][2][i+2]=cf1[i-1]*kappa*(dz*a[2][2][i+1]-a[2][2][i]);
+    for (i = 2; i < torderlim+1; i++) {
+        b[i+2][2][2] = cf1[i-1] * kappa * (dx * a[i+1][2][2] - a[i][2][2]);
+        b[2][i+2][2] = cf1[i-1] * kappa * (dy * a[2][i+1][2] - a[2][i][2]);
+        b[2][2][i+2] = cf1[i-1] * kappa * (dz * a[2][2][i+1] - a[2][2][i]);
 
-        a[i+2][2][2]=fac*(ddx*cf2[i-1]*a[i+1][2][2]-cf3[i-1]*a[i][2][2]+
-                     cf1[i-1]*kappa*(dx*b[i+1][2][2]-b[i][2][2]));
-        a[2][i+2][2]=fac*(ddy*cf2[i-1]*a[2][i+1][2]-cf3[i-1]*a[2][i][2]+
-                     cf1[i-1]*kappa*(dy*b[2][i+1][2]-b[2][i][2]));
-        a[2][2][i+2]=fac*(ddz*cf2[i-1]*a[2][2][i+1]-cf3[i-1]*a[2][2][i]+
-                     cf1[i-1]*kappa*(dz*b[2][2][i+1]-b[2][2][i]));
+        a[i+2][2][2] = fac * (ddx * cf2[i-1] * a[i+1][2][2] 
+                                  - cf3[i-1] * a[i][2][2]
+                     + cf1[i-1] * kappa * (dx * b[i+1][2][2]    
+                                              - b[i][2][2]));
+
+        a[2][i+2][2] = fac * (ddy * cf2[i-1] * a[2][i+1][2] 
+                                  - cf3[i-1] * a[2][i][2]
+                     + cf1[i-1] * kappa * (dy * b[2][i+1][2] 
+                                              - b[2][i][2]));
+        
+        a[2][2][i+2] = fac * (ddz * cf2[i-1] * a[2][2][i+1] 
+                                  - cf3[i-1] * a[2][2][i]
+                     + cf1[i-1] * kappa * (dz * b[2][2][i+1]
+                                              - b[2][2][i]));
     }
 
   /* 1 index 0, 1 index 1, other >=1 */
-    b[3][3][2]=kappax*a[2][3][2];
-    b[3][2][3]=kappax*a[2][2][3];
-    b[2][3][3]=kappay*a[2][2][3];
+    b[3][3][2] = kappax * a[2][3][2];
+    b[3][2][3] = kappax * a[2][2][3];
+    b[2][3][3] = kappay * a[2][2][3];
 
-    a[3][3][2]=fac*(dx*a[2][3][2]+ddy*a[3][2][2]+kappax*b[2][3][2]);
-    a[3][2][3]=fac*(dx*a[2][2][3]+ddz*a[3][2][2]+kappax*b[2][2][3]);
-    a[2][3][3]=fac*(dy*a[2][2][3]+ddz*a[2][3][2]+kappay*b[2][2][3]);
+    a[3][3][2] = fac * (dx * a[2][3][2] + ddy * a[3][2][2] + kappax * b[2][3][2]);
+    a[3][2][3] = fac * (dx * a[2][2][3] + ddz * a[3][2][2] + kappax * b[2][2][3]);
+    a[2][3][3] = fac * (dy * a[2][2][3] + ddz * a[2][3][2] + kappay * b[2][2][3]);
 
-    for (i=2;i<torderlim;i++){
-        b[3][2][i+2]=kappax*a[2][2][i+2];
-        b[2][3][i+2]=kappay*a[2][2][i+2];
-        b[2][i+2][3]=kappaz*a[2][i+2][2];
-        b[3][i+2][2]=kappax*a[2][i+2][2];
-        b[i+2][3][2]=kappay*a[i+2][2][2];
-        b[i+2][2][3]=kappaz*a[i+2][2][2];
+    for (i = 2; i < torderlim; i++) {
+        b[3][2][i+2] = kappax * a[2][2][i+2];
+        b[2][3][i+2] = kappay * a[2][2][i+2];
+        b[2][i+2][3] = kappaz * a[2][i+2][2];
+        b[3][i+2][2] = kappax * a[2][i+2][2];
+        b[i+2][3][2] = kappay * a[i+2][2][2];
+        b[i+2][2][3] = kappaz * a[i+2][2][2];
 
-        a[3][2][i+2]=fac*(dx*a[2][2][i+2]+ddz*a[3][2][i+1]-a[3][2][i]+
-                     kappax*b[2][2][i+2]);
-        a[2][3][i+2]=fac*(dy*a[2][2][i+2]+ddz*a[2][3][i+1]-a[2][3][i]+
-                     kappay*b[2][2][i+2]);
-        a[2][i+2][3]=fac*(dz*a[2][i+2][2]+ddy*a[2][i+1][3]-a[2][i][3]+
-                     kappaz*b[2][i+2][2]);
-        a[3][i+2][2]=fac*(dx*a[2][i+2][2]+ddy*a[3][i+1][2]-a[3][i][2]+
-                     kappax*b[2][i+2][2]);
-        a[i+2][3][2]=fac*(dy*a[i+2][2][2]+ddx*a[i+1][3][2]-a[i][3][2]+
-                     kappay*b[i+2][2][2]);
-        a[i+2][2][3]=fac*(dz*a[i+2][2][2]+ddx*a[i+1][2][3]-a[i][2][3]+
-                     kappaz*b[i+2][2][2]);
+        a[3][2][i+2]=fac * (dx * a[2][2][i+2] + ddz * a[3][2][i+1] - a[3][2][i]
+                      + kappax * b[2][2][i+2]);
+        a[2][3][i+2]=fac * (dy * a[2][2][i+2] + ddz * a[2][3][i+1] - a[2][3][i]
+                      + kappay * b[2][2][i+2]);
+        a[2][i+2][3]=fac * (dz * a[2][i+2][2] + ddy * a[2][i+1][3] - a[2][i][3]
+                      + kappaz * b[2][i+2][2]);
+        a[3][i+2][2]=fac * (dx * a[2][i+2][2] + ddy * a[3][i+1][2] - a[3][i][2]
+                      + kappax * b[2][i+2][2]);
+        a[i+2][3][2]=fac * (dy * a[i+2][2][2] + ddx * a[i+1][3][2] - a[i][3][2]
+                      + kappay * b[i+2][2][2]);
+        a[i+2][2][3]=fac * (dz * a[i+2][2][2] + ddx * a[i+1][2][3] - a[i][2][3]
+                      + kappaz * b[i+2][2][2]);
     }
 
     /* 1 index 0, others >=2 */
-    for (i=2;i<torderlim-1;i++){
-        for (j=2;j<torderlim-i+1;j++){
-            b[i+2][j+2][2]=cf1[i-1]*kappa*(dx*a[i+1][j+2][2]-a[i][j+2][2]);
-            b[i+2][2][j+2]=cf1[i-1]*kappa*(dx*a[i+1][2][j+2]-a[i][2][j+2]);
-            b[2][i+2][j+2]=cf1[i-1]*kappa*(dy*a[2][i+1][j+2]-a[2][i][j+2]);
+    for (i = 2; i < torderlim-1; i++) {
+        for (j = 2; j < torderlim-i+1; j++) {
+            b[i+2][j+2][2] = cf1[i-1] * kappa * (dx * a[i+1][j+2][2] - a[i][j+2][2]);
+            b[i+2][2][j+2] = cf1[i-1] * kappa * (dx * a[i+1][2][j+2] - a[i][2][j+2]);
+            b[2][i+2][j+2] = cf1[i-1] * kappa * (dy * a[2][i+1][j+2] - a[2][i][j+2]);
 
-            a[i+2][j+2][2]=fac*(ddx*cf2[i-1]*a[i+1][j+2][2]+ddy*a[i+2][j+1][2]
-                           -cf3[i-1]*a[i][j+2][2]-a[i+2][j][2]+
-                           cf1[i-1]*kappa*(dx*b[i+1][j+2][2]-b[i][j+2][2]));
-            a[i+2][2][j+2]=fac*(ddx*cf2[i-1]*a[i+1][2][j+2]+ddz*a[i+2][2][j+1]
-                           -cf3[i-1]*a[i][2][j+2]-a[i+2][2][j]+
-                           cf1[i-1]*kappa*(dx*b[i+1][2][j+2]-b[i][2][j+2]));
-            a[2][i+2][j+2]=fac*(ddy*cf2[i-1]*a[2][i+1][j+2]+ddz*a[2][i+2][j+1]
-                           -cf3[i-1]*a[2][i][j+2]-a[2][i+2][j]+
-                           cf1[i-1]*kappa*(dy*b[2][i+1][j+2]-b[2][i][j+2]));
+            a[i+2][j+2][2] = fac * (ddx * cf2[i-1] * a[i+1][j+2][2] 
+                                             + ddy * a[i+2][j+1][2]
+                                        - cf3[i-1] * a[i][j+2][2] 
+                                                   - a[i+2][j][2]
+                           + cf1[i-1] * kappa * (dx * b[i+1][j+2][2] 
+                                                    - b[i][j+2][2]));
+
+            a[i+2][2][j+2] = fac * (ddx * cf2[i-1] * a[i+1][2][j+2] 
+                                             + ddz * a[i+2][2][j+1]
+                                        - cf3[i-1] * a[i][2][j+2] 
+                                                   - a[i+2][2][j]
+                           + cf1[i-1] * kappa * (dx * b[i+1][2][j+2]
+                                                    - b[i][2][j+2]));
+
+            a[2][i+2][j+2] = fac * (ddy * cf2[i-1] * a[2][i+1][j+2] 
+                                             + ddz * a[2][i+2][j+1]
+                                        - cf3[i-1] * a[2][i][j+2] 
+                                                   - a[2][i+2][j] 
+                           + cf1[i-1] * kappa * (dy * b[2][i+1][j+2] 
+                                                    - b[2][i][j+2]));
         }
     }
 
   /* 2 indices 1,other >= 1 */
-    b[3][3][3]=kappax*a[2][3][3];
-    a[3][3][3]=fac*(dx*a[2][3][3]+ddy*a[3][2][3]+ddz*a[3][3][2]+
-               kappax*b[2][3][3]);
+    b[3][3][3] = kappax * a[2][3][3];
+    a[3][3][3] = fac * (dx * a[2][3][3] 
+                     + ddy * a[3][2][3]
+                     + ddz * a[3][3][2]
+                  + kappax * b[2][3][3]);
 
-    for (i=2;i<torderlim-1;i++){
-        b[3][3][i+2]=kappax*a[2][3][i+2];
-        b[3][i+2][3]=kappax*a[2][i+2][3];
-        b[i+2][3][3]=kappay*a[i+2][2][3];
+    for (i = 2; i < torderlim-1; i++){
+        b[3][3][i+2] = kappax * a[2][3][i+2];
+        b[3][i+2][3] = kappax * a[2][i+2][3];
+        b[i+2][3][3] = kappay * a[i+2][2][3];
 
-        a[3][3][i+2]=fac*(dx*a[2][3][i+2]+ddy*a[3][2][i+2]+ddz*a[3][3][i+1]
-                     -a[3][3][i]+kappax*b[2][3][i+2]);
-        a[3][i+2][3]=fac*(dx*a[2][i+2][3]+ddy*a[3][i+1][3]+ddz*a[3][i+2][2]
-                     -a[3][i][3]+kappax*b[2][i+2][3]);
-        a[i+2][3][3]=fac*(dy*a[i+2][2][3]+ddx*a[i+1][3][3]+ddz*a[i+2][3][2]
-                     -a[i][3][3]+kappay*b[i+2][2][3]);
+        a[3][3][i+2] = fac * (dx * a[2][3][i+2]
+                           + ddy * a[3][2][i+2]
+                           + ddz * a[3][3][i+1]
+                                  -a[3][3][i] 
+                        + kappax * b[2][3][i+2]);
+
+        a[3][i+2][3] = fac * (dx * a[2][i+2][3] 
+                           + ddy * a[3][i+1][3]
+                           + ddz * a[3][i+2][2]
+                                 - a[3][i][3] 
+                        + kappax * b[2][i+2][3]);
+
+        a[i+2][3][3] = fac * (dy * a[i+2][2][3] 
+                           + ddx * a[i+1][3][3] 
+                           + ddz * a[i+2][3][2]
+                                 - a[i][3][3] 
+                        + kappay * b[i+2][2][3]);
     }
 
   /* 1 index 1, others >=2 */
-    for (i=2;i<torderlim-2;i++){
-        for (j=2;j<torderlim-i+1;j++){
-            b[3][i+2][j+2]=kappax*a[2][i+2][j+2];
-            b[i+2][3][j+2]=kappay*a[i+2][2][j+2];
-            b[i+2][j+2][3]=kappaz*a[i+2][j+2][2];
+    for (i = 2; i < torderlim-2; i++) {
+        for (j = 2; j < torderlim-i+1; j++) {
+            b[3][i+2][j+2] = kappax * a[2][i+2][j+2];
+            b[i+2][3][j+2] = kappay * a[i+2][2][j+2];
+            b[i+2][j+2][3] = kappaz * a[i+2][j+2][2];
 
-            a[3][i+2][j+2]=fac*(dx*a[2][i+2][j+2]+ddy*a[3][i+1][j+2]
-                           +ddz*a[3][i+2][j+1]-a[3][i][j+2]
-                           -a[3][i+2][j]+kappax*b[2][i+2][j+2]);
-            a[i+2][3][j+2]=fac*(dy*a[i+2][2][j+2]+ddx*a[i+1][3][j+2]
-                           +ddz*a[i+2][3][j+1]-a[i][3][j+2]
-                           -a[i+2][3][j]+kappay*b[i+2][2][j+2]);
-            a[i+2][j+2][3]=fac*(dz*a[i+2][j+2][2]+ddx*a[i+1][j+2][3]
-                           +ddy*a[i+2][j+1][3]-a[i][j+2][3]
-                           -a[i+2][j][3]+kappaz*b[i+2][j+2][2]);
+            a[3][i+2][j+2] = fac * (dx * a[2][i+2][j+2] 
+                                 + ddy * a[3][i+1][j+2]
+                                 + ddz * a[3][i+2][j+1]         
+                                       - a[3][i][j+2]
+                                       - a[3][i+2][j]         
+                              + kappax * b[2][i+2][j+2]);
+
+            a[i+2][3][j+2] = fac * (dy * a[i+2][2][j+2] 
+                                 + ddx * a[i+1][3][j+2]
+                                 + ddz * a[i+2][3][j+1] 
+                                       - a[i][3][j+2]
+                                       - a[i+2][3][j] 
+                              + kappay * b[i+2][2][j+2]);
+            
+            a[i+2][j+2][3] = fac * (dz * a[i+2][j+2][2] 
+                                 + ddx * a[i+1][j+2][3]
+                                 + ddy * a[i+2][j+1][3] 
+                                       - a[i][j+2][3]
+                                       - a[i+2][j][3]
+                              + kappaz * b[i+2][j+2][2]);
         }
     }
 
   /* all indices >=2 */
-    for (k=2;k<torderlim-3;k++){
-        for (j=2;j<torderlim-1-k;j++){
-            for (i=2;i<torderlim+1-k-j;i++){
-                b[i+2][j+2][k+2]=cf1[i-1]*kappa*(dx*a[i+1][j+2][k+2]-a[i][j+2][k+2]);
-                a[i+2][j+2][k+2]=fac*(ddx*cf2[i-1]*a[i+1][j+2][k+2]
-                                 +ddy*a[i+2][j+1][k+2]+ddz*a[i+2][j+2][k+1]
-                                 -cf3[i-1]*a[i][j+2][k+2]-a[i+2][j][k+2]-a[i+2][j+2][k]
-                                 +cf1[i-1]*kappa*(dx*b[i+1][j+2][k+2]-b[i][j+2][k+2]));
+    for (k = 2; k < torderlim-3; k++) {
+        for (j = 2; j < torderlim-1-k; j++) {
+            for (i = 2; i < torderlim+1-k-j; i++) {
+                b[i+2][j+2][k+2] = cf1[i-1] * kappa * (dx * a[i+1][j+2][k+2] 
+                                                          - a[i][j+2][k+2]);
+
+                a[i+2][j+2][k+2] = fac * (ddx * cf2[i-1] * a[i+1][j+2][k+2]
+                                                   + ddy * a[i+2][j+1][k+2] 
+                                                   + ddz * a[i+2][j+2][k+1]
+                                                cf3[i-1] * a[i][j+2][k+2]
+                                                         - a[i+2][j][k+2]
+                                                         - a[i+2][j+2][k]
+                                 + cf1[i-1] * kappa * (dx * b[i+1][j+2][k+2] 
+                                                          - b[i][j+2][k+2]));
             }
         }
     }
