@@ -3,8 +3,6 @@
  *
  * C version authored by:
  * Jiahui Chen, Southern Methodist University, Dallas, TX
- *
- * Additional modifications and updates by:
  * Leighton Wilson, University of Michigan, Ann Arbor, MI
  *
  * Based on package originally written in FORTRAN by:
@@ -19,9 +17,16 @@
 
 
 /* runtime parameters */
-int numpars, order, maxparnode, iflag, forcedim;
+int numpars; 
+int order;
+int maxparnode; 
+int iflag; 
+int forcedim;
 double theta;
-double center[3], r0[3], v0[3];
+
+double center[3];
+double r0[3];
+double v0[3];
 
 
 /* arrays for coordinates, charge, potential & force */

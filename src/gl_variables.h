@@ -3,8 +3,6 @@
  *
  * C version authored by:
  * Jiahui Chen, Southern Methodist University, Dallas, TX
- *
- * Additional modifications and updates by:
  * Leighton Wilson, University of Michigan, Ann Arbor, MI
  *
  * Based on package originally written in FORTRAN by:
@@ -26,7 +24,9 @@ double bulk_strength, kappa2, kappa;
 
 
 /*global scalar variables*/
-int nface, nspt, natm;
+int nface; 
+int nspt; 
+int natm;
 
 
 /*dynamic allocated variables*/
