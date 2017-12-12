@@ -80,6 +80,27 @@ int treecode_initialization(int main_order, int main_maxparnode, double main_the
         }
     }
 
+    /* initialize kk */
+    kk[0][0]=0; kk[0][1]=0; kk[0][2]=0; /* Original Kernel */
+
+    kk[1][0]=1; kk[1][1]=0; kk[1][2]=0; /* 1st Order */
+    kk[2][0]=0; kk[2][1]=1; kk[2][2]=0;
+    kk[3][0]=0; kk[3][1]=0; kk[3][2]=1;
+
+    kk[4][0]=1; kk[4][1]=0; kk[4][2]=0;
+    kk[5][0]=0; kk[5][1]=1; kk[5][2]=0;
+    kk[6][0]=0; kk[6][1]=0; kk[6][2]=1;
+
+    kk[7][0]=2; kk[7][1]=0; kk[7][2]=0;
+    kk[8][0]=1; kk[8][1]=1; kk[8][2]=0;
+    kk[9][0]=1; kk[9][1]=0; kk[9][2]=1;
+    kk[10][0]=1; kk[10][1]=1; kk[10][2]=0;
+    kk[11][0]=0; kk[11][1]=2; kk[11][2]=0;
+    kk[12][0]=0; kk[12][1]=1; kk[12][2]=1;
+    kk[13][0]=1; kk[13][1]=0; kk[13][2]=1;
+    kk[14][0]=0; kk[14][1]=1; kk[14][2]=1;
+    kk[15][0]=0; kk[15][1]=0; kk[15][2]=2;
+
     /* the adjustment of der_cof for the recurrence relation */
 
     for (i = 0; i < order+1; i++) {
