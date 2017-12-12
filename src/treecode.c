@@ -1169,7 +1169,7 @@ int comp_tcoeff(tnode *p, double kappa) {
                 a[i+2][j+2][k+2] = fac * (ddx * cf2[i-1] * a[i+1][j+2][k+2]
                                                    + ddy * a[i+2][j+1][k+2] 
                                                    + ddz * a[i+2][j+2][k+1]
-                                                cf3[i-1] * a[i][j+2][k+2]
+                                              - cf3[i-1] * a[i][j+2][k+2]
                                                          - a[i+2][j][k+2]
                                                          - a[i+2][j+2][k]
                                  + cf1[i-1] * kappa * (dx * b[i+1][j+2][k+2] 
