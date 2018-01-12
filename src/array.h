@@ -65,6 +65,28 @@
     }                                                          \
 } while (0)
 
+#define make_4array(a, k, l, m, n) do {                             \
+    size_t make_4array_loop_counter;                                \
+    make_vector(a, (k) + 1);                                        \
+    for (make_4array_loop_counter = 0;                              \
+            make_4array_loop_counter < (k);                         \
+            make_4array_loop_counter++)                             \
+        make_3array((a)[make_4array_loop_counter], (l), (m), (n));  \
+    (a)[l] = NULL;                                                  \
+} while (0)
+
+#define free_4array(a) do {                                    \
+    if (a != NULL) {                                           \
+        size_t make_4array_loop_counter;                       \
+        for (make_4array_loop_counter = 0;                     \
+                (a)[make_4array_loop_counter] != NULL;         \
+                make_4array_loop_counter++)                    \
+            free_3array((a)[make_4array_loop_counter]);        \
+        free_vector(a);                                        \
+        a = NULL;                                              \
+    }                                                          \
+} while (0)
+
 #define print_vector(fmt, v, n) do {                           \
     size_t print_vector_loop_counter;                          \
     for (print_vector_loop_counter = 0;                        \

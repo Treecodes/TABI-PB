@@ -3,8 +3,6 @@
  *
  * C version authored by:
  * Jiahui Chen, Southern Methodist University, Dallas, TX
- *
- * Additional modifications and updates by:
  * Leighton Wilson, University of Michigan, Ann Arbor, MI
  *
  * Based on package originally written in FORTRAN by:
@@ -17,8 +15,8 @@
  *
  */
 
-#ifndef H_TABIPBSTRUCT_H
-#define H_TABIPBSTRUCT_H
+#ifndef H_TABIPB_STRUCT_H
+#define H_TABIPB_STRUCT_H
 
 #include <stdlib.h> /* calloc() */
 #include <stdio.h> /* FILE */
@@ -50,25 +48,26 @@ typedef struct sTABIPBparm {
 
    /* output of potential data: 1 output vtk */
     int output_datafile;
+    
+    /* set and used locally */
+    double eps;
+    double kappa;
+    double kappa2;
 
 } TABIPBparm;
 
 
 typedef struct sTABIPBvars {
 
-   /* solvation energy */
-   double soleng, couleng;
+    /* solvation energy */
+    double soleng, couleng;
 
-   /* number of nodes, number of triangles */
-   int nspt, nface, natm;
+    /* number of nodes, number of triangles */
+    int nspt, nface, natm;
 
-   /* msms variables */
-   int **extr_v, **extr_f; //[3][nspt], [2][nface]
+    /* msms variables */
+    int **extr_v, **extr_f; //[3][nspt], [2][nface]
 
-   /*
-    double *tr_xyz, *tr_q; //[3]*[nface]
-    double *tr_area, *bvct;
-    */
     double *atmrad, *atmchr, *chrpos;
 
     /* vertices, normal vector*/
@@ -92,4 +91,4 @@ typedef struct sTABIPBvars {
 
 int sphinx2tabipb(TABIPBparm *parm, TABIPBvars *vars);
 
-#endif /* H_TABIPBSTRUCT_H */
+#endif /* H_TABIPB_STRUCT_H */

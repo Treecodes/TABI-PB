@@ -12,35 +12,16 @@
  * Last modified by Leighton Wilson, 06/20/2016
  */
 
-#ifndef H_GLVARS_H
-#define H_GLVARS_H
-
-#include "TABIPBstruct.h"
-
+#ifndef H_GLOBAL_PARAMS_H
+#define H_GLOBAL_PARAMS_H
 
 /*constant variables */
-double pi, one_over_4pi, kcal2j, bulk_coef, units_coef, epsw, epsp, eps;
-double bulk_strength, kappa2, kappa;
 
+const double PI = 3.14159265358979324;
+const double ONE_OVER_4PI = 0.079577471545948;
+const double KCAL_TO_KJ = 4.184;
+const double BULK_COEFF = 2529.12179861515279;
+const double UNITS_COEFF = 1389.3875744; // 332.0716 * kcal2kj
+const double UNITS_PARA = 8729.779593448; // 2 * constUnits * PI
 
-/*global scalar variables*/
-int nface; 
-int nspt; 
-int natm;
-
-
-/*dynamic allocated variables*/
-int **extr_v; //[3][nspt]
-int **extr_f; //[2][nface]
-int **face;//[3][nface]
-
-double **vert, **snrm; //[3][nspt];
-double *tr_xyz, *tr_q; //[3]*[nface]
-double *tr_area, *bvct, *xvct; //[nface];
-double *atmrad, *atmchr, *chrpos; //[natm],[3][nface];
-
-/* GMRes variables */
-double *work, *h;
-
-
-#endif /* H_GLVARS_H */
+#endif /* H_GLOBAL_PARAMS_H */
