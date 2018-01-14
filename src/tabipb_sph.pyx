@@ -19,6 +19,9 @@ cdef class TABIPB_Solver:
   cdef double temp_
   cdef int mesh_flag_
   cdef int output_datafile_
+  cdef double eps_
+  cdef double kappa_
+  cdef double kappa2_
 
   cdef int _pid
 

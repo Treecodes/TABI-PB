@@ -15,21 +15,20 @@
 #include <math.h>
 #include <stdlib.h>
 
-#include "treecode.h"
-#include "array.h"
+#include "run_gmres.h"
+#include "treecode_gmres_interface.h"
 
+#include "array.h"
 #include "particle_struct.h"
 
 
-int CallGMRES(int nface, double *source_term, double *xvct)
+int RunGMRES(int nface, double *source_term, double *xvct)
 {
-
     static long int info;
     long int RESTRT, ldw, ldh, iter, N;
     double resid;
+    double *work, *h;
 
-    extern int matvec();
-    extern int psolve();
     extern int gmres_(long int *n, double *b, double *x, long int *restrt,
                       double *work, long int *ldw, double *h, long int *ldh,
                       long int *iter, double *resid, int (*matvec)(),
@@ -42,9 +41,6 @@ int CallGMRES(int nface, double *source_term, double *xvct)
     ldh = RESTRT + 1;
     iter = 100;
     resid = 1e-4;
-
-    work = (double *) calloc(ldw * (RESTRT + 4), sizeof(double));
-    h = (double *) calloc(ldh * (RESTRT + 2), sizeof(double));
 
     make_vector(work, ldw * (RESTRT + 4));
     make_vector(h, ldh * (RESTRT + 2));

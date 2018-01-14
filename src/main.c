@@ -13,7 +13,13 @@
  *
  */
 
-#include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
+
+#include "tabipb.h"
+#include "print_output.h"
+
+#include "array.h"
 #include "TABIPBstruct.h"
 
 int main(int argc, char **argv)
@@ -33,10 +39,7 @@ int main(int argc, char **argv)
 #ifndef _WIN32                                                                     
     extern void timer_start();
     extern void timer_end();
-#endif  
-
-    extern int OutputPrint();
-    extern int OutputVTK();
+#endif
 
 #ifndef _WIN32                                                                     
     timer_start("TOTAL_TIME");
@@ -45,7 +48,6 @@ int main(int argc, char **argv)
     TABIPBparm *main_parm = malloc(sizeof *main_parm);
     TABIPBvars *main_vars = malloc(sizeof *main_vars);
 
-    extern int tabipb();
 /********************************************************/
 
     fp = fopen("usrdata.in", "r");
@@ -134,11 +136,11 @@ int main(int argc, char **argv)
     fclose(fp);
     printf("Finished assembling charge structures from .pqr file...\n");
 
-    ierr = tabipb(main_parm, main_vars);
+    ierr = TABIPB(main_parm, main_vars);
 
     ierr = OutputPrint(main_vars);
     if (output_datafile == 1) {
-        ierr=OutputVTK(main_parm, main_vars);
+        ierr = OutputVTK(main_parm, main_vars);
     }
 
     free(main_parm);

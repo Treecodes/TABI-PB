@@ -18,9 +18,6 @@
 #ifndef H_TABIPB_STRUCT_H
 #define H_TABIPB_STRUCT_H
 
-#include <stdlib.h> /* calloc() */
-#include <stdio.h> /* FILE */
-#include "array.h"
 
 typedef struct sTABIPBparm {
 
@@ -59,31 +56,32 @@ typedef struct sTABIPBparm {
 
 typedef struct sTABIPBvars {
 
-    /* solvation energy */
+    /* solvation and coulombic energy */
     double soleng, couleng;
 
-    /* number of nodes, number of triangles */
-    int nspt, nface, natm;
-
-    /* msms variables */
-    int **extr_v, **extr_f; //[3][nspt], [2][nface]
-
+    /* number of atoms */
+    int natm;
+    
+    /* atomic radii, charges, position */
     double *atmrad, *atmchr, *chrpos;
 
-    /* vertices, normal vector*/
+    /* number of vertices and faces */
+    int nspt, nface;
+    
+    /* positions and normals of vertices */
     double **vert, **snrm;
 
-    /* surface potential on vertices area */
+    /* surface potential on vertices */
     double *vert_ptl;
     double max_vert_ptl, min_vert_ptl;
     double max_der_vert_ptl, min_der_vert_ptl;
 
-    /* surface potential on elements area */
+    /* surface potential on elements */
     double *xvct;
     double max_xvct, min_xvct;
     double max_der_xvct, min_der_xvct;
 
-    /* connectivity data for MSMS surface triangulation */
+    /* connectivity data for surface triangulation */
     int **face;
 
 } TABIPBvars;

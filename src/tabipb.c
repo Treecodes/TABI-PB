@@ -15,23 +15,32 @@
  *
  */
 
-#include <time.h>
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "tabipb.h"
-#include "treecode.h"
+#include "readin.h"
+#include "treecode_tabipb_interface.h"
+#include "run_gmres.h"
+#include "utilities.h"
 
 #include "global_params.h"
 #include "array.h"
-
 #include "TABIPBstruct.h"
 #include "particle_struct.h"
 
 
-int tabipb(TABIPBparm *parm, TABIPBvars *vars) {
+/* internal functions */
+static int s_ComputeSourceTerm(TABIPBparm *parm, TABIPBvars *vars,
+                               TreeParticles *particles);
+static int s_ComputePotential(TABIPBvars *vars, TreeParticles *particles,
+                              double *chrptl);
+static int s_OutputPotential(TABIPBvars *vars, TreeParticles *particles);
+
+
+int TABIPB(TABIPBparm *parm, TABIPBvars *vars) {
   /* Assemble the TABIPBparm out side this subroutine, and pass the three arrays */
   /* TABIPBparm a structure of parameters: file path, file name, density,
      probe radius, epsp, epsw, bulk_strength, treecode order, treecode maxparnode,
@@ -50,13 +59,8 @@ int tabipb(TABIPBparm *parm, TABIPBvars *vars) {
     double energy_coulomb = 0.0;
     double t1, t2;
 
-    extern void Readin();
-
     /* variables used to compute potential solution */
     double *chrptl;
-
-    /* GMRES related variables */
-    extern int CallGMRES(int nface, double *source_term, double *xvct)
 
     printf("\n              Treecode order: %d", parm->order);
     printf("\n Max # of particles per leaf: %d", parm->maxparnode);
@@ -79,7 +83,7 @@ int tabipb(TABIPBparm *parm, TABIPBvars *vars) {
 
     Readin(parm, vars, particles);
 
-    ComputeSourceTerm(parm, vars, particles);
+    s_ComputeSourceTerm(parm, vars, particles);
 
     /* set up treecode */
     TreecodeInitialization(parm, vars->nface, particles);
@@ -92,7 +96,7 @@ int tabipb(TABIPBparm *parm, TABIPBvars *vars) {
 
     /* the solvation energy computation */
     make_vector(chrptl, vars->nface);
-    ComputePotential(vars, chrptl);
+    s_ComputePotential(vars, chrptl);
 
     energy_solvation = 0.0;
     energy_coulomb = 0.0;
@@ -128,7 +132,7 @@ int tabipb(TABIPBparm *parm, TABIPBvars *vars) {
     /* dellocate treecode variables, reorder particles */
     TreecodeFinalization(particles);
 
-    OutputPotential(vars, particles);
+    s_OutputPotential(vars, particles);
 
     free_matrix(particles->position);
     free_matrix(particles->partical_normal);
@@ -138,11 +142,19 @@ int tabipb(TABIPBparm *parm, TABIPBvars *vars) {
     return 0;
 
 }
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
 
-/************************************/
-int ComputeSourceTerm(TABIPBparm *parm, TABIPBvars *vars, TreeParticles *particles) {
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/* PRIVATE internal TABIPB functions                         * * * */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+/**********************************************************/
+static int s_ComputeSourceTerm(TABIPBparm *parm, TABIPBvars *vars,
+                               TreeParticles *particles)
+{
 /* this computes the source term where
  * S1=sum(qk*G0)/e1 S2=sim(qk*G0')/e1 */
 
@@ -183,13 +195,13 @@ int ComputeSourceTerm(TABIPBparm *parm, TABIPBvars *vars, TreeParticles *particl
 
     return 0;
 }
-
-/************************************/
-
+/********************************************************/
 
 
-/************************************/
-int ComputePotential(TABIPBvars *vars, TreeParticles *particles, double *chrptl) {
+/********************************************************/
+static int s_ComputePotential(TABIPBvars *vars, TreeParticles *particles,
+                              double *chrptl)
+{
   /* local variables */
     int i, j;
     double sumrs, irs, rs, G0, Gk, kappa_rs, exp_kappa_rs;
@@ -243,11 +255,12 @@ int ComputePotential(TABIPBvars *vars, TreeParticles *particles, double *chrptl)
 
     return 0;
 }
+/********************************************************/
 
 
-/************************************/
-int OutputPotential(TABIPBvars *vars, TreeParticles *particles) {
-
+/********************************************************/
+static int s_OutputPotential(TABIPBvars *vars, TreeParticles *particles)
+{
     int i, j, k, jerr, nface_vert;
     double tot_length, loc_length, aa[3], dot_aa, para_temp, phi_star;
     int **ind_vert;
@@ -331,110 +344,4 @@ int OutputPotential(TABIPBvars *vars, TreeParticles *particles) {
 
     return 0;
 }
-
-
-/************************************/
-int OutputPrint(TABIPBvars *vars)
-{
-    int i;
-
-    printf("\nSolvation energy = %f kJ/mol", vars->soleng);
-    printf("\nFree energy = %f kJ/mol\n\n", vars->soleng+vars->couleng);
-    printf("The max and min potential and normal derivatives on elements area:\n");
-    printf("potential %f %f\n", vars->max_xvct, vars->min_xvct);
-    printf("norm derv %f %f\n\n", vars->max_der_xvct,
-                                  vars->min_der_xvct);
-    printf("The max and min potential and normal derivatives on vertices area:\n");
-    printf("potential %f %f\n", vars->max_vert_ptl, vars->min_vert_ptl);
-    printf("norm derv %f %f\n\n", vars->max_der_vert_ptl,
-                                  vars->min_der_vert_ptl);
-
-    FILE *fp = fopen("surface_potential.dat", "w");
-    fprintf(fp, "%d %d\n", vars->nspt, vars->nface);
-
-    for (i = 0; i < vars->nspt; i++)
-        fprintf(fp, "%d %f %f %f %f %f %f %f %f\n", i,
-                vars->vert[0][i], vars->vert[1][i], vars->vert[2][i],
-                vars->snrm[0][i], vars->snrm[1][i], vars->snrm[2][i],
-                vars->vert_ptl[i], vars->vert_ptl[i + vars->nspt]);
-
-    for (i = 0; i < vars->nface; i++)
-        fprintf(fp, "%d %d %d\n", vars->face[0][i], vars->face[1][i], vars->face[2][i]);
-
-    fclose(fp);
-
-    return 0;
-}
-
-
-/************************************/
-int OutputVTK(TABIPBparm *parm, TABIPBvars *vars)
-{
-    char i_char1[20], i_char2[20], i_char3[20], nspt_str[20],
-         nface_str[20], nface4_str[20];
-    int i;
-
-    sprintf(nspt_str, "%d", vars->nspt);
-    sprintf(nface_str, "%d", vars->nface);
-    sprintf(nface4_str, "%d", vars->nface * 4);
-
-    sprintf(i_char1, "mesh flag: %d", parm->mesh_flag);
-
-    FILE *fp = fopen("surface_potential.vtk", "w");
-
-    fprintf(fp, "# vtk DataFile Version 1.0\n");
-    fprintf(fp, "mesh for protein %s, with %s\n", parm->fname, i_char1);
-    fprintf(fp, "ASCII\n");
-    fprintf(fp, "DATASET POLYDATA\n\n");
-
-    fprintf(fp, "POINTS %s double\n", nspt_str);
-    for (i = 0; i < vars->nspt; i++) {
-        fprintf(fp, "%f %f %f\n", vars->vert[0][i], vars->vert[1][i],
-                                  vars->vert[2][i]);
-    }
-
-    fprintf(fp, "POLYGONS %s %s\n", nface_str, nface4_str);
-    for (i = 0; i < vars->nface; i++) {
-        fprintf(fp, "3 %d %d %d\n", vars->face[0][i] - 1, vars->face[1][i] - 1,
-                                    vars->face[2][i] - 1);
-    }
-
-    fprintf(fp, "\nPOINT_DATA %s\n", nspt_str);
-    fprintf(fp, "SCALARS PotentialVert double\n");
-    fprintf(fp, "LOOKUP_TABLE default\n");
-    for (i = 0; i < vars->nspt; i++) {
-         fprintf(fp, "%f\n", KCAL_TO_KJ * vars->vert_ptl[i]);
-    }
-
-    fprintf(fp, "SCALARS NormalPotentialVert double\n");
-    fprintf(fp, "LOOKUP_TABLE default\n");
-    for (i = 0; i < vars->nspt; i++) {
-        fprintf(fp, "%f\n", KCAL_TO_KJ * vars->vert_ptl[nspt + i]);
-    }
-
-    //if we want induced surface charges, we can multiply vertnorm by (1/eps + 1)
-    fprintf(fp, "\nNORMALS VertNorms double\n");
-    for (i = 0; i < vars->nspt; i++) {
-        fprintf(fp, "%f %f %f\n", vars->snrm[0][i], vars->snrm[1][i],
-                                  vars->snrm[2][i]);
-    }
-
-    fprintf(fp, "\nCELL_DATA %s\n", nface_str);
-    fprintf(fp, "SCALARS PotentialFace double\n");
-    fprintf(fp, "LOOKUP_TABLE default\n");
-    for (i = 0; i < vars->nface; i++) {
-        fprintf(fp, "%f\n", KCAL_TO_KJ * vars->xvct[i]);
-    }
-
-    //if we want induced surface charges, we can multiply vertnorm by (1/eps + 1)
-    fprintf(fp, "SCALARS NormalPotentialFace double\n");
-    fprintf(fp, "LOOKUP_TABLE default\n");
-    for (i = 0; i < vars->nface; i++) {
-        fprintf(fp, "%f\n", KCAL_TO_KJ * vars->xvct[vars->nface + i]);
-    }
-
-    fclose(fp);
-
-    return 0;
-}
-
+/********************************************************/
