@@ -15,12 +15,13 @@ cdef extern from "src/TABIPBstruct.h":
     int mesh_flag;
     int number_of_lines;
     int output_datafile;
+    double eps;
+    double kappa;
+    double kappa2;
 
   ctypedef struct TABIPBvars:
     double soleng;
     int nspt, nface, natm;
-    int **extr_v;
-    int **extr_f;
     double *atmrad;
     double *atmchr;
     double *chrpos;

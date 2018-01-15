@@ -19,6 +19,9 @@ cdef class TABIPB_Solver:
   cdef double temp_
   cdef int mesh_flag_
   cdef int output_datafile_
+  cdef double eps_
+  cdef double kappa_
+  cdef double kappa2_
 
   cdef int _pid
 
@@ -100,9 +103,9 @@ cdef class TABIPB_Solver:
 
     results = []
 
-    _log.info("({}): TABIPB flow solver started.".format(self._pid))
+    _log.info("({}): TABIPB solver started.".format(self._pid))
 
     results.append(self._run_tabipb(molecules))
 
-    _log.info("({}): TABIPB flow solver done.".format(self._pid))
+    _log.info("({}): TABIPB solver done.".format(self._pid))
     return results

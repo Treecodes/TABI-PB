@@ -3,8 +3,6 @@
  *
  * C version authored by:
  * Jiahui Chen, Southern Methodist University, Dallas, TX
- *
- * Additional modifications and updates by:
  * Leighton Wilson, University of Michigan, Ann Arbor, MI
  *
  * Based on package originally written in FORTRAN by:
@@ -17,12 +15,9 @@
  *
  */
 
-#ifndef H_TABIPBSTRUCT_H
-#define H_TABIPBSTRUCT_H
+#ifndef H_TABIPB_STRUCT_H
+#define H_TABIPB_STRUCT_H
 
-#include <stdlib.h> /* calloc() */
-#include <stdio.h> /* FILE */
-#include "array.h"
 
 typedef struct sTABIPBparm {
 
@@ -50,41 +45,43 @@ typedef struct sTABIPBparm {
 
    /* output of potential data: 1 output vtk */
     int output_datafile;
+    
+    /* set and used locally */
+    double eps;
+    double kappa;
+    double kappa2;
 
 } TABIPBparm;
 
 
 typedef struct sTABIPBvars {
 
-   /* solvation energy */
-   double soleng, couleng;
+    /* solvation and coulombic energy */
+    double soleng, couleng;
 
-   /* number of nodes, number of triangles */
-   int nspt, nface, natm;
-
-   /* msms variables */
-   int **extr_v, **extr_f; //[3][nspt], [2][nface]
-
-   /*
-    double *tr_xyz, *tr_q; //[3]*[nface]
-    double *tr_area, *bvct;
-    */
+    /* number of atoms */
+    int natm;
+    
+    /* atomic radii, charges, position */
     double *atmrad, *atmchr, *chrpos;
 
-    /* vertices, normal vector*/
+    /* number of vertices and faces */
+    int nspt, nface;
+    
+    /* positions and normals of vertices */
     double **vert, **snrm;
 
-    /* surface potential on vertices area */
+    /* surface potential on vertices */
     double *vert_ptl;
     double max_vert_ptl, min_vert_ptl;
     double max_der_vert_ptl, min_der_vert_ptl;
 
-    /* surface potential on elements area */
+    /* surface potential on elements */
     double *xvct;
     double max_xvct, min_xvct;
     double max_der_xvct, min_der_xvct;
 
-    /* connectivity data for MSMS surface triangulation */
+    /* connectivity data for surface triangulation */
     int **face;
 
 } TABIPBvars;
@@ -92,4 +89,4 @@ typedef struct sTABIPBvars {
 
 int sphinx2tabipb(TABIPBparm *parm, TABIPBvars *vars);
 
-#endif /* H_TABIPBSTRUCT_H */
+#endif /* H_TABIPB_STRUCT_H */
