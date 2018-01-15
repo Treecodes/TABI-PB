@@ -24,6 +24,7 @@
 
 int RunGMRES(int nface, double *source_term, double *xvct)
 {
+    int i;
     static long int info;
     long int RESTRT, ldw, ldh, iter, N;
     double resid;
@@ -44,13 +45,14 @@ int RunGMRES(int nface, double *source_term, double *xvct)
 
     make_vector(work, ldw * (RESTRT + 4));
     make_vector(h, ldh * (RESTRT + 2));
-
+    
+    for (i = 0; i < N; i++) xvct[i] = 0.0;
+    
     gmres_(&N, source_term, xvct, &RESTRT, work, &ldw, 
            h, &ldh, &iter, &resid, &matvec, psolve, &info);
 
     free_vector(work);
     free_vector(h);
-
 
     return 0;
 }

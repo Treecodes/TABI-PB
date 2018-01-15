@@ -7,14 +7,16 @@
  * Weihua Geng, Southern Methodist University, Dallas, TX
  * Robery Krasny, University of Michigan, Ann Arbor, MI
  *
- * Works for Sphinx by Jiahui at 7/14/2016
- * Rebuild the architecture of wrapper by Jiahui at 6/30/2016
- * Build matrix free and nanoshaper by Leighton at 6/23/2016
+ * Fixing readin of pqrs by Leighton, 01/14/2018
+ * Works for Sphinx by Jiahui, 7/14/2016
+ * Rebuild the architecture of wrapper by Jiahui, 6/30/2016
+ * Build matrix free and nanoshaper by Leighton, 6/23/2016
  *
  */
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "tabipb.h"
 #include "print_output.h"
@@ -31,7 +33,7 @@ int main(int argc, char **argv)
     char c[16];
     char fname_tp[256];
     char c1[10], c2[10], c3[10], c4[10], c5[10];
-    double a1, a2, a3, b1, b2, b3;
+    double a1, a2, a3, b1, b2;
     double density, radius, epsp, epsw, bulk_strength, theta, temp;
     int maxparnode, order, mesh_flag, output_datafile, ierr, i;
 
@@ -95,9 +97,8 @@ int main(int argc, char **argv)
 
     sprintf(fname_tp, "molecule.xyzr");
     wfp = fopen(fname_tp, "w");
-    
-    int ch;// main_parm->number_of_lines = 0;
 
+    main_parm->number_of_lines = 0;
     while (fscanf(fp, "%s %s %s %s %s %lf %lf %lf %lf %lf",
            c1, c2, c3, c4, c5, &a1, &a2, &a3, &b1, &b2) != EOF) {
         if (strncmp(c1, "ATOM", 4) == 0) {
@@ -106,31 +107,26 @@ int main(int argc, char **argv)
         }
     }
 
-    fclose(fp);
     fclose(wfp);
     printf("Finished assembling atomic information (.xyzr) file...\n");
 
-    sprintf(fname_tp, "%s%s.pqr", main_parm->fpath, main_parm->fname);
-    fp = fopen(fname_tp, "r");
+    make_vector(main_vars->chrpos, 3 * main_parm->number_of_lines);
+    make_vector(main_vars->atmchr, main_parm->number_of_lines);
+    make_vector(main_vars->atmrad, main_parm->number_of_lines);
 
-    if ((main_vars->chrpos = (double *) calloc(3 * main_parm->number_of_lines, sizeof(double))) == NULL) {
-        printf("Error in allocating t_chrpos!\n");
-    }
-    if ((main_vars->atmchr = (double *) calloc(main_parm->number_of_lines, sizeof(double))) == NULL) {
-        printf("Error in allocating t_atmchr!\n");
-    }
-    if ((main_vars->atmrad = (double *) calloc(main_parm->number_of_lines, sizeof(double))) == NULL) {
-        printf("Error in allocating t_atmrad!\n");
-    }
-
-    for (i = 0; i < main_parm->number_of_lines; i++) {
-        ierr = fscanf(fp, "%s %s %s %s %s %lf %lf %lf %lf %lf",
-                      c1,c2,c3,c4,c5,&a1,&a2,&a3,&b1,&b2);
-        main_vars->chrpos[3*i] = a1;
-        main_vars->chrpos[3*i + 1] = a2;
-        main_vars->chrpos[3*i + 2] = a3;
-        main_vars->atmchr[i] = b1;
-        main_vars->atmrad[i] = b2;
+    rewind(fp);
+    i = 0;
+    
+    while (fscanf(fp, "%s %s %s %s %s %lf %lf %lf %lf %lf",
+           c1, c2, c3, c4, c5, &a1, &a2, &a3, &b1, &b2) != EOF) {
+        if (strncmp(c1, "ATOM", 4) == 0) {
+            main_vars->chrpos[3*i] = a1;
+            main_vars->chrpos[3*i + 1] = a2;
+            main_vars->chrpos[3*i + 2] = a3;
+            main_vars->atmchr[i] = b1;
+            main_vars->atmrad[i] = b2;
+            i++;
+        }
     }
 
     fclose(fp);
@@ -144,11 +140,11 @@ int main(int argc, char **argv)
     }
 
     free(main_parm);
-    free(main_vars->atmchr);
-    free(main_vars->chrpos);
-    free(main_vars->atmrad);
-    free(main_vars->vert_ptl); // allocate in output_potential()
-    free(main_vars->xvct);
+    free_vector(main_vars->atmchr);
+    free_vector(main_vars->chrpos);
+    free_vector(main_vars->atmrad);
+    free_vector(main_vars->vert_ptl); // allocate in output_potential()
+    free_vector(main_vars->xvct);
     free_matrix(main_vars->vert);
     free_matrix(main_vars->snrm);
     free_matrix(main_vars->face);

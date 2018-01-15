@@ -35,8 +35,8 @@
 /* internal functions */
 static int s_ComputeSourceTerm(TABIPBparm *parm, TABIPBvars *vars,
                                TreeParticles *particles);
-static int s_ComputePotential(TABIPBvars *vars, TreeParticles *particles,
-                              double *chrptl);
+static int s_ComputePotential(TABIPBparm *parm, TABIPBvars *vars,
+                              TreeParticles *particles, double *chrptl);
 static int s_OutputPotential(TABIPBvars *vars, TreeParticles *particles);
 
 
@@ -49,15 +49,9 @@ int TABIPB(TABIPBparm *parm, TABIPBvars *vars) {
      raduis */
 
   /* variables local to main */
-    int i, j, k;
-    double s[3];
-    double pot = 0.0; 
-    double sum = 0.0; 
-    double pot_temp = 0.0;
-    double ptl; 
+    int i, j;
     double energy_solvation = 0.0;
     double energy_coulomb = 0.0;
-    double t1, t2;
 
     /* variables used to compute potential solution */
     double *chrptl;
@@ -78,7 +72,7 @@ int TABIPB(TABIPBparm *parm, TABIPBvars *vars) {
     
     parm->eps = parm->epsw/parm->epsp;
     parm->kappa2 = BULK_COEFF * parm->bulk_strength / parm->epsw / parm->temp;
-    parm->kappa = sqrt(kappa2);
+    parm->kappa = sqrt(parm->kappa2);
 
 
     Readin(parm, vars, particles);
@@ -88,15 +82,15 @@ int TABIPB(TABIPBparm *parm, TABIPBvars *vars) {
     /* set up treecode */
     TreecodeInitialization(parm, vars->nface, particles);
     
-    make_vector(particles->xvct, N);
-    make_vector(vars->xvct, N);
+    make_vector(particles->xvct, 2 * vars->nface);
+    make_vector(vars->xvct, 2 * vars->nface);
 
     /* call GMRES */
-    CallGMRES(vars->nface, particles->source_term, particles->xvct)
+    RunGMRES(vars->nface, particles->source_term, particles->xvct);
 
     /* the solvation energy computation */
     make_vector(chrptl, vars->nface);
-    s_ComputePotential(vars, chrptl);
+    s_ComputePotential(parm, vars, particles, chrptl);
 
     energy_solvation = 0.0;
     energy_coulomb = 0.0;
@@ -111,6 +105,7 @@ int TABIPB(TABIPBparm *parm, TABIPBvars *vars) {
         r[0] = vars->chrpos[3*i];
         r[1] = vars->chrpos[3*i + 1];
         r[2] = vars->chrpos[3*i + 2];
+        
         for (j = i+1; j < vars->natm; j++){
             diff[0] = r[0] - vars->chrpos[3*j];
             diff[1] = r[1] - vars->chrpos[3*j + 1];
@@ -120,7 +115,6 @@ int TABIPB(TABIPBparm *parm, TABIPBvars *vars) {
                  + diff[2]*diff[2]);
             energy_coulomb += 1 / parm->epsp / dist * vars->atmchr[i] * vars->atmchr[j];
         }
-        //printf("the couleng is %f,%f\n",couleng,dist);
     }
     free_vector(chrptl);
 
@@ -135,7 +129,7 @@ int TABIPB(TABIPBparm *parm, TABIPBvars *vars) {
     s_OutputPotential(vars, particles);
 
     free_matrix(particles->position);
-    free_matrix(particles->partical_normal);
+    free_matrix(particles->normal);
     free_vector(particles->area);
     free_vector(particles->source_term);
     
@@ -185,11 +179,12 @@ static int s_ComputeSourceTerm(TABIPBparm *parm, TABIPBvars *vars,
             G0 = ONE_OVER_4PI * irs;
 
   /* G1 = cos_theta*G0/||r_s||_2 */
-            G1 = cos_theta G0 * irs;
+            G1 = cos_theta * G0 * irs;
 
   /* update source term */
             particles->source_term[i] += vars->atmchr[j] * G0 / parm->epsp;
-            particles->source_term[vars->nface + i] += vars->atmchr[j] * G1 / parm->epsp;
+            particles->source_term[vars->nface + i] += vars->atmchr[j]
+                                                     * G1 / parm->epsp;
         }
     }
 
@@ -199,8 +194,8 @@ static int s_ComputeSourceTerm(TABIPBparm *parm, TABIPBvars *vars,
 
 
 /********************************************************/
-static int s_ComputePotential(TABIPBvars *vars, TreeParticles *particles,
-                              double *chrptl)
+static int s_ComputePotential(TABIPBparm *parm, TABIPBvars *vars,
+                              TreeParticles *particles, double *chrptl)
 {
   /* local variables */
     int i, j;
@@ -235,7 +230,7 @@ static int s_ComputePotential(TABIPBvars *vars, TreeParticles *particles,
             irs = 1 / rs;
 
             G0 = ONE_OVER_4PI * irs;
-            kappa_rs = kappa * rs;
+            kappa_rs = parm->kappa * rs;
             exp_kappa_rs = exp(-kappa_rs);
             Gk = exp_kappa_rs * G0;
 
@@ -244,11 +239,12 @@ static int s_ComputePotential(TABIPBvars *vars, TreeParticles *particles,
             G1 = G0 * cos_theta * irs;
             G2 = G1 * (1.0 + kappa_rs) * exp_kappa_rs;
 
-            L1 = G1 - eps * G2;
+            L1 = G1 - parm->eps * G2;
             L2 = G0 - Gk;
 
             chrptl[j] += vars->atmchr[i]
-                       * (L1*particles->xvct[j] + L2*particles->xvct[vars->nface+j])
+                       * (L1*particles->xvct[j]
+                       + L2*particles->xvct[vars->nface+j])
                        * particles->area[j];
         }
     }
@@ -261,35 +257,32 @@ static int s_ComputePotential(TABIPBvars *vars, TreeParticles *particles,
 /********************************************************/
 static int s_OutputPotential(TABIPBvars *vars, TreeParticles *particles)
 {
-    int i, j, k, jerr, nface_vert;
-    double tot_length, loc_length, aa[3], dot_aa, para_temp, phi_star;
+    int i, j, k, nface_vert;
+    double tot_length, loc_length, aa[3], dot_aa, para_temp;
     int **ind_vert;
 
-    extern double maxval(double *, int);
-    extern double minval(double *, int);
-
     nface_vert = 15; /* one vertex could have been involved
-                        in at most 11 triangles, 15 is safe */
+                        in at most 11 triangles, so 15 is safe */
     para_temp = UNITS_COEFF * 4 * PI;
-
-    if ((ind_vert = (int **) calloc(nface_vert, sizeof(int *)))  == NULL) {
-        printf("Error in allocating vars->xvct!\n");
-    }
-
-    for (i = 0; i < nface_vert; i++){
-        if ((ind_vert[i] = (int *) calloc(nspt, sizeof(int)))  == NULL) {
-             printf("Error in allocating vars->xvct!\n");
+    
+    
+    make_matrix(ind_vert, nface_vert, vars->nspt);
+    make_vector(vars->vert_ptl, 2 * vars->nspt);
+    
+    for (i = 0; i < nface_vert; i++) {
+        for (j = 0; j < vars->nspt; j++) {
+            ind_vert[i][j] = 0;
         }
     }
-
-    if ((vars->vert_ptl = (double *) calloc(nspt * 2, sizeof(double)))  == NULL) {
-        printf("Error in allocating vars->xvct!\n");
+    
+    for (i = 0; i < 2 * vars->nspt; i++) {
+        vars->vert_ptl[i] = 0.0;
     }
 
     for (i = 0; i < vars->nface; i++) {
         for (j = 0; j < 3; j++) {
             for (k = 0; k < nface_vert - 1; k++) {
-                if (ind_vert[k][vars->face[j][i] - 1] == 0.0) {
+                if (ind_vert[k][vars->face[j][i] - 1] == 0) {
                     ind_vert[k][vars->face[j][i] - 1] = i + 1;
                     ind_vert[nface_vert - 1][vars->face[j][i] - 1] += 1;
                     break;
@@ -298,24 +291,29 @@ static int s_OutputPotential(TABIPBvars *vars, TreeParticles *particles)
         }
     }
 
-    memcpy(vars->xvct, particles->xvct, 2*numpars*sizeof(double));
+    memcpy(vars->xvct, particles->xvct, 2 * vars->nface * sizeof(double));
+
     
     for (i = 0; i < vars->nspt; i++) {
         tot_length = 0.0;
         for (j = 0; j < ind_vert[nface_vert - 1][i]; j++) {
       /* distance between vertices and centroid */
-            aa[0] = particles->position[0][3 * (ind_vert[j][i]-1)] - vars->vert[0][i];
-            aa[1] = particles->position[1][3 * (ind_vert[j][i]-1)] - vars->vert[1][i];
-            aa[2] = particles->position[2][3 * (ind_vert[j][i]-1)] - vars->vert[2][i];
+            aa[0] = particles->position[0][ind_vert[j][i]-1]
+                  - vars->vert[0][i];
+            aa[1] = particles->position[1][ind_vert[j][i]-1]
+                  - vars->vert[1][i];
+            aa[2] = particles->position[2][ind_vert[j][i]-1]
+                  - vars->vert[2][i];
             dot_aa = aa[0]*aa[0] + aa[1]*aa[1] + aa[2]*aa[2];
             loc_length = sqrt(dot_aa);
 
             vars->vert_ptl[i] += 1.0/loc_length*vars->xvct[ind_vert[j][i]-1];
-            vars->vert_ptl[i + vars->nspt] += 1.0/loc_length*vars->xvct[ind_vert[j][i]+vars->nface-1];
+            vars->vert_ptl[i + vars->nspt] += 1.0 / loc_length
+                                  * vars->xvct[ind_vert[j][i]+vars->nface-1];
             tot_length += 1.0/loc_length;
         }
         vars->vert_ptl[i] /= tot_length;
-        vars->vert_ptl[i + nspt] /= tot_length;
+        vars->vert_ptl[i + vars->nspt] /= tot_length;
     }
 
     for (i = 0; i < 2 * vars->nface; i++)
@@ -326,21 +324,17 @@ static int s_OutputPotential(TABIPBvars *vars, TreeParticles *particles)
         vars->vert_ptl[i + vars->nspt] *= para_temp;
     }
 
-    vars->max_xvct = maxval(vars->xvct, vars->nface);
-    vars->min_xvct = minval(vars->xvct, vars->nface);
-    vars->max_der_xvct = maxval(vars->xvct + vars->nface, vars->nface);
-    vars->min_der_xvct = minval(vars->xvct + vars->nface, vars->nface);
+    vars->max_xvct = MaxVal(vars->xvct, vars->nface);
+    vars->min_xvct = MinVal(vars->xvct, vars->nface);
+    vars->max_der_xvct = MaxVal(vars->xvct + vars->nface, vars->nface);
+    vars->min_der_xvct = MinVal(vars->xvct + vars->nface, vars->nface);
 
-    vars->max_vert_ptl = maxval(vars->vert_ptl, vars->nspt);
-    vars->min_vert_ptl = minval(vars->vert_ptl, vars->nspt);
-    vars->max_der_vert_ptl = maxval(vars->vert_ptl + vars->nspt, vars->nspt);
-    vars->min_der_vert_ptl = minval(vars->vert_ptl + vars->nspt, vars->nspt);
+    vars->max_vert_ptl = MaxVal(vars->vert_ptl, vars->nspt);
+    vars->min_vert_ptl = MinVal(vars->vert_ptl, vars->nspt);
+    vars->max_der_vert_ptl = MaxVal(vars->vert_ptl + vars->nspt, vars->nspt);
+    vars->min_der_vert_ptl = MinVal(vars->vert_ptl + vars->nspt, vars->nspt);
 
-
-    for (i = 0; i < nface_vert; i++) {
-        free(ind_vert[i]);
-    }
-    free(ind_vert);
+    free_matrix(ind_vert);
 
     return 0;
 }

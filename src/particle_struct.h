@@ -9,7 +9,7 @@
  * Weihua Geng, Southern Methodist University, Dallas, TX
  * Robery Krasny, University of Michigan, Ann Arbor, MI
  *
- * Last modified by Leighton Wilson, 01/11/2018
+ * Last modified by Leighton Wilson, 01/12/2018
  * Created by Leighton Wilson, 01/10/2018
  */
 
@@ -20,10 +20,11 @@
 typedef struct sTreeParticles {
     
     int num_particles;
-    double **particle_position;
-    double **particle_normal;
-    double *particle_area;
+    double **position;
+    double **normal;
+    double *area;
     double *source_term;
+    double *xvct;
 
 } TreeParticles;
 

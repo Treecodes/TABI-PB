@@ -46,8 +46,8 @@ static int s_max_level;
 
 /* global variables for taylor expansions */
 static int s_torder;
-static int s_torder2;
 static int s_torderlim;
+static int s_torderflat;
 
 static double *s_cf = NULL;
 static double *s_cf1 = NULL;
@@ -81,21 +81,24 @@ static TreeNode *s_tree_root = NULL;
 
 
 /* internal functions */
-int s_Setup(double xyz_limits[6]);
-int s_CreateTree(TreeNode *p, int ibeg, int iend, double xyzmm[6], int level);
-int s_PartitionEight(double xyzmms[6][8], double xl, double yl, double zl,
-                   double lmax, double x_mid, double y_mid, double z_mid,
-                   int ind[8][2]);
-int s_ComputePBKernel(double *phi);
-int s_ComputeAllMoments(TreeNode *p, int ifirst);
-int s_ComputeMoments(TreeNode *p);
-int s_RunTreecode(TreeNode *p, double peng[2], double *tpoten_old,
-                  double tempq[2][16]);
-int s_ComputeTreePB(TreeNode *p, double peng[2], double tempq[2][16]);
-int s_ComputeCoeffs(TreeNode *p, double kappa);
-int s_ComputeDirectPB(double peng[2], int ibeg, int iend, double *tpoten_old);
-int s_RemoveMoments(TreeNode *p);
-int s_RemoveNode(TreeNode *p);
+static int s_Setup(double xyz_limits[6]);
+static int s_CreateTree(TreeNode *p, int ibeg, int iend, double xyzmm[6],
+                        int level);
+static int s_PartitionEight(double xyzmms[6][8], double xl, double yl,
+                            double zl, double lmax, double x_mid, double y_mid,
+                            double z_mid, int ind[8][2]);
+static int s_ComputePBKernel(double *phi);
+static int s_ComputeAllMoments(TreeNode *p, int ifirst);
+static int s_ComputeMoments(TreeNode *p);
+static int s_RunTreecode(TreeNode *p, double *tpoten_old,
+                         double tempq[2][16], double peng[2]);
+static int s_ComputeTreePB(TreeNode *p, double tempq[2][16], double peng[2]);
+static int s_ComputeCoeffs(TreeNode *p);
+static int s_ComputeCoeffsCoulomb(TreeNode *p);
+static int s_ComputeDirectPB(int ibeg, int iend, double *tpoten_old,
+                             double peng[2]);
+static int s_RemoveMoments(TreeNode *p);
+static int s_RemoveNode(TreeNode *p);
 
 
 
@@ -109,7 +112,7 @@ int TreecodeInitialization(TABIPBparm *parm, int nface,
 {
     /* set up variables used in treecode */
     /* local variables*/
-    int level, ierr, err, i, j, k, mm, nn, idx, ijk[3];
+    int level, i, j, k, mm, nn, idx, ijk[3];
 
     /* variables needed for reorder */
     double *temp_area, *temp_source;
@@ -136,7 +139,7 @@ int TreecodeInitialization(TABIPBparm *parm, int nface,
 
     /* allocate s_der_coeff */
     
-    make_4array(s_der_coeff, s_order+1, s_order+1, s_order+1, 16)
+    make_4array(s_der_coeff, s_order+1, s_order+1, s_order+1, 16);
 
     /* initialize s_kk */
     s_kk[0][0]=0; s_kk[0][1]=0; s_kk[0][2]=0; /* Original Kernel */
@@ -195,7 +198,7 @@ int TreecodeInitialization(TABIPBparm *parm, int nface,
         for (j = 0; j < s_order+1; j++) {
             for (k = 0; k < s_order+1; k++) {
                 for (idx = 0; idx < 16; idx++) {
-                    s_der_coeff[i][j][k][idx] *= one_over_4pi;
+                    s_der_coeff[i][j][k][idx] *= ONE_OVER_4PI;
                 }
             }
         }
@@ -215,7 +218,7 @@ int TreecodeInitialization(TABIPBparm *parm, int nface,
 /* and setup global variables. Also, copy variables into global copy arrays. */
     s_Setup(xyz_limits);
 
-    s_tree_root = (TreeNode*)calloc(1,sizeof(TreeNode));
+    s_tree_root = (TreeNode*)calloc(1, sizeof(TreeNode));
     printf("Creating tree for %d particles with max %d per node\n",
            s_numpars, s_max_per_leaf);
 
@@ -241,7 +244,6 @@ int TreecodeInitialization(TABIPBparm *parm, int nface,
     free_vector(temp_area);
     free_vector(temp_source);
 
-    
     make_3array(s_target_charge, s_numpars, 2, 16);
     make_3array(s_source_charge, s_numpars, 2, 16);
 
@@ -253,8 +255,8 @@ int TreecodeInitialization(TABIPBparm *parm, int nface,
 int TreecodeFinalization(TreeParticles *particles)
 {
 
-    int i, j, k, m;
-    double *temp_area, *temp_source;
+    int i;
+    double *temp_area, *temp_source, *temp_xvct;
     double **temp_normal, **temp_position;
 
 /***********reorder particles*************/
@@ -298,8 +300,6 @@ int TreecodeFinalization(TreeParticles *particles)
 /***********treecode_initialization*******/
     free_4array(s_der_coeff);
 
-    free(s_particle_charge);
-
     free_3array(s_target_charge);
     free_3array(s_source_charge);
     
@@ -315,8 +315,8 @@ int TreecodeFinalization(TreeParticles *particles)
     free_vector(s_cf2);
     free_vector(s_cf3);
     
-    free_vector(a);
-    free_vector(b);
+    free_vector(s_a);
+    free_vector(s_b);
 
     free_vector(s_order_arr);
 /*****************************************/
@@ -339,17 +339,14 @@ int matvec(double *alpha, double *tpoten_old, double *beta, double *tpoten) {
 /* in gmres *matvec(Alpha, X, Beta, Y) where y := alpha*A*x + beta*y */
   /* local variables */
     int i, j, k;
-    double area, rs, irs, sumrs;
-    double temp_x, temp_area, sl[4];
+    double temp_x, temp_area;
     double temp_charge[2][16];
     double pre1, pre2;
-    double peng[2],peng_old[2];
-
-    //extern int ComputePBKernel(), ComputeAllMoments(),
-    //RunTreecode(), RemoveMoments();
-
+    double peng[2], peng_old[2];
+    
+    
     s_ComputePBKernel(tpoten_old);
-
+    
   /* Generate the moments if not allocated yet */
     s_ComputeAllMoments(s_tree_root, 1);
 
@@ -362,8 +359,8 @@ int matvec(double *alpha, double *tpoten_old, double *beta, double *tpoten) {
         peng_old[0] = tpoten_old[i];
         peng_old[1] = tpoten_old[i+s_numpars];
         s_target_position[0] = s_particle_position[0][i];
-        s_target_position[1] = s_particle_position[0][i];
-        s_target_position[2] = s_particle_position[0][i];
+        s_target_position[1] = s_particle_position[1][i];
+        s_target_position[2] = s_particle_position[2][i];
         s_target_normal[0] = s_particle_normal[0][i];
         s_target_normal[1] = s_particle_normal[1][i];
         s_target_normal[2] = s_particle_normal[2][i];
@@ -381,7 +378,7 @@ int matvec(double *alpha, double *tpoten_old, double *beta, double *tpoten) {
         s_particle_area[i] = 0.0;
 
     /* start to use Treecode */
-        s_RunTreecode(s_tree_root, peng, tpoten_old, temp_charge);
+        s_RunTreecode(s_tree_root, tpoten_old, temp_charge, peng);
 
         tpoten[i] = tpoten[i] * *beta + (pre1 * peng_old[0] - peng[0]) * *alpha;
         tpoten[s_numpars+i] = tpoten[s_numpars+i] * *beta
@@ -430,7 +427,7 @@ static int s_Setup(double xyz_limits[6])
  Also, global variables are set and the Cartesian coordinates of
  the smallest box containing the particles is determined. The particle
  postions and charges are copied so that they can be restored upon exit.*/
-    int err, i, j, k;
+    int i, j, k;
     double t1;
 
     printf("Setting up arrays for Taylor expansion...\n");
@@ -438,8 +435,8 @@ static int s_Setup(double xyz_limits[6])
 /* global integers and reals:  s_torder, s_torderlim and THETASQ */
   /* keep the accuracy of first and second derivative of funtion G */
     s_torder = s_order+2;
-    s_torder2 = s_order;
     s_torderlim = s_torder;
+    s_torderflat = (s_order+1) * (s_order+2) * (s_order+3) / 6;
 
 /* allocate global Taylor expansion variables */
   /* s_cf(0:s_torder) */
@@ -451,8 +448,8 @@ static int s_Setup(double xyz_limits[6])
 
     /* a(-2:s_torderlim,-2:s_torderlim,-2:s_torderlim) */
     
-    make_3array(s_a, s_torderlim+3, s_torderlim+3, s+torderlim+3);
-    make_3array(s_b, s_torderlim+3, s_torderlim+3, s+torderlim+3);
+    make_3array(s_a, s_torderlim+3, s_torderlim+3, s_torderlim+3);
+    make_3array(s_b, s_torderlim+3, s_torderlim+3, s_torderlim+3);
 
     for (i = 0; i < s_torderlim+3; i++) {
         for (j = 0; j < s_torderlim+3; j++) {
@@ -511,7 +508,7 @@ static int s_CreateTree(TreeNode *p, int ibeg, int iend, double xyzmm[6],
     double x_mid, y_mid, z_mid, xl, yl, zl, lmax, t1, t2, t3;
     int ind[8][2];
     double xyzmms[6][8];
-    int i, j, limin, limax, err, loclev, numposchild;
+    int i, j, loclev, numposchild;
     double lxyzmm[6];
 
 /* set node fields: number of particles, exist_ms and xyz bounds */
@@ -561,11 +558,12 @@ static int s_CreateTree(TreeNode *p, int ibeg, int iend, double xyzmm[6],
     if (s_max_level < level) s_max_level = level;
 
     p->num_children = 0;
-    p->child = (TreeNode**)calloc(8, sizeof(TreeNode*));
-    
+
+    make_vector(p->child, 8);
     for (i = 0; i < 8; i++) {
         p->child[i] = (TreeNode*)calloc(1, sizeof(TreeNode));
     }
+    
 
     if (p->numpar > s_max_per_leaf) {
 /* set IND array to 0 and then call PARTITION routine. IND array holds indices
@@ -577,26 +575,36 @@ static int s_CreateTree(TreeNode *p, int ibeg, int iend, double xyzmm[6],
         xyzmms[3][0] = p->y_max;
         xyzmms[4][0] = p->z_min;
         xyzmms[5][0] = p->z_max;
+        
         for (i = 0; i < 8; i++) {
             ind[i][0] = 0;
             ind[i][1] = 0;
         }
+        
         ind[0][0] = ibeg;
         ind[0][1] = iend;
         x_mid = p->x_mid;
         y_mid = p->y_mid;
         z_mid = p->z_mid;
 
-        numposchild = s_PartitionEight(xyzmms,xl,yl,zl,lmax,x_mid,y_mid,z_mid,ind);
+        numposchild = s_PartitionEight(xyzmms, xl, yl, zl, lmax,
+                                       x_mid, y_mid, z_mid, ind);
+        
 /* Shrink the box */
         for (i = 0; i < 8; i++) {
             if (ind[i][0] < ind[i][1]) {
-                xyzmms[0][i] = MinVal(&x[ind[i][0]], ind[i][1]-ind[i][0]);
-                xyzmms[1][i] = MaxVal(&x[ind[i][0]], ind[i][1]-ind[i][0]);
-                xyzmms[2][i] = MinVal(&y[ind[i][0]], ind[i][1]-ind[i][0]);
-                xyzmms[3][i] = MaxVal(&y[ind[i][0]], ind[i][1]-ind[i][0]);
-                xyzmms[4][i] = MinVal(&z[ind[i][0]], ind[i][1]-ind[i][0]);
-                xyzmms[5][i] = MaxVal(&z[ind[i][0]], ind[i][1]-ind[i][0]);
+                xyzmms[0][i] = MinVal(&s_particle_position[0][ind[i][0]],
+                                      ind[i][1]-ind[i][0]);
+                xyzmms[1][i] = MaxVal(&s_particle_position[0][ind[i][0]],
+                                      ind[i][1]-ind[i][0]);
+                xyzmms[2][i] = MinVal(&s_particle_position[1][ind[i][0]],
+                                      ind[i][1]-ind[i][0]);
+                xyzmms[3][i] = MaxVal(&s_particle_position[1][ind[i][0]],
+                                      ind[i][1]-ind[i][0]);
+                xyzmms[4][i] = MinVal(&s_particle_position[2][ind[i][0]],
+                                      ind[i][1]-ind[i][0]);
+                xyzmms[5][i] = MaxVal(&s_particle_position[2][ind[i][0]],
+                                      ind[i][1]-ind[i][0]);
             }
         }
 /* create children if indicated and store info in parent */
@@ -609,7 +617,7 @@ static int s_CreateTree(TreeNode *p, int ibeg, int iend, double xyzmm[6],
                     lxyzmm[j] = xyzmms[j][i];
                 }
                 s_CreateTree(p->child[p->num_children-1],
-                           ind[i][0], ind[i][1], lxyzmm, loclev);
+                             ind[i][0], ind[i][1], lxyzmm, loclev);
             }
         }
     } else {
@@ -636,7 +644,7 @@ static int s_PartitionEight(double xyzmms[6][8], double xl, double yl,
  * the indice limits of each new box (node) and NUMPOSCHILD the number
  * of possible children.  If IND(J,1) > IND(J,2) for a given J this indicates
  * that box J is empty.*/
-    int temp_ind,i,j;
+    int temp_ind, i, j;
     double critlen;
     int numposchild;
 
@@ -646,7 +654,7 @@ static int s_PartitionEight(double xyzmms[6][8], double xl, double yl,
     if (xl >= critlen) {
         temp_ind = Partition(s_particle_position[0], s_particle_position[1],
                              s_particle_position[2], s_order_arr,
-                             ind[0][0], ind[0][1], x_mid, s_numpars);
+                             ind[0][0], ind[0][1], x_mid);
         ind[1][0] = temp_ind+1;
         ind[1][1] = ind[0][1];
         ind[0][1] = temp_ind;
@@ -662,7 +670,7 @@ static int s_PartitionEight(double xyzmms[6][8], double xl, double yl,
         for (i = 0; i < numposchild; i++) {
             temp_ind = Partition(s_particle_position[1], s_particle_position[0],
                                  s_particle_position[2], s_order_arr,
-                                 ind[i][0], ind[i][1], y_mid, s_numpars);
+                                 ind[i][0], ind[i][1], y_mid);
             ind[numposchild+i][0] = temp_ind+1;
             ind[numposchild+i][1] = ind[i][1];
             ind[i][1] = temp_ind;
@@ -679,7 +687,7 @@ static int s_PartitionEight(double xyzmms[6][8], double xl, double yl,
         for (i = 0; i < numposchild; i++) {
             temp_ind = Partition(s_particle_position[2], s_particle_position[0],
                                  s_particle_position[1], s_order_arr,
-                                 ind[i][0], ind[i][1], z_mid, s_numpars);
+                                 ind[i][0], ind[i][1], z_mid);
             ind[numposchild+i][0] = temp_ind+1;
             ind[numposchild+i][1] = ind[i][1];
             ind[i][1] = temp_ind;
@@ -701,7 +709,7 @@ static int s_PartitionEight(double xyzmms[6][8], double xl, double yl,
 static int s_ComputePBKernel(double *phi)
 {
 
-    int i, j, ikp, iknl, ixyz, jxyz, indx;
+    int i, ikp, iknl, ixyz, jxyz, indx;
 
     for (i = 0; i < s_numpars; i++) {
         indx = 0;
@@ -716,7 +724,8 @@ static int s_ComputePBKernel(double *phi)
                 indx += 1;
                 for (ikp = 0; ikp < 2; ikp++) {
                     s_target_charge[i][ikp][indx] = 1.0 * (1-iknl)
-                                                  + s_particle_normal[ixyz][i] * iknl;
+                                                  + s_particle_normal[ixyz][i]
+                                                  * iknl;
                     s_source_charge[i][ikp][indx] = (s_particle_normal[ixyz][i]
                                                   * (1-iknl) + 1.0 * iknl)
                                                   * s_particle_area[i]
@@ -748,12 +757,11 @@ static int s_ComputeAllMoments(TreeNode *p, int ifirst)
 /* REMOVE_NODE recursively removes each node from the tree and deallocates
  * its memory for MS array if it exits. */
 
-
-    int i, err;
-    
+    int i;
     
     if (p->exist_ms == 0 && ifirst == 0) {
-        make_4array(p->ms, 16, s_torder+1, s_torder+1, s_torder+1);
+        //make_4array(p->ms, 16, s_torder+1, s_torder+1, s_torder+1);
+        make_matrix(p->ms, 16, s_torderflat);
         s_ComputeMoments(p);
         p->exist_ms = 1;
     }
@@ -775,35 +783,46 @@ static int s_ComputeMoments(TreeNode *p)
 /* COMP_MS computes the moments for node P needed in the Taylor
  * approximation */
 
-    int i, j, k1, k2, k3, n, m, k;
+    int ii, i, j, k, k1, k2, k3, n;
     double dx, dy, dz, tx, ty, tz, txyz;
-
+    
+    //for (n = 0; n < 16; n++) {
+    //    for (i = 0; i < s_torder+1; i++) {
+    //        for (j = 0; j < s_torder+1; j++) {
+    //            for (k = 0; k < s_torder+1; k++) {
+    //                p->ms[n][i][j][k] = 0.0;
+    //            }
+    //        }
+    //    }
+    //}
+    
     for (n = 0; n < 16; n++) {
-        for (i = 0; i < s_torder+1; i++) {
-            for (j = 0; j < s_torder+1; j++) {
-                for (k = 0; k < s_torder+1; k++) {
-                    p->ms[n][i][j][k] = 0.0;
-                }
-            }
+        for (i = 0; i < s_torderflat; i++) {
+            p->ms[n][i] = 0.0;
         }
     }
 
     for (i = p->ibeg; i < p->iend+1; i++) {
-        dx = x[i]-p->x_mid;
-        dy = y[i]-p->y_mid;
-        dz = z[i]-p->z_mid;
+        dx = s_particle_position[0][i]-p->x_mid;
+        dy = s_particle_position[1][i]-p->y_mid;
+        dz = s_particle_position[2][i]-p->z_mid;
         for (j = 0; j < 7; j++) {
+        
+            ii = 0;
+            
             tx = 1.0;
-            for (k1 = 0; k1 < s_torder+1; k1++) {
+            for (k1 = 0; k1 < s_order+1; k1++) {
                 ty=1.0;
-                for (k2 = 0; k2 < s_torder+1-k1; k2++) {
+                for (k2 = 0; k2 < s_order+1-k1; k2++) {
                     tz=1.0;
-                    for (k3 = 0; k3 < s_torder+1-k1-k2; k3++) {
-  /*****************************************/
-                        txyz = tx*ty*tz;
-                        p->ms[j][k1][k2][k3] += s_source_charge[i][0][j] * txyz;
+                    for (k3 = 0; k3 < s_order+1-k1-k2; k3++) {
 
-  /*****************************************/
+                        txyz = tx*ty*tz;
+                        //p->ms[j][k1][k2][k3] += s_source_charge[i][0][j] * txyz;
+                        
+                        p->ms[j][ii] += s_source_charge[i][0][j] * txyz;
+                        ii++;
+                        
                         tz = tz*dz;
                     }
                     ty = ty*dy;
@@ -812,18 +831,25 @@ static int s_ComputeMoments(TreeNode *p)
             }
         }
 
+        ii = 0;
+
         tx = 1.0;
-        for (k1 = 0; k1 < s_torder+1; k1++) {
+        for (k1 = 0; k1 < s_order+1; k1++) {
             ty = 1.0;
-            for (k2 = 0; k2 < s_torder+1-k1; k2++) {
+            for (k2 = 0; k2 < s_order+1-k1; k2++) {
                 tz = 1.0;
-                for (k3 = 0; k3 < s_torder+1-k1-k2; k3++) {
-  /*****************************************/
+                for (k3 = 0; k3 < s_order+1-k1-k2; k3++) {
+
                     txyz = tx*ty*tz;
-                    p->ms[7][k1][k2][k3] += s_source_charge[i][0][7] * txyz;
-                    p->ms[10][k1][k2][k3] += s_source_charge[i][0][10] * txyz;
-                    p->ms[13][k1][k2][k3] += s_source_charge[i][0][13] * txyz;
-  /*****************************************/
+                    //p->ms[7][k1][k2][k3] += s_source_charge[i][0][7] * txyz;
+                    //p->ms[10][k1][k2][k3] += s_source_charge[i][0][10] * txyz;
+                    //p->ms[13][k1][k2][k3] += s_source_charge[i][0][13] * txyz;
+
+                    p->ms[7][ii] += s_source_charge[i][0][7] * txyz;
+                    p->ms[10][ii] += s_source_charge[i][0][10] * txyz;
+                    p->ms[13][ii] += s_source_charge[i][0][13] * txyz;
+                    ii++;
+
                     tz *= dz;
                 }
                 ty *= dy;
@@ -831,17 +857,26 @@ static int s_ComputeMoments(TreeNode *p)
             tx *= dx;
         }
     }
+    
+    ii = 0;
 
-  /*****************************************/
-    for (k1 = 0; k1 < s_torder+1; k1++) {
-        for (k2 = 0; k2 < s_torder+1-k1; k2++) {
-            for (k3 = 0; k3 < s_torder+1-k1-k2; k3++) {
-                p->ms[8][k1][k2][k3] = p->ms[7][k1][k2][k3];
-                p->ms[9][k1][k2][k3] = p->ms[7][k1][k2][k3];
-                p->ms[11][k1][k2][k3] = p->ms[10][k1][k2][k3];
-                p->ms[12][k1][k2][k3] = p->ms[10][k1][k2][k3];
-                p->ms[14][k1][k2][k3] = p->ms[13][k1][k2][k3];
-                p->ms[15][k1][k2][k3] = p->ms[13][k1][k2][k3];
+    for (k1 = 0; k1 < s_order+1; k1++) {
+        for (k2 = 0; k2 < s_order+1-k1; k2++) {
+            for (k3 = 0; k3 < s_order+1-k1-k2; k3++) {
+                //p->ms[8][k1][k2][k3] = p->ms[7][k1][k2][k3];
+                //p->ms[9][k1][k2][k3] = p->ms[7][k1][k2][k3];
+                //p->ms[11][k1][k2][k3] = p->ms[10][k1][k2][k3];
+                //p->ms[12][k1][k2][k3] = p->ms[10][k1][k2][k3];
+                //p->ms[14][k1][k2][k3] = p->ms[13][k1][k2][k3];
+                //p->ms[15][k1][k2][k3] = p->ms[13][k1][k2][k3];
+                
+                p->ms[8][ii] = p->ms[7][ii];
+                p->ms[9][ii] = p->ms[7][ii];
+                p->ms[11][ii] = p->ms[10][ii];
+                p->ms[12][ii] = p->ms[10][ii];
+                p->ms[14][ii] = p->ms[13][ii];
+                p->ms[15][ii] = p->ms[13][ii];
+                ii++;
             }
         }
     }
@@ -852,11 +887,11 @@ static int s_ComputeMoments(TreeNode *p)
 
 
 /********************************************************/
-static int s_RunTreecode(TreeNode *p, double peng[2],
-                         double *tpoten_old, double tempq[2][16])
+static int s_RunTreecode(TreeNode *p, double *tpoten_old, double tempq[2][16],
+                         double peng[2])
 {
   /* RunTreecode() is self recurrence function */
-    double tx, ty, tz, dist, penglocal[2], pengchild[2];
+    double tx, ty, tz, dist, pengchild[2];
     int i;
 
 
@@ -864,7 +899,7 @@ static int s_RunTreecode(TreeNode *p, double peng[2],
     tx = p->x_mid - s_target_position[0];
     ty = p->y_mid - s_target_position[1];
     tz = p->z_mid - s_target_position[2];
-    dist = sqrt(tx*tx+ty*ty+tz*tz);
+    dist = sqrt(tx*tx + ty*ty + tz*tz);
 
   /* initialize potential energy */
     peng[0] = 0.0; 
@@ -874,13 +909,10 @@ static int s_RunTreecode(TreeNode *p, double peng[2],
 /* box use the expansion for the approximation. */
 
     if (p->radius < dist*theta && p->numpar > 40) {
-        s_ComputeTreePB(p, peng, tempq);
+        s_ComputeTreePB(p, tempq, peng);
     } else {
         if (p->num_children == 0) {
-            penglocal[0] = 0.0; 
-            s_ComputeDirectPB(penglocal, p->ibeg, p->iend, tpoten_old);
-            peng[0] = penglocal[0];
-            peng[1] = penglocal[1];
+            s_ComputeDirectPB(p->ibeg, p->iend, tpoten_old, peng);
         } else {
       /* If MAC fails check to see if there are children. If not, perform */
       /* direct calculation.  If there are children, call routine */
@@ -888,7 +920,7 @@ static int s_RunTreecode(TreeNode *p, double peng[2],
             for (i = 0; i < p->num_children; i++) {
                 pengchild[0] = 0.0; 
                 pengchild[1] = 0.0;
-                s_RunTreecode(p->child[i], pengchild, tpoten_old, tempq);
+                s_RunTreecode(p->child[i], tpoten_old, tempq, pengchild);
                 peng[0] += pengchild[0];
                 peng[1] += pengchild[1];
             }
@@ -901,36 +933,52 @@ static int s_RunTreecode(TreeNode *p, double peng[2],
 
 
 /********************************************************/
-static int s_ComputeTreePB(TreeNode *p, double peng[2], double tempq[2][16])
+static int s_ComputeTreePB(TreeNode *p, double tempq[2][16], double peng[2])
 {
-    int i, j, k, ikp, indx;
-    double kapa[2], sl[4], pt_comp[2][16];
-
-
-    kapa[0] = 0.0; 
-    kapa[1] = s_kappa;
-
-    for (ikp = 0; ikp < 2; ikp++) {
-        s_ComputeCoeffs(p, kapa[ikp]);
-
-        for (indx = 0; indx < 16; indx++) {
-            peng[ikp] = 0.0;
-            for (i = 0; i < s_torder2+1; i++) {
-                for (j = 0;j < s_torder2+1-i; j++) {
-                    for (k = 0; k < s_torder2+1-i-j; k++) {
-                        peng[ikp] = peng[ikp] + s_der_coeff[i][j][k][indx]
-                                  * s_a[i+2+s_kk[indx][0]][j+2+s_kk[indx][1]][k+2+s_kk[indx][2]]
-                                  * p->ms[indx][i][j][k];
-                    }
+    int ii, i, j, k, indx;
+    double sl[4], pt_comp[2][16];
+    
+    s_ComputeCoeffsCoulomb(p);
+    for (indx = 0; indx < 16; indx++) {
+        peng[0] = 0.0;
+        ii = 0;
+        for (i = 0; i < s_order+1; i++) {
+            for (j = 0; j < s_order+1-i; j++) {
+                for (k = 0; k < s_order+1-i-j; k++) {
+                    peng[0] += s_der_coeff[i][j][k][indx]
+                             * s_a[i+2+s_kk[indx][0]]
+                                  [j+2+s_kk[indx][1]]
+                                  [k+2+s_kk[indx][2]]
+                             * p->ms[indx][ii];
+                    ii++;
                 }
             }
-            pt_comp[ikp][indx] = tempq[ikp][indx] * peng[ikp];
         }
+        pt_comp[0][indx] = tempq[0][indx] * peng[0];
+    }
+
+    s_ComputeCoeffs(p);
+    for (indx = 0; indx < 16; indx++) {
+        peng[1] = 0.0;
+        ii = 0;
+        for (i = 0; i < s_order+1; i++) {
+            for (j = 0; j < s_order+1-i; j++) {
+                for (k = 0; k < s_order+1-i-j; k++) {
+                    peng[1] += s_der_coeff[i][j][k][indx]
+                             * s_a[i+2+s_kk[indx][0]]
+                                  [j+2+s_kk[indx][1]]
+                                  [k+2+s_kk[indx][2]]
+                             * p->ms[indx][ii];
+                    ii++;
+                }
+            }
+        }
+        pt_comp[1][indx] = tempq[1][indx] * peng[1];
     }
 
     sl[0] = pt_comp[0][0] - pt_comp[1][0];
     sl[1] = s_eps * (pt_comp[1][1] + pt_comp[1][2] + pt_comp[1][3])
-            - (pt_comp[0][1] + pt_comp[0][2] + pt_comp[0][3]);
+                  - (pt_comp[0][1] + pt_comp[0][2] + pt_comp[0][3]);
     sl[2] = - (pt_comp[0][4] + pt_comp[0][5] + pt_comp[0][6])
             + (pt_comp[1][4] + pt_comp[1][5] + pt_comp[1][6]) / s_eps;
     sl[3] = 0.0;
@@ -948,7 +996,7 @@ static int s_ComputeTreePB(TreeNode *p, double peng[2], double tempq[2][16])
 
 
 /********************************************************/
-static int s_ComputeCoeffs(TreeNode *p, double kappa)
+static int s_ComputeCoeffs(TreeNode *p)
 {
 /* COMP_TCOEFF computes the Taylor coefficients of the potential
  * using a recurrence formula.  The center of the expansion is the
@@ -959,24 +1007,24 @@ static int s_ComputeCoeffs(TreeNode *p, double kappa)
 
   /* setup variables */
 
-    dx = s_target_position[0]-p->x_mid;
-    dy = s_target_position[1]-p->y_mid;
-    dz = s_target_position[2]-p->z_mid;
+    dx = s_target_position[0] - p->x_mid;
+    dy = s_target_position[1] - p->y_mid;
+    dz = s_target_position[2] - p->z_mid;
 
     ddx = 2.0 * dx;
     ddy = 2.0 * dy;
     ddz = 2.0 * dz;
 
-    kappax = kappa * dx;
-    kappay = kappa * dy;
-    kappaz = kappa * dz;
+    kappax = s_kappa * dx;
+    kappay = s_kappa * dy;
+    kappaz = s_kappa * dz;
 
     dist = dx*dx + dy*dy + dz*dz;
     fac = 1.0/dist;
     dist = sqrt(dist);
 
   /* 0th coeff or function val */
-    s_b[2][2][2] = exp(-kappa * dist);
+    s_b[2][2][2] = exp(-s_kappa * dist);
     s_a[2][2][2] = s_b[2][2][2] / dist;
 
   /* 2 indices are 0 */
@@ -985,28 +1033,28 @@ static int s_ComputeCoeffs(TreeNode *p, double kappa)
     s_b[2][3][2] = kappay * s_a[2][2][2];
     s_b[2][2][3] = kappaz * s_a[2][2][2];
 
-    s_a[3][2][2] = fac * dx * (s_a[2][2][2] + kappa * s_b[2][2][2]);
-    s_a[2][3][2] = fac * dy * (s_a[2][2][2] + kappa * s_b[2][2][2]);
-    s_a[2][2][3] = fac * dz * (s_a[2][2][2] + kappa * s_b[2][2][2]);
+    s_a[3][2][2] = fac * dx * (s_a[2][2][2] + s_kappa * s_b[2][2][2]);
+    s_a[2][3][2] = fac * dy * (s_a[2][2][2] + s_kappa * s_b[2][2][2]);
+    s_a[2][2][3] = fac * dz * (s_a[2][2][2] + s_kappa * s_b[2][2][2]);
 
-    for (i = 2; i < s_torderlim+1; i++) {
-        s_b[i+2][2][2] = s_cf1[i-1] * kappa * (dx * s_a[i+1][2][2] - s_a[i][2][2]);
-        s_b[2][i+2][2] = s_cf1[i-1] * kappa * (dy * s_a[2][i+1][2] - s_a[2][i][2]);
-        s_b[2][2][i+2] = s_cf1[i-1] * kappa * (dz * s_a[2][2][i+1] - s_a[2][2][i]);
+    for (i = 2; i < s_order+3; i++) {
+        s_b[i+2][2][2] = s_cf1[i-1] * s_kappa * (dx * s_a[i+1][2][2] - s_a[i][2][2]);
+        s_b[2][i+2][2] = s_cf1[i-1] * s_kappa * (dy * s_a[2][i+1][2] - s_a[2][i][2]);
+        s_b[2][2][i+2] = s_cf1[i-1] * s_kappa * (dz * s_a[2][2][i+1] - s_a[2][2][i]);
 
         s_a[i+2][2][2] = fac * (ddx * s_cf2[i-1] * s_a[i+1][2][2]
                                   - s_cf3[i-1] * s_a[i][2][2]
-                     + s_cf1[i-1] * kappa * (dx * s_b[i+1][2][2]
+                     + s_cf1[i-1] * s_kappa * (dx * s_b[i+1][2][2]
                                               - s_b[i][2][2]));
 
         s_a[2][i+2][2] = fac * (ddy * s_cf2[i-1] * s_a[2][i+1][2]
                                   - s_cf3[i-1] * s_a[2][i][2]
-                     + s_cf1[i-1] * kappa * (dy * s_b[2][i+1][2]
+                     + s_cf1[i-1] * s_kappa * (dy * s_b[2][i+1][2]
                                               - s_b[2][i][2]));
         
         s_a[2][2][i+2] = fac * (ddz * s_cf2[i-1] * s_a[2][2][i+1]
                                   - s_cf3[i-1] * s_a[2][2][i]
-                     + s_cf1[i-1] * kappa * (dz * s_b[2][2][i+1]
+                     + s_cf1[i-1] * s_kappa * (dz * s_b[2][2][i+1]
                                               - s_b[2][2][i]));
     }
 
@@ -1019,7 +1067,7 @@ static int s_ComputeCoeffs(TreeNode *p, double kappa)
     s_a[3][2][3] = fac * (dx * s_a[2][2][3] + ddz * s_a[3][2][2] + kappax * s_b[2][2][3]);
     s_a[2][3][3] = fac * (dy * s_a[2][2][3] + ddz * s_a[2][3][2] + kappay * s_b[2][2][3]);
 
-    for (i = 2; i < s_torderlim; i++) {
+    for (i = 2; i < s_order+2; i++) {
         s_b[3][2][i+2] = kappax * s_a[2][2][i+2];
         s_b[2][3][i+2] = kappay * s_a[2][2][i+2];
         s_b[2][i+2][3] = kappaz * s_a[2][i+2][2];
@@ -1042,31 +1090,31 @@ static int s_ComputeCoeffs(TreeNode *p, double kappa)
     }
 
     /* 1 index 0, others >=2 */
-    for (i = 2; i < s_torderlim-1; i++) {
-        for (j = 2; j < s_torderlim-i+1; j++) {
-            s_b[i+2][j+2][2] = s_cf1[i-1] * kappa * (dx * s_a[i+1][j+2][2] - s_a[i][j+2][2]);
-            s_b[i+2][2][j+2] = s_cf1[i-1] * kappa * (dx * s_a[i+1][2][j+2] - s_a[i][2][j+2]);
-            s_b[2][i+2][j+2] = s_cf1[i-1] * kappa * (dy * s_a[2][i+1][j+2] - s_a[2][i][j+2]);
+    for (i = 2; i < s_order+1; i++) {
+        for (j = 2; j < s_order+3-i; j++) {
+            s_b[i+2][j+2][2] = s_cf1[i-1] * s_kappa * (dx * s_a[i+1][j+2][2] - s_a[i][j+2][2]);
+            s_b[i+2][2][j+2] = s_cf1[i-1] * s_kappa * (dx * s_a[i+1][2][j+2] - s_a[i][2][j+2]);
+            s_b[2][i+2][j+2] = s_cf1[i-1] * s_kappa * (dy * s_a[2][i+1][j+2] - s_a[2][i][j+2]);
 
             s_a[i+2][j+2][2] = fac * (ddx * s_cf2[i-1] * s_a[i+1][j+2][2]
                                              + ddy * s_a[i+2][j+1][2]
                                         - s_cf3[i-1] * s_a[i][j+2][2]
                                                    - s_a[i+2][j][2]
-                           + s_cf1[i-1] * kappa * (dx * s_b[i+1][j+2][2]
+                           + s_cf1[i-1] * s_kappa * (dx * s_b[i+1][j+2][2]
                                                     - s_b[i][j+2][2]));
 
             s_a[i+2][2][j+2] = fac * (ddx * s_cf2[i-1] * s_a[i+1][2][j+2]
                                              + ddz * s_a[i+2][2][j+1]
                                         - s_cf3[i-1] * s_a[i][2][j+2]
                                                    - s_a[i+2][2][j]
-                           + s_cf1[i-1] * kappa * (dx * s_b[i+1][2][j+2]
+                           + s_cf1[i-1] * s_kappa * (dx * s_b[i+1][2][j+2]
                                                     - s_b[i][2][j+2]));
 
             s_a[2][i+2][j+2] = fac * (ddy * s_cf2[i-1] * s_a[2][i+1][j+2]
                                              + ddz * s_a[2][i+2][j+1]
                                         - s_cf3[i-1] * s_a[2][i][j+2]
                                                    - s_a[2][i+2][j]
-                           + s_cf1[i-1] * kappa * (dy * s_b[2][i+1][j+2]
+                           + s_cf1[i-1] * s_kappa * (dy * s_b[2][i+1][j+2]
                                                     - s_b[2][i][j+2]));
         }
     }
@@ -1078,7 +1126,7 @@ static int s_ComputeCoeffs(TreeNode *p, double kappa)
                      + ddz * s_a[3][3][2]
                   + kappax * s_b[2][3][3]);
 
-    for (i = 2; i < s_torderlim-1; i++){
+    for (i = 2; i < s_order+1; i++) {
         s_b[3][3][i+2] = kappax * s_a[2][3][i+2];
         s_b[3][i+2][3] = kappax * s_a[2][i+2][3];
         s_b[i+2][3][3] = kappay * s_a[i+2][2][3];
@@ -1103,8 +1151,8 @@ static int s_ComputeCoeffs(TreeNode *p, double kappa)
     }
 
   /* 1 index 1, others >=2 */
-    for (i = 2; i < s_torderlim-2; i++) {
-        for (j = 2; j < s_torderlim-i+1; j++) {
+    for (i = 2; i < s_order; i++) {
+        for (j = 2; j < s_order+2-i; j++) {
             s_b[3][i+2][j+2] = kappax * s_a[2][i+2][j+2];
             s_b[i+2][3][j+2] = kappay * s_a[i+2][2][j+2];
             s_b[i+2][j+2][3] = kappaz * s_a[i+2][j+2][2];
@@ -1133,10 +1181,10 @@ static int s_ComputeCoeffs(TreeNode *p, double kappa)
     }
 
   /* all indices >=2 */
-    for (k = 2; k < s_torderlim-3; k++) {
-        for (j = 2; j < s_torderlim-1-k; j++) {
-            for (i = 2; i < s_torderlim+1-k-j; i++) {
-                s_b[i+2][j+2][k+2] = s_cf1[i-1] * kappa * (dx * s_a[i+1][j+2][k+2]
+    for (k = 2; k < s_order-1; k++) {
+        for (j = 2; j < s_order+1-k; j++) {
+            for (i = 2; i < s_order+3-k-j; i++) {
+                s_b[i+2][j+2][k+2] = s_cf1[i-1] * s_kappa * (dx * s_a[i+1][j+2][k+2]
                                                           - s_a[i][j+2][k+2]);
 
                 s_a[i+2][j+2][k+2] = fac * (ddx * s_cf2[i-1] * s_a[i+1][j+2][k+2]
@@ -1145,7 +1193,7 @@ static int s_ComputeCoeffs(TreeNode *p, double kappa)
                                               - s_cf3[i-1] * s_a[i][j+2][k+2]
                                                          - s_a[i+2][j][k+2]
                                                          - s_a[i+2][j+2][k]
-                                 + s_cf1[i-1] * kappa * (dx * s_b[i+1][j+2][k+2]
+                                 + s_cf1[i-1] * s_kappa * (dx * s_b[i+1][j+2][k+2]
                                                           - s_b[i][j+2][k+2]));
             }
         }
@@ -1157,13 +1205,161 @@ static int s_ComputeCoeffs(TreeNode *p, double kappa)
 
 
 /********************************************************/
-static int s_ComputeDirectPB(double peng[2], int ibeg, int iend, double *tpoten_old)
+static int s_ComputeCoeffsCoulomb(TreeNode *p)
+{
+/* COMP_TCOEFF computes the Taylor coefficients of the potential
+ * using a recurrence formula.  The center of the expansion is the
+ * midpoint of the node P.  s_target_position and s_torderLIM are globally defined. */
+    double dx, dy, dz, ddx, ddy, ddz, dist, fac;
+    int i, j, k;
+
+  /* setup variables */
+
+    dx = s_target_position[0] - p->x_mid;
+    dy = s_target_position[1] - p->y_mid;
+    dz = s_target_position[2] - p->z_mid;
+
+    ddx = 2.0 * dx;
+    ddy = 2.0 * dy;
+    ddz = 2.0 * dz;
+
+    dist = dx*dx + dy*dy + dz*dz;
+    fac = 1.0 / dist;
+    dist = sqrt(dist);
+
+  /* 0th coeff or function val */
+    s_a[2][2][2] = 1.0 / dist;
+
+  /* 2 indices are 0 */
+
+    s_a[3][2][2] = fac * dx * s_a[2][2][2];
+    s_a[2][3][2] = fac * dy * s_a[2][2][2];
+    s_a[2][2][3] = fac * dz * s_a[2][2][2];
+
+    for (i = 2; i < s_order+3; i++) {
+
+        s_a[i+2][2][2] = fac * (ddx * s_cf2[i-1] * s_a[i+1][2][2]
+                                    - s_cf3[i-1] * s_a[i][2][2]);
+
+        s_a[2][i+2][2] = fac * (ddy * s_cf2[i-1] * s_a[2][i+1][2]
+                                    - s_cf3[i-1] * s_a[2][i][2]);
+        
+        s_a[2][2][i+2] = fac * (ddz * s_cf2[i-1] * s_a[2][2][i+1]
+                                    - s_cf3[i-1] * s_a[2][2][i]);
+    }
+
+  /* 1 index 0, 1 index 1, other >=1 */
+    s_a[3][3][2] = fac * (dx * s_a[2][3][2] + ddy * s_a[3][2][2]);
+    s_a[3][2][3] = fac * (dx * s_a[2][2][3] + ddz * s_a[3][2][2]);
+    s_a[2][3][3] = fac * (dy * s_a[2][2][3] + ddz * s_a[2][3][2]);
+
+    for (i = 2; i < s_order+2; i++) {
+
+        s_a[3][2][i+2]=fac * (dx * s_a[2][2][i+2] + ddz * s_a[3][2][i+1] - s_a[3][2][i]);
+        s_a[2][3][i+2]=fac * (dy * s_a[2][2][i+2] + ddz * s_a[2][3][i+1] - s_a[2][3][i]);
+        s_a[2][i+2][3]=fac * (dz * s_a[2][i+2][2] + ddy * s_a[2][i+1][3] - s_a[2][i][3]);
+        s_a[3][i+2][2]=fac * (dx * s_a[2][i+2][2] + ddy * s_a[3][i+1][2] - s_a[3][i][2]);
+        s_a[i+2][3][2]=fac * (dy * s_a[i+2][2][2] + ddx * s_a[i+1][3][2] - s_a[i][3][2]);
+        s_a[i+2][2][3]=fac * (dz * s_a[i+2][2][2] + ddx * s_a[i+1][2][3] - s_a[i][2][3]);
+    }
+
+    /* 1 index 0, others >=2 */
+    for (i = 2; i < s_order+1; i++) {
+        for (j = 2; j < s_order+3-i; j++) {
+
+            s_a[i+2][j+2][2] = fac * (ddx * s_cf2[i-1] * s_a[i+1][j+2][2]
+                                                 + ddy * s_a[i+2][j+1][2]
+                                          - s_cf3[i-1] * s_a[i][j+2][2]
+                                                       - s_a[i+2][j][2]);
+
+            s_a[i+2][2][j+2] = fac * (ddx * s_cf2[i-1] * s_a[i+1][2][j+2]
+                                                 + ddz * s_a[i+2][2][j+1]
+                                          - s_cf3[i-1] * s_a[i][2][j+2]
+                                                       - s_a[i+2][2][j]);
+
+            s_a[2][i+2][j+2] = fac * (ddy * s_cf2[i-1] * s_a[2][i+1][j+2]
+                                                 + ddz * s_a[2][i+2][j+1]
+                                          - s_cf3[i-1] * s_a[2][i][j+2]
+                                                       - s_a[2][i+2][j]);
+        }
+    }
+
+  /* 2 indices 1,other >= 1 */
+    s_a[3][3][3] = fac * (dx * s_a[2][3][3]
+                       + ddy * s_a[3][2][3]
+                       + ddz * s_a[3][3][2]);
+
+    for (i = 2; i < s_order+1; i++) {
+
+        s_a[3][3][i+2] = fac * (dx * s_a[2][3][i+2]
+                           + ddy * s_a[3][2][i+2]
+                           + ddz * s_a[3][3][i+1]
+                                  -s_a[3][3][i]);
+
+        s_a[3][i+2][3] = fac * (dx * s_a[2][i+2][3]
+                             + ddy * s_a[3][i+1][3]
+                             + ddz * s_a[3][i+2][2]
+                                   - s_a[3][i][3]);
+
+        s_a[i+2][3][3] = fac * (dy * s_a[i+2][2][3]
+                             + ddx * s_a[i+1][3][3]
+                             + ddz * s_a[i+2][3][2]
+                                   - s_a[i][3][3]);
+    }
+
+  /* 1 index 1, others >=2 */
+    for (i = 2; i < s_order; i++) {
+        for (j = 2; j < s_order+2-i; j++) {
+
+            s_a[3][i+2][j+2] = fac * (dx * s_a[2][i+2][j+2]
+                                   + ddy * s_a[3][i+1][j+2]
+                                   + ddz * s_a[3][i+2][j+1]
+                                         - s_a[3][i][j+2]
+                                         - s_a[3][i+2][j]);
+
+            s_a[i+2][3][j+2] = fac * (dy * s_a[i+2][2][j+2]
+                                   + ddx * s_a[i+1][3][j+2]
+                                   + ddz * s_a[i+2][3][j+1]
+                                         - s_a[i][3][j+2]
+                                         - s_a[i+2][3][j]);
+            
+            s_a[i+2][j+2][3] = fac * (dz * s_a[i+2][j+2][2]
+                                   + ddx * s_a[i+1][j+2][3]
+                                   + ddy * s_a[i+2][j+1][3]
+                                         - s_a[i][j+2][3]
+                                         - s_a[i+2][j][3]);
+        }
+    }
+
+  /* all indices >=2 */
+    for (k = 2; k < s_order-1; k++) {
+        for (j = 2; j < s_order+1-k; j++) {
+            for (i = 2; i < s_order+3-k-j; i++) {
+
+                s_a[i+2][j+2][k+2] = fac
+                                   * (ddx * s_cf2[i-1] * s_a[i+1][j+2][k+2]
+                                                 + ddy * s_a[i+2][j+1][k+2]
+                                                 + ddz * s_a[i+2][j+2][k+1]
+                                          - s_cf3[i-1] * s_a[i][j+2][k+2]
+                                                       - s_a[i+2][j][k+2]
+                                                       - s_a[i+2][j+2][k]);
+            }
+        }
+    }
+
+    return 0;
+}
+/********************************************************/
+
+
+/********************************************************/
+static int s_ComputeDirectPB(int ibeg, int iend,
+                             double *tpoten_old, double peng[2])
 {
   /* COMPF_DIRECT directly computes the force on the current target
  * particle determined by the global variable s_target_position.*/
-    int i, j;
-    double dist, dist2, tx, ty, tz, soupos[3], souq[3];
-    double peng_old[2], L1, L2, L3, L4, area, temp_area;
+    int j;
+    double peng_old[2], L1, L2, L3, L4, area;
     double tp[3], tq[3], sp[3], sq[3], r_s[3];
     double rs, irs, sumrs;
     double G0, kappa_rs, exp_kappa_rs, Gk;
@@ -1181,9 +1377,9 @@ static int s_ComputeDirectPB(double peng[2], int ibeg, int iend, double *tpoten_
     tq[2] = s_target_normal[2];
     
     for (j = ibeg; j < iend+1; j++) {
-        sp[0] = s_particle_position[j];
-        sp[1] = s_particle_position[j];
-        sp[2] = s_particle_position[j];
+        sp[0] = s_particle_position[0][j];
+        sp[1] = s_particle_position[1][j];
+        sp[2] = s_particle_position[2][j];
         sq[0] = s_particle_normal[0][j];
         sq[1] = s_particle_normal[1][j];
         sq[2] = s_particle_normal[2][j];
@@ -1192,7 +1388,7 @@ static int s_ComputeDirectPB(double peng[2], int ibeg, int iend, double *tpoten_
         sumrs = r_s[0]*r_s[0] + r_s[1]*r_s[1] + r_s[2]*r_s[2];
         rs = sqrt(sumrs);
         irs = 1.0/rs;
-        G0 = one_over_4pi * irs;
+        G0 = ONE_OVER_4PI * irs;
         kappa_rs = s_kappa * rs;
         exp_kappa_rs = exp(-kappa_rs);
         Gk = exp_kappa_rs * G0;
@@ -1210,7 +1406,7 @@ static int s_ComputeDirectPB(double peng[2], int ibeg, int iend, double *tpoten_
 
         dot_tqsq = sq[0]*tq[0] + sq[1]*tq[1] + sq[2]*tq[2];
         G3 = (dot_tqsq - 3.0*cos_theta0*cos_theta) * irs*tp1;
-        G4 = tp2*G3 - kappa2*cos_theta0*cos_theta*Gk;
+        G4 = tp2*G3 - s_kappa2*cos_theta0*cos_theta*Gk;
 
         L1 = G1 - s_eps*G2;
         L2 = G0 - Gk;
@@ -1235,16 +1431,16 @@ static int s_RemoveMoments(TreeNode *p)
 {
 /* REMOVE_NODE recursively removes each node from the
  * tree and deallocates its memory for MS array if it exits. */
-    int i, j, k, n;
+    int i;
 
     if (p->exist_ms == 1) {
-        free_4array(p->ms);
+        free_matrix(p->ms);
         p->exist_ms = 0;
     }
 
     if (p->num_children > 0) {
         for (i = 0; i < p->num_children; i++)
-            RemoveMoments(p->child[i]);
+            s_RemoveMoments(p->child[i]);
     }
 
     return 0;
@@ -1253,7 +1449,7 @@ static int s_RemoveMoments(TreeNode *p)
 
 
 /********************************************************/
-static int s_RemoveNode(TreeNode* p)
+static int s_RemoveNode(TreeNode *p)
 {
 /* REMOVE_NODE recursively removes each node from the
  * tree and deallocates its memory for MS array if it exits. */
@@ -1261,7 +1457,7 @@ static int s_RemoveNode(TreeNode* p)
 
     if (p->num_children > 0) {
         for (i = 0; i < 8; i++) {
-            RemoveNode(p->child[i]);
+            s_RemoveNode(p->child[i]);
             free(p->child[i]);
         }
         free(p->child);

@@ -9,7 +9,7 @@
  * Weihua Geng, Southern Methodist University, Dallas, TX
  * Robery Krasny, University of Michigan, Ann Arbor, MI
  *
- * Last modified by Leighton Wilson, 01/11/2018
+ * Last modified by Leighton Wilson, 01/14/2018
  * Created by Leighton Wilson, 01/11/2018
  */
 
@@ -26,8 +26,8 @@ typedef struct sTreeNode {
     double x_mid, y_mid, z_mid;
     double radius, aspect;
     int level, num_children, exist_ms;
-    double ****ms;
-    struct TreeNode **child;
+    double **ms;
+    struct sTreeNode **child;
 
 } TreeNode;
 

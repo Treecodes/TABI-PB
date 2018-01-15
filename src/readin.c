@@ -26,47 +26,25 @@
 #include "TABIPBstruct.h"
 #include "particle_struct.h"
 
-/* function computing the area of a triangle given vertices coodinates */
-double TriangleArea(double v[3][3])
-{
-    int i;
-    double a[3], b[3], c[3], aa, bb, cc, ss, area;
 
-    for (i = 0; i <= 2; i++) {
-        a[i] = v[i][0] - v[i][1];
-        b[i] = v[i][0] - v[i][2];
-        c[i] = v[i][1] - v[i][2];
-    }
-
-    aa = sqrt(a[0]*a[0] + a[1]*a[1] + a[2]*a[2]);
-    bb = sqrt(b[0]*b[0] + b[1]*b[1] + b[2]*b[2]);
-    cc = sqrt(c[0]*c[0] + c[1]*c[1] + c[2]*c[2]);
-
-    ss = 0.5 * (aa + bb + cc);
-    area = sqrt(ss * (ss-aa) * (ss-bb) * (ss-cc));
-
-    return(area);
-}
+static double TriangleArea(double v[3][3]); 
 
 /* function read in molecule information */
-int Readin(TABIPBparm *parm, TABIPBvars *vars, ParticleStruct *particles)
+int Readin(TABIPBparm *parm, TABIPBvars *vars, TreeParticles *particles)
 {
-    FILE *fp, *wfp, *nsfp;
-    char c, c1[10], c2[10], c3[10], c4[10], c5[10];
+    FILE *fp, *nsfp;
+    char c;
     char fname_tp[256];
 
     int i, j, k, i1, i2, i3, j1, j2, j3, ii, jj, kk;
     int nfacenew, nface, ichanged, ierr;
     int natm_msms;
 
-    int namelength = 4;
-
     double den, prob_rds, a1, a2, a3, b1, b2, b3, v0_norm;
     double r0[3], v0[3], v[3][3], r[3][3];
     int idx[3], jface[3], iface[3];
-    double rs, rd[3], pot = 0.0, sum = 0.0, pot_temp = 0.0;
+    double sum = 0.0;
     double dist_local, area_local;
-    double cos_theta, G0, tp1, G1, r_s[3];
     double xx[3], yy[3];
 
     int **face_copy, **face;
@@ -163,20 +141,20 @@ int Readin(TABIPBparm *parm, TABIPBvars *vars, ParticleStruct *particles)
 
 
     if (parm->mesh_flag == 0) {
-        ierr = fscanf(fp,"%d %d %lf %lf ",&nspt,&natm_msms,&den,&prob_rds);
+        ierr = fscanf(fp,"%d %d %lf %lf ",&vars->nspt,&natm_msms,&den,&prob_rds);
     } else if (parm->mesh_flag == 1 ||
                parm->mesh_flag == 2 ||
                parm->mesh_flag == 3) {
-        ierr = fscanf(fp,"%d ",&nspt);
+        ierr = fscanf(fp,"%d ",&vars->nspt);
     }
 
 
   /*allocate variables for vertices file*/
 
-    make_matrix(vars->vert, 3, nspt);
-    make_matrix(vars->snrm, 3, nspt);
+    make_matrix(vars->vert, 3, vars->nspt);
+    make_matrix(vars->snrm, 3, vars->nspt);
 
-    for (i = 0; i <= nspt-1; i++) {
+    for (i = 0; i <= vars->nspt-1; i++) {
         ierr = fscanf(fp, "%lf %lf %lf %lf %lf %lf %d %d %d",
                       &a1, &a2, &a3, &b1, &b2, &b3, &i1, &i2, &i3);
 
@@ -309,7 +287,6 @@ int Readin(TABIPBparm *parm, TABIPBvars *vars, ParticleStruct *particles)
     free_matrix(face_copy);
     
     vars->nface = nface;
-    vars->nspt = nspt;
     
     remove("molecule.xyzr");
     remove("molecule.vert");
@@ -331,9 +308,9 @@ int Readin(TABIPBparm *parm, TABIPBvars *vars, ParticleStruct *particles)
 /*    tr_q: The normal direction at the particle location */
 /* tr_area: The triangular area of each element */
 
-    make_matrix(particles->particle_position, 3, vars->nface);
-    make_matrix(particles->particle_normal, 3, vars->nface);
-    make_vector(particles->particle_area, vars->nface);
+    make_matrix(particles->position, 3, vars->nface);
+    make_matrix(particles->normal, 3, vars->nface);
+    make_vector(particles->area, vars->nface);
     make_vector(particles->source_term, 2 * vars->nface);
     
     //tr_xyz = (double *) calloc(3*nface, sizeof(double));
@@ -364,18 +341,42 @@ int Readin(TABIPBparm *parm, TABIPBvars *vars, ParticleStruct *particles)
         }
 
         for (j = 0; j < 3; j++) {
-            particles->particle_position[j][i] = r0[j];
-            particles->particle_normal[j][i] = v0[j];
+            particles->position[j][i] = r0[j];
+            particles->normal[j][i] = v0[j];
             //tr_xyz[3*i + j] = r0[j];
             //tr_q[3*i + j] = v0[j];
         }
 
-        particles->particle_area[i] = TriangleArea(r);
+        particles->area[i] = TriangleArea(r);
         //tr_area[i] = TriangleArea(r);
-        sum += particles->particle_area[i];
+        sum += particles->area[i];
     }
 
     printf("Total suface area = %.17f\n",sum);
 
     return 0;
+}
+
+
+
+/* function computing the area of a triangle given vertices coodinates */
+static double TriangleArea(double v[3][3])
+{
+    int i;
+    double a[3], b[3], c[3], aa, bb, cc, ss, area;
+
+    for (i = 0; i <= 2; i++) {
+        a[i] = v[i][0] - v[i][1];
+        b[i] = v[i][0] - v[i][2];
+        c[i] = v[i][1] - v[i][2];
+    }
+
+    aa = sqrt(a[0]*a[0] + a[1]*a[1] + a[2]*a[2]);
+    bb = sqrt(b[0]*b[0] + b[1]*b[1] + b[2]*b[2]);
+    cc = sqrt(c[0]*c[0] + c[1]*c[1] + c[2]*c[2]);
+
+    ss = 0.5 * (aa + bb + cc);
+    area = sqrt(ss * (ss-aa) * (ss-bb) * (ss-cc));
+
+    return(area);
 }

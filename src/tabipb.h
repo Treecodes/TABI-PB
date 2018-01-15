@@ -18,6 +18,6 @@
 #include "TABIPBstruct.h"
 
 
-int tabipb(TABIPBparm *parm, TABIPB *vars);
+int TABIPB(TABIPBparm *parm, TABIPBvars *vars);
 
 #endif /* H_TABIPB_H */

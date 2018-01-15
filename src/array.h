@@ -72,7 +72,7 @@
             make_4array_loop_counter < (k);                         \
             make_4array_loop_counter++)                             \
         make_3array((a)[make_4array_loop_counter], (l), (m), (n));  \
-    (a)[l] = NULL;                                                  \
+    (a)[k] = NULL;                                                  \
 } while (0)
 
 #define free_4array(a) do {                                    \

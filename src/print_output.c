@@ -61,7 +61,7 @@ int OutputPrint(TABIPBvars *vars)
 /************************************/
 int OutputVTK(TABIPBparm *parm, TABIPBvars *vars)
 {
-    char i_char1[20], i_char2[20], i_char3[20], nspt_str[20],
+    char i_char1[20], nspt_str[20],
          nface_str[20], nface4_str[20];
     int i;
 
@@ -100,7 +100,7 @@ int OutputVTK(TABIPBparm *parm, TABIPBvars *vars)
     fprintf(fp, "SCALARS NormalPotentialVert double\n");
     fprintf(fp, "LOOKUP_TABLE default\n");
     for (i = 0; i < vars->nspt; i++) {
-        fprintf(fp, "%f\n", KCAL_TO_KJ * vars->vert_ptl[nspt + i]);
+        fprintf(fp, "%f\n", KCAL_TO_KJ * vars->vert_ptl[vars->nspt + i]);
     }
 
     //if we want induced surface charges, we can multiply vertnorm by (1/eps + 1)

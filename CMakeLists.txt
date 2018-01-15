@@ -48,14 +48,25 @@ if(ENABLE_TABIPB_SPHINX)
               src/dscal.c
               src/dtrsv.c
               src/f2c.h
-              src/gl_variables.h
               src/gmres.c
-              src/readin.c
-              src/tabipb.c
               src/TABIPBstruct.h
               src/TABIPBWrap.c
+              src/global_params.h
+              src/tabipb.c
+              src/tabipb.h
+              src/particle_struct.h
+              src/readin.c
+              src/readin.h
+              src/run_gmres.c
+              src/run_gmres.h
               src/treecode.c
-              src/treecode.h
+              src/treecode_gmres_interface.h
+              src/treecode_tabipb_interface.h
+              src/tree_node_struct.h
+              src/utilities.c
+              src/utilities.h
+              src/print_output.c
+              src/print_output.h
               src/xmalloc.c
               src/xmalloc.h)
 
@@ -80,6 +91,8 @@ include_directories("/src")
     set (CMAKE_C_FLAGS_RELEASE "-fast -c")
     set (CMAKE_C_FLAGS_DEBUG   "")
   else ()
+    set (CMAKE_C_FLAGS_RELEASE "-c -O3")
+    set (CMAKE_C_FLAGS_DEBUG   "-Wall")
     message ("CMAKE_C_COMPILER full path: " ${CMAKE_C_COMPILER})
     message ("C compiler: " ${C_COMPILER_NAME})
   endif ()
@@ -89,14 +102,14 @@ include_directories("/src")
         add_executable(tabipb
           src/main.c src/tabipb.c src/gmres.c src/daxpy.c src/dcopy.c src/ddot.c
           src/dgemv.c src/dnrm2.c src/drot.c src/drotg.c src/dscal.c src/d_sign.c
-          src/dtrsv.c src/readin.c src/treecode.c
-          src/xmalloc.c)
+          src/dtrsv.c src/run_gmres.c src/readin.c src/treecode.c
+          src/print_output.c src/utilities.c src/xmalloc.c)
   else()
         add_executable(tabipb
           src/main.c src/tabipb.c src/gmres.c src/daxpy.c src/dcopy.c src/ddot.c
           src/dgemv.c src/dnrm2.c src/drot.c src/drotg.c src/dscal.c src/d_sign.c
-          src/dtrsv.c src/readin.c src/pp_timer.c src/treecode.c
-          src/xmalloc.c)
+          src/dtrsv.c src/run_gmres.c src/readin.c src/treecode.c src/pp_timer.c
+          src/print_output.c src/utilities.c src/xmalloc.c)
   endif()
 
 
@@ -142,7 +155,9 @@ if(ENABLE_TABIPB_APBS)
   set (LIBFILES
     src/TABIPBWrap.c src/tabipb.c src/gmres.c src/daxpy.c src/dcopy.c src/ddot.c
     src/dgemv.c src/dnrm2.c src/drot.c src/drotg.c src/dscal.c src/d_sign.c
-    src/dtrsv.c src/readin.c src/treecode.c src/xmalloc.c)
+    src/dtrsv.c src/run_gmres.c src/readin.c src/treecode.c
+    src/print_output.c src/utilities.c src/xmalloc.c
+    )
 
   message(***** ${CMAKE_INSTALL_PREFIX} *****)
 
