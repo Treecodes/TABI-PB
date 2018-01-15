@@ -52,10 +52,6 @@ int sphinx2tabipb(TABIPBparm *parm, TABIPBvars *vars)
     FILE *wfp;
     char fname_tp[256];
     int i, ierr;
-    
-    extern int tabipb();
-    extern int output_print();
-    extern int output_vtk();
 
     sprintf(fname_tp, "molecule.xyzr");
     wfp = fopen(fname_tp,"w");
@@ -65,7 +61,7 @@ int sphinx2tabipb(TABIPBparm *parm, TABIPBvars *vars)
     }
     fclose(wfp);
 
-    ierr = TABIPB(parm,vars);
+    ierr = TABIPB(parm, vars);
 
     free(vars->vert_ptl);
     free(vars->xvct);
