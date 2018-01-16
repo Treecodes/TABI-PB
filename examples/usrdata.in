@@ -1,12 +1,12 @@
-fname 1a63
+fname 1aie
 den 1 
 probe_radius 1.4
 epsp 1
 epsw 80
 bulk_strength 0.30
 temp 300
-order 1
+order 3
 maxparnode 500
 max 0.8
-mesh 0
+mesh 1
 outdata 1

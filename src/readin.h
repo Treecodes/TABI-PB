@@ -19,7 +19,7 @@
 #include "TABIPBstruct.h"
 #include "particle_struct.h"
 
-/* function read in molecule information */
-int Readin(TABIPBparm *parm, TABIPBvars *vars, TreeParticles *particles);
+/* function to read in molecule information */
+int Readin(TABIPBparm *parm, TABIPBvars *vars);
 
 #endif /* H_READIN_H */

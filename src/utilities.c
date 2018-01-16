@@ -9,8 +9,13 @@
  * Weihua Geng, Southern Methodist University, Dallas, TX
  * Robery Krasny, University of Michigan, Ann Arbor, MI
  *
- * Last modified by Leighton Wilson, 01/12/2018
+ * Added TriangleArea by Leighton Wilson, 01/15/2018
+ * Created by Leighton Wilson, 01/12/2018
  */
+
+#include <math.h>
+
+#include "utilities.h"
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* helper functions                                          * * * */
@@ -31,6 +36,8 @@ double MinVal(double *variables, int number)
     
     return min_val;
 }
+/**********************************************************/
+
 
 /**********************************************************/
 double MaxVal(double *variables, int number) 
@@ -46,74 +53,31 @@ double MaxVal(double *variables, int number)
     
     return max_val;
 }
+/**********************************************************/
 
 
-/********************************************************/
-int Partition(double *a, double *b, double *c, int *indarr,
-              int ibeg, int iend, double val)
+/**********************************************************/
+/* function computing the area of a triangle given vertices coodinates */
+double TriangleArea(double v[3][3])
 {
-/* PARTITION determines the index MIDIND, after partitioning
- * in place the  arrays A,B,C and Q,  such that
- * A(IBEG:MIDIND) <= VAL and  A(MIDIND+1:IEND) > VAL.
- * If on entry IBEG > IEND or  A(IBEG:IEND) > VAL then MIDIND
- * is returned as IBEG-1.  */
-    double ta, tb, tc;
-    int lower, upper, tind;
-    int midind;
+    int i;
+    double a[3], b[3], c[3], aa, bb, cc, ss, area;
 
-    if (ibeg < iend) {
-/* temporarily store IBEG entries and set A(IBEG)=VAL for
- * the partitoning algorithm.  */
-        ta = a[ibeg];
-        tb = b[ibeg];
-        tc = c[ibeg];
-        tind = indarr[ibeg];
-        a[ibeg] = val;/*val=mid val on that direction*/
-        upper = ibeg;
-        lower = iend;
-
-        while (upper != lower) {
-            while (upper < lower && val < a[lower])
-                lower -= 1;
-            if (upper != lower) {
-                a[upper] = a[lower];
-                b[upper] = b[lower];
-                c[upper] = c[lower];
-                indarr[upper] = indarr[lower];
-            }
-            while (upper < lower && val >= a[upper])
-            upper += 1;
-            if (upper != lower) {
-                a[lower] = a[upper];
-                b[lower] = b[upper];
-                c[lower] = c[upper];
-                indarr[lower] = indarr[upper];
-            }
-        }
-        midind = upper;
-/* replace TA in position UPPER and change MIDIND if TA > VAL */
-        if (ta > val) {
-            midind = upper - 1;
-        }
-
-        a[upper] = ta;
-        b[upper] = tb;
-        c[upper] = tc;
-        indarr[upper] = tind;
-    
-    } else if (ibeg == iend) {
-    
-        if (a[ibeg] <= val) {
-            midind = ibeg;
-        } else {
-            midind = ibeg - 1;
-        }
-    
-    } else {
-        midind = ibeg - 1;
+    for (i = 0; i <= 2; i++) {
+        a[i] = v[i][0] - v[i][1];
+        b[i] = v[i][0] - v[i][2];
+        c[i] = v[i][1] - v[i][2];
     }
 
-    return (midind);
+    aa = sqrt(a[0]*a[0] + a[1]*a[1] + a[2]*a[2]);
+    bb = sqrt(b[0]*b[0] + b[1]*b[1] + b[2]*b[2]);
+    cc = sqrt(c[0]*c[0] + c[1]*c[1] + c[2]*c[2]);
+
+    ss = 0.5 * (aa + bb + cc);
+    area = sqrt(ss * (ss-aa) * (ss-bb) * (ss-cc));
+
+    return(area);
 }
+/**********************************************************/
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */

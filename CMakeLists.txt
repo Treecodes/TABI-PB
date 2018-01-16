@@ -63,6 +63,8 @@ if(ENABLE_TABIPB_SPHINX)
               src/treecode_gmres_interface.h
               src/treecode_tabipb_interface.h
               src/tree_node_struct.h
+              src/partition.c
+              src/partition.h
               src/utilities.c
               src/utilities.h
               src/print_output.c
@@ -102,14 +104,14 @@ include_directories("/src")
         add_executable(tabipb
           src/main.c src/tabipb.c src/gmres.c src/daxpy.c src/dcopy.c src/ddot.c
           src/dgemv.c src/dnrm2.c src/drot.c src/drotg.c src/dscal.c src/d_sign.c
-          src/dtrsv.c src/run_gmres.c src/readin.c src/treecode.c
+          src/dtrsv.c src/partition.c src/run_gmres.c src/readin.c src/treecode.c
           src/print_output.c src/utilities.c src/xmalloc.c)
   else()
         add_executable(tabipb
           src/main.c src/tabipb.c src/gmres.c src/daxpy.c src/dcopy.c src/ddot.c
           src/dgemv.c src/dnrm2.c src/drot.c src/drotg.c src/dscal.c src/d_sign.c
-          src/dtrsv.c src/run_gmres.c src/readin.c src/treecode.c src/pp_timer.c
-          src/print_output.c src/utilities.c src/xmalloc.c)
+          src/dtrsv.c src/partition.c src/run_gmres.c src/readin.c src/treecode.c
+          src/print_output.c src/utilities.c src/xmalloc.c src/pp_timer.c)
   endif()
 
 
@@ -155,7 +157,7 @@ if(ENABLE_TABIPB_APBS)
   set (LIBFILES
     src/TABIPBWrap.c src/tabipb.c src/gmres.c src/daxpy.c src/dcopy.c src/ddot.c
     src/dgemv.c src/dnrm2.c src/drot.c src/drotg.c src/dscal.c src/d_sign.c
-    src/dtrsv.c src/run_gmres.c src/readin.c src/treecode.c
+    src/dtrsv.c src/partition.c src/run_gmres.c src/readin.c src/treecode.c
     src/print_output.c src/utilities.c src/xmalloc.c
     )
 

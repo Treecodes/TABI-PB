@@ -1,5 +1,5 @@
 /*
- * C header for helper routines for treecode in tabipb
+ * C header for partition routine used by treecode in tabipb
  *
  * C version authored by:
  * Leighton Wilson, University of Michigan, Ann Arbor, MI
@@ -9,23 +9,19 @@
  * Weihua Geng, Southern Methodist University, Dallas, TX
  * Robery Krasny, University of Michigan, Ann Arbor, MI
  *
- * Added TriangleArea routine by Leighton Wilson, 01/15/2018
- * Created by Leighton Wilson, 01/12/2018
+ * Created by Leighton Wilson, 01/15/2018
  */
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* helper functions                                          * * * */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef H_UTILITY_ROUTINES_H
-#define H_UTILITY_ROUTINES_H
+#ifndef H_PARTITION_H
+#define H_PARTITION_H
 
-double MinVal(double *variables, int number);
+int Partition(double *a, double *b, double *c, int *indarr,
+              int ibeg, int iend, double val);
 
-double MaxVal(double *variables, int number);
-
-double TriangleArea(double v[3][3]);
-
-#endif /* H_UTILITY_ROUTINES_H */
+#endif /* H_PARTITION_H */
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */

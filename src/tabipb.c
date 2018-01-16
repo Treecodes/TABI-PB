@@ -9,9 +9,11 @@
  * Weihua Geng, Southern Methodist University, Dallas, TX
  * Robery Krasny, University of Michigan, Ann Arbor, MI
  *
- * Works for Sphinx by Jiahui at 7/14/2016
- * Rebuild the architecture of wrapper by Jiahui at 6/30/2016
- * Build matrix free and nanoshaper by Leighton at 6/23/2016
+ * Rewriting interface and localizing functions by Leighton, 01/14/2018
+ * Creating GMRes interface by Leighton, 01/12/2018
+ * Works for Sphinx by Jiahui, 7/14/2016
+ * Rebuild the architecture of wrapper by Jiahui, 6/30/2016
+ * Build matrix free and nanoshaper by Leighton, 6/23/2016
  *
  */
 
@@ -33,11 +35,15 @@
 
 
 /* internal functions */
+static int s_ConstructTreeParticles(TABIPBvars *vars,
+                                    TreeParticles *particles);
 static int s_ComputeSourceTerm(TABIPBparm *parm, TABIPBvars *vars,
                                TreeParticles *particles);
-static int s_ComputePotential(TABIPBparm *parm, TABIPBvars *vars,
-                              TreeParticles *particles, double *chrptl);
 static int s_OutputPotential(TABIPBvars *vars, TreeParticles *particles);
+
+static double s_ComputeSolvationEnergy(TABIPBparm *parm, TABIPBvars *vars,
+                                       TreeParticles *particles);
+static double s_ComputeCoulombEnergy(TABIPBparm *parm, TABIPBvars *vars);
 
 
 int TABIPB(TABIPBparm *parm, TABIPBvars *vars) {
@@ -49,12 +55,9 @@ int TABIPB(TABIPBparm *parm, TABIPBvars *vars) {
      raduis */
 
   /* variables local to main */
-    int i, j;
-    double energy_solvation = 0.0;
-    double energy_coulomb = 0.0;
-
-    /* variables used to compute potential solution */
-    double *chrptl;
+    double energy_solvation;
+    double energy_coulomb;
+    TreeParticles *particles = malloc(sizeof *particles);;
 
     printf("\n              Treecode order: %d", parm->order);
     printf("\n Max # of particles per leaf: %d", parm->maxparnode);
@@ -63,78 +66,45 @@ int TABIPB(TABIPBparm *parm, TABIPBvars *vars) {
 
     printf("\nSetting up the TABI input...\n");
 
-  /**creating particle struct**/
-  
-    TreeParticles *particles = malloc(sizeof *particles);
-    
-
   /***************constant*****************/
     
     parm->eps = parm->epsw/parm->epsp;
     parm->kappa2 = BULK_COEFF * parm->bulk_strength / parm->epsw / parm->temp;
     parm->kappa = sqrt(parm->kappa2);
 
-
-    Readin(parm, vars, particles);
-
+    /* generate surface meshes from .xyzr and save in TABIPBvars */
+    Readin(parm, vars);
+    
+    /*set up the particles struct used by treecode */
+    s_ConstructTreeParticles(vars, particles);
     s_ComputeSourceTerm(parm, vars, particles);
 
     /* set up treecode */
     TreecodeInitialization(parm, vars->nface, particles);
-    
-    make_vector(particles->xvct, 2 * vars->nface);
-    make_vector(vars->xvct, 2 * vars->nface);
 
     /* call GMRES */
     RunGMRES(vars->nface, particles->source_term, particles->xvct);
 
-    /* the solvation energy computation */
-    make_vector(chrptl, vars->nface);
-    s_ComputePotential(parm, vars, particles, chrptl);
+    /* compute solvation and coulombic energy */
+    energy_solvation = s_ComputeSolvationEnergy(parm, vars, particles);
+    energy_coulomb = s_ComputeCoulombEnergy(parm, vars);
 
-    energy_solvation = 0.0;
-    energy_coulomb = 0.0;
+    vars->soleng = energy_solvation * UNITS_PARA;
+    vars->couleng = energy_coulomb * UNITS_COEFF;
 
-    double r[3], diff[3], dist;
-
-    for (i = 0; i < vars->nface; i++) {
-        energy_solvation += chrptl[i];
-    }
-
-    for (i = 0; i < vars->natm; i++) {
-        r[0] = vars->chrpos[3*i];
-        r[1] = vars->chrpos[3*i + 1];
-        r[2] = vars->chrpos[3*i + 2];
-        
-        for (j = i+1; j < vars->natm; j++){
-            diff[0] = r[0] - vars->chrpos[3*j];
-            diff[1] = r[1] - vars->chrpos[3*j + 1];
-            diff[2] = r[2] - vars->chrpos[3*j + 2];
-            dist = sqrt(diff[0]*diff[0]
-                 + diff[1]*diff[1]
-                 + diff[2]*diff[2]);
-            energy_coulomb += 1 / parm->epsp / dist * vars->atmchr[i] * vars->atmchr[j];
-        }
-    }
-    free_vector(chrptl);
-
-    energy_solvation = energy_solvation * UNITS_PARA;
-    energy_coulomb = energy_coulomb * UNITS_COEFF;
-    vars->soleng = energy_solvation;
-    vars->couleng = energy_coulomb;
-
-    /* dellocate treecode variables, reorder particles */
+    /* deallocate treecode variables and reorder particles */
     TreecodeFinalization(particles);
 
+    /* scale potential to proper units and copy to TABIPBvars */
     s_OutputPotential(vars, particles);
 
     free_matrix(particles->position);
     free_matrix(particles->normal);
     free_vector(particles->area);
     free_vector(particles->source_term);
+    free(particles);
     
     return 0;
-
 }
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -144,6 +114,64 @@ int TABIPB(TABIPBparm *parm, TABIPBvars *vars) {
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* PRIVATE internal TABIPB functions                         * * * */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+/**********************************************************/
+static int s_ConstructTreeParticles(TABIPBvars *vars, TreeParticles *particles)
+{
+/* function to construct particles used by tree */
+/*  tr_xyz: The position of the particles on surface */
+/*    tr_q: The normal direction at the particle location */
+/* tr_area: The triangular area of each element */
+
+    int i, j, k;
+    int idx[3];
+    double sum = 0.0, v0_norm;
+    double r0[3], v0[3], v[3][3], r[3][3];
+    
+    make_matrix(particles->position, 3, vars->nface);
+    make_matrix(particles->normal, 3, vars->nface);
+    make_vector(particles->area, vars->nface);
+    make_vector(particles->source_term, 2 * vars->nface);
+    make_vector(particles->xvct, 2 * vars->nface);
+
+    for (i = 0; i < vars->nface; i++) {
+        for (j = 0; j < 3; j++) {
+            idx[j] = vars->face[j][i];
+        }
+
+        for (j = 0; j < 3; j++) {
+            r0[j] = 0;
+            v0[j] = 0;
+
+            for (k = 0; k < 3; k++) {
+                r0[j] = r0[j] + vars->vert[j][idx[k]-1] / 3.0;
+                v0[j] = v0[j] + vars->snrm[j][idx[k]-1] / 3.0;
+                r[j][k] = vars->vert[j][idx[k]-1];
+                v[j][k] = vars->snrm[j][idx[k]-1];
+            }
+        }
+
+        v0_norm = sqrt(v0[0]*v0[0] + v0[1]*v0[1] + v0[2]*v0[2]);
+
+        for (k = 0; k<3; k++) {
+            v0[k] = v0[k] / v0_norm;
+        }
+
+        for (j = 0; j < 3; j++) {
+            particles->position[j][i] = r0[j];
+            particles->normal[j][i] = v0[j];
+        }
+
+        particles->area[i] = TriangleArea(r);
+        sum += particles->area[i];
+    }
+
+    printf("Total suface area = %.17f\n" ,sum);
+
+    return 0;
+}
+/**********************************************************/
+
 
 /**********************************************************/
 static int s_ComputeSourceTerm(TABIPBparm *parm, TABIPBvars *vars,
@@ -156,6 +184,7 @@ static int s_ComputeSourceTerm(TABIPBparm *parm, TABIPBvars *vars,
     int i, j;
     double sumrs, cos_theta, irs, G0, G1;
     double r_s[3];
+
 
     for (i = 0; i < vars->nface; i++) {
         particles->source_term[i] = 0.0;
@@ -194,15 +223,18 @@ static int s_ComputeSourceTerm(TABIPBparm *parm, TABIPBvars *vars,
 
 
 /********************************************************/
-static int s_ComputePotential(TABIPBparm *parm, TABIPBvars *vars,
-                              TreeParticles *particles, double *chrptl)
+static double s_ComputeSolvationEnergy(TABIPBparm *parm, TABIPBvars *vars,
+                                       TreeParticles *particles)
 {
   /* local variables */
     int i, j;
     double sumrs, irs, rs, G0, Gk, kappa_rs, exp_kappa_rs;
     double cos_theta, G1, G2, L1, L2;
     double r[3], v[3], s[3], r_s[3];
+    double *chrptl;
+    double energy_solvation = 0.0;
 
+    make_vector(chrptl, vars->nface);
     for (j = 0; j < vars->nface; j++) {
         chrptl[j] = 0.0;
 
@@ -248,8 +280,43 @@ static int s_ComputePotential(TABIPBparm *parm, TABIPBvars *vars,
                        * particles->area[j];
         }
     }
+    
+    for (i = 0; i < vars->nface; i++) {
+        energy_solvation += chrptl[i];
+    }
+    
+    free_vector(chrptl);
 
-    return 0;
+    return (energy_solvation);
+}
+/********************************************************/
+
+
+/********************************************************/
+static double s_ComputeCoulombEnergy(TABIPBparm *parm, TABIPBvars *vars)
+{
+    int i, j;
+    double r[3], diff[3], dist;
+    double energy_coulomb = 0.0;
+
+    for (i = 0; i < vars->natm; i++) {
+        r[0] = vars->chrpos[3*i];
+        r[1] = vars->chrpos[3*i + 1];
+        r[2] = vars->chrpos[3*i + 2];
+        
+        for (j = i+1; j < vars->natm; j++){
+            diff[0] = r[0] - vars->chrpos[3*j];
+            diff[1] = r[1] - vars->chrpos[3*j + 1];
+            diff[2] = r[2] - vars->chrpos[3*j + 2];
+            dist = sqrt(diff[0]*diff[0]
+                 + diff[1]*diff[1]
+                 + diff[2]*diff[2]);
+            energy_coulomb += 1 / parm->epsp / dist
+                            * vars->atmchr[i] * vars->atmchr[j];
+        }
+    }
+
+    return (energy_coulomb);
 }
 /********************************************************/
 

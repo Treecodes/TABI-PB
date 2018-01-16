@@ -9,7 +9,8 @@
  * Weihua Geng, Southern Methodist University, Dallas, TX
  * Robery Krasny, University of Michigan, Ann Arbor, MI
  *
- * Last modified by Leighton Wilson, 01/11/2018
+ * Flattened moment arrays and simplified orders, 01/14/2018
+ * Localized all global variables by Leighton Wilson, 01/11/2018
  */
 
 #include <stdio.h>
@@ -20,6 +21,7 @@
 #include "treecode_tabipb_interface.h"
 #include "treecode_gmres_interface.h"
 #include "utilities.h"
+#include "partition.h"
 
 #include "global_params.h"
 #include "array.h"
@@ -45,11 +47,8 @@ static int s_min_level;
 static int s_max_level;
 
 /* global variables for taylor expansions */
-static int s_torder;
-static int s_torderlim;
-static int s_torderflat;
+static int s_torder_flat;
 
-static double *s_cf = NULL;
 static double *s_cf1 = NULL;
 static double *s_cf2 = NULL;
 static double *s_cf3 = NULL;
@@ -131,6 +130,8 @@ int TreecodeInitialization(TABIPBparm *parm, int nface,
     s_kappa = parm->kappa;
     s_kappa2 = parm->kappa2;
     s_eps = parm->eps;
+    
+    s_torder_flat = (s_order+1) * (s_order+2) * (s_order+3) / 6;
     
     s_min_level = 50000;
     s_max_level = 0;
@@ -224,7 +225,6 @@ int TreecodeInitialization(TABIPBparm *parm, int nface,
 
     s_CreateTree(s_tree_root, 0, s_numpars-1, xyz_limits, level);
 
-    
     memcpy(temp_normal[0], s_particle_normal[0], s_numpars*sizeof(double));
     memcpy(temp_normal[1], s_particle_normal[1], s_numpars*sizeof(double));
     memcpy(temp_normal[2], s_particle_normal[2], s_numpars*sizeof(double));
@@ -285,10 +285,12 @@ int TreecodeFinalization(TreeParticles *particles)
         particles->normal[1][s_order_arr[i]]    = temp_normal[1][i];
         particles->normal[2][s_order_arr[i]]    = temp_normal[2][i];
         particles->area[s_order_arr[i]]         = temp_area[i];
-        particles->source_term[s_order_arr[i]]           = temp_source[i];
-        particles->source_term[s_order_arr[i] + s_numpars] = temp_source[i + s_numpars];
-        particles->xvct[s_order_arr[i]]                  = temp_xvct[i];
-        particles->xvct[s_order_arr[i] + s_numpars]        = temp_xvct[i + s_numpars];
+        particles->source_term[s_order_arr[i]]  = temp_source[i];
+        particles->source_term[s_order_arr[i] + s_numpars]
+                                                = temp_source[i + s_numpars];
+        particles->xvct[s_order_arr[i]]         = temp_xvct[i];
+        particles->xvct[s_order_arr[i] + s_numpars]
+                                                = temp_xvct[i + s_numpars];
     }
 
     free_matrix(temp_position);
@@ -310,7 +312,6 @@ int TreecodeFinalization(TreeParticles *particles)
     printf("Cleaning up the tree structure...\n");
 
 /***********variables in setup************/
-    free_vector(s_cf);
     free_vector(s_cf1);
     free_vector(s_cf2);
     free_vector(s_cf3);
@@ -380,9 +381,10 @@ int matvec(double *alpha, double *tpoten_old, double *beta, double *tpoten) {
     /* start to use Treecode */
         s_RunTreecode(s_tree_root, tpoten_old, temp_charge, peng);
 
-        tpoten[i] = tpoten[i] * *beta + (pre1 * peng_old[0] - peng[0]) * *alpha;
+        tpoten[i] = tpoten[i] * *beta
+                  + (pre1 * peng_old[0] - peng[0]) * *alpha;
         tpoten[s_numpars+i] = tpoten[s_numpars+i] * *beta
-                          + (pre2 * peng_old[1] - peng[1]) * *alpha;
+                            + (pre2 * peng_old[1] - peng[1]) * *alpha;
 
         s_particle_position[0][i] = temp_x;
         s_particle_area[i] = temp_area;
@@ -426,44 +428,31 @@ static int s_Setup(double xyz_limits[6])
 /* SETUP allocates and initializes arrays needed for the Taylor expansion.
  Also, global variables are set and the Cartesian coordinates of
  the smallest box containing the particles is determined. The particle
- postions and charges are copied so that they can be restored upon exit.*/
+ positions and charges are copied so that they can be restored upon exit.*/
     int i, j, k;
     double t1;
 
     printf("Setting up arrays for Taylor expansion...\n");
-
-/* global integers and reals:  s_torder, s_torderlim and THETASQ */
-  /* keep the accuracy of first and second derivative of funtion G */
-    s_torder = s_order+2;
-    s_torderlim = s_torder;
-    s_torderflat = (s_order+1) * (s_order+2) * (s_order+3) / 6;
-
-/* allocate global Taylor expansion variables */
-  /* s_cf(0:s_torder) */
-  
-    make_vector(s_cf, s_torder+1);
-    make_vector(s_cf1, s_torderlim);
-    make_vector(s_cf2, s_torderlim);
-    make_vector(s_cf3, s_torderlim);
-
-    /* a(-2:s_torderlim,-2:s_torderlim,-2:s_torderlim) */
     
-    make_3array(s_a, s_torderlim+3, s_torderlim+3, s_torderlim+3);
-    make_3array(s_b, s_torderlim+3, s_torderlim+3, s_torderlim+3);
+/* allocate global Taylor expansion variables */
+  
+    make_vector(s_cf1, s_order+2);
+    make_vector(s_cf2, s_order+2);
+    make_vector(s_cf3, s_order+2);
+    
+    make_3array(s_a, s_order+5, s_order+5, s_order+5);
+    make_3array(s_b, s_order+5, s_order+5, s_order+5);
 
-    for (i = 0; i < s_torderlim+3; i++) {
-        for (j = 0; j < s_torderlim+3; j++) {
-            for (k = 0; k < s_torderlim+3; k++) {
+    for (i = 0; i < s_order+5; i++) {
+        for (j = 0; j < s_order+5; j++) {
+            for (k = 0; k < s_order+5; k++) {
                 s_a[i][j][k] = 0.0;
                 s_b[i][j][k] = 0.0;
             }
         }
     }
 
-    for (i = 0; i < s_torder+1; i++)
-        s_cf[i] = i+1.0;
-
-    for (i = 0; i < s_torderlim; i++) {
+    for (i = 0; i < s_order+2; i++) {
         t1 = 1.0 / (i+1.0);
         s_cf1[i] = t1;
         s_cf2[i] = 1.0 - 0.5*t1;
@@ -760,8 +749,7 @@ static int s_ComputeAllMoments(TreeNode *p, int ifirst)
     int i;
     
     if (p->exist_ms == 0 && ifirst == 0) {
-        //make_4array(p->ms, 16, s_torder+1, s_torder+1, s_torder+1);
-        make_matrix(p->ms, 16, s_torderflat);
+        make_matrix(p->ms, 16, s_torder_flat);
         s_ComputeMoments(p);
         p->exist_ms = 1;
     }
@@ -783,21 +771,11 @@ static int s_ComputeMoments(TreeNode *p)
 /* COMP_MS computes the moments for node P needed in the Taylor
  * approximation */
 
-    int ii, i, j, k, k1, k2, k3, n;
+    int ii, i, j, k1, k2, k3, n;
     double dx, dy, dz, tx, ty, tz, txyz;
     
-    //for (n = 0; n < 16; n++) {
-    //    for (i = 0; i < s_torder+1; i++) {
-    //        for (j = 0; j < s_torder+1; j++) {
-    //            for (k = 0; k < s_torder+1; k++) {
-    //                p->ms[n][i][j][k] = 0.0;
-    //            }
-    //        }
-    //    }
-    //}
-    
     for (n = 0; n < 16; n++) {
-        for (i = 0; i < s_torderflat; i++) {
+        for (i = 0; i < s_torder_flat; i++) {
             p->ms[n][i] = 0.0;
         }
     }
@@ -999,8 +977,8 @@ static int s_ComputeTreePB(TreeNode *p, double tempq[2][16], double peng[2])
 static int s_ComputeCoeffs(TreeNode *p)
 {
 /* COMP_TCOEFF computes the Taylor coefficients of the potential
- * using a recurrence formula.  The center of the expansion is the
- * midpoint of the node P.  s_target_position and s_torderLIM are globally defined. */
+ * using a recurrence formula. The center of the expansion is the
+ * midpoint of the node P. s_target_position and s_order are globally defined. */
     double dx, dy, dz, ddx, ddy, ddz, dist, fac;
     double kappax, kappay, kappaz;
     int i, j, k;
@@ -1208,8 +1186,8 @@ static int s_ComputeCoeffs(TreeNode *p)
 static int s_ComputeCoeffsCoulomb(TreeNode *p)
 {
 /* COMP_TCOEFF computes the Taylor coefficients of the potential
- * using a recurrence formula.  The center of the expansion is the
- * midpoint of the node P.  s_target_position and s_torderLIM are globally defined. */
+ * using a recurrence formula. The center of the expansion is the
+ * midpoint of the node P. s_target_position and s_order are globally defined. */
     double dx, dy, dz, ddx, ddy, ddz, dist, fac;
     int i, j, k;
 

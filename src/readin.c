@@ -2,10 +2,8 @@
  * C routine to mesh surfaces and read in surface data for tabipb
  *
  * C version authored by:
- * Jiahui Chen, Southern Methodist University, Dallas, TX
- *
- * Additional modifications and updates by:
  * Leighton Wilson, University of Michigan, Ann Arbor, MI
+ * Jiahui Chen, Southern Methodist University, Dallas, TX
  *
  * Based on package originally written in FORTRAN by:
  * Weihua Geng, Southern Methodist University, Dallas, TX
@@ -20,6 +18,9 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include "readin.h"
+#include "utilities.h"
+
 #include "global_params.h"
 #include "array.h"
 
@@ -27,10 +28,8 @@
 #include "particle_struct.h"
 
 
-static double TriangleArea(double v[3][3]); 
-
-/* function read in molecule information */
-int Readin(TABIPBparm *parm, TABIPBvars *vars, TreeParticles *particles)
+/* function to read in molecule information */
+int Readin(TABIPBparm *parm, TABIPBvars *vars)
 {
     FILE *fp, *nsfp;
     char c;
@@ -41,15 +40,11 @@ int Readin(TABIPBparm *parm, TABIPBvars *vars, TreeParticles *particles)
     int natm_msms;
 
     double den, prob_rds, a1, a2, a3, b1, b2, b3, v0_norm;
-    double r0[3], v0[3], v[3][3], r[3][3];
-    int idx[3], jface[3], iface[3];
-    double sum = 0.0;
+    int idx, jface[3], iface[3];
     double dist_local, area_local;
-    double xx[3], yy[3];
+    double r[3][3], xx[3], yy[3];
 
     int **face_copy, **face;
-
-    vars->natm = parm->number_of_lines;    //natm is number of lines in .xyzr
 
   /* Run msms */
     if (parm->mesh_flag == 0) {
@@ -117,16 +112,6 @@ int Readin(TABIPBparm *parm, TABIPBvars *vars, TreeParticles *particles)
         remove("triangleAreas.txt");
         remove("exposed.xyz");
         remove("exposedIndices.txt");
-
-        //sprintf(fname_tp,"mv triangulatedSurf.face molecule.face\n");
-        //ierr = system(fname_tp);
-        //sprintf(fname_tp,"mv triangulatedSurf.vert molecule.vert\n");
-        //ierr = system(fname_tp);
-        //ierr = system("rm -f stderror.txt");
-        //ierr = system("rm -f surfaceConfiguration.prm");
-        //ierr = system("rm -f triangleAreas.txt");
-        //ierr = system("rm -f exposed.xyz");
-        //ierr = system("rm -f exposedIndices.txt");
     }
 
   /* read in vert */
@@ -149,8 +134,8 @@ int Readin(TABIPBparm *parm, TABIPBvars *vars, TreeParticles *particles)
     }
 
 
-  /*allocate variables for vertices file*/
-
+   /*allocate variables for vertices file*/
+    vars->natm = parm->number_of_lines;    //natm is number of lines in .xyzr
     make_matrix(vars->vert, 3, vars->nspt);
     make_matrix(vars->snrm, 3, vars->nspt);
 
@@ -275,8 +260,9 @@ int Readin(TABIPBparm *parm, TABIPBvars *vars, TreeParticles *particles)
     printf("\n%d faces have been deleted...\n", nface - nfacenew);
     nface = nfacenew;
 
-    free_matrix(face);
-    make_matrix(vars->face, 3, nface);
+    vars->nface = nface;
+    make_matrix(vars->face, 3, vars->nface);
+    make_vector(vars->xvct, 2 * vars->nface);
 
     for (i = 0; i < nface; i++) {
         for (j = 0; j < 3; j++) {
@@ -284,99 +270,12 @@ int Readin(TABIPBparm *parm, TABIPBvars *vars, TreeParticles *particles)
         }
     }
 
+    free_matrix(face);
     free_matrix(face_copy);
-    
-    vars->nface = nface;
     
     remove("molecule.xyzr");
     remove("molecule.vert");
     remove("molecule.face");
 
-    //sprintf(fname_tp, "rm -f molecule.xyzr");
-    //ierr = system(fname_tp);
-    //sprintf(fname_tp, "rm -f molecule.vert");
-    //ierr = system(fname_tp);
-    //sprintf(fname_tp, "rm -f molecule.face");
-    //ierr = system(fname_tp);
-
-
-
-
-
-
-/*  tr_xyz: The position of the particles on surface */
-/*    tr_q: The normal direction at the particle location */
-/* tr_area: The triangular area of each element */
-
-    make_matrix(particles->position, 3, vars->nface);
-    make_matrix(particles->normal, 3, vars->nface);
-    make_vector(particles->area, vars->nface);
-    make_vector(particles->source_term, 2 * vars->nface);
-    
-    //tr_xyz = (double *) calloc(3*nface, sizeof(double));
-    //tr_q = (double *) calloc(3*nface, sizeof(double));
-    //tr_area = (double *) calloc(nface, sizeof(double));
-
-    for (i = 0; i < vars->nface; i++) {
-        for (j = 0; j < 3; j++) {
-            idx[j] = vars->face[j][i];
-        }
-
-        for (j = 0; j < 3; j++) {
-            r0[j] = 0;
-            v0[j] = 0;
-
-            for (k = 0; k < 3; k++) {
-                r0[j] = r0[j] + vars->vert[j][idx[k]-1] / 3.0;
-                v0[j] = v0[j] + vars->snrm[j][idx[k]-1] / 3.0;
-                r[j][k] = vars->vert[j][idx[k]-1];
-                v[j][k] = vars->snrm[j][idx[k]-1];
-            }
-        }
-
-        v0_norm = sqrt(v0[0]*v0[0] + v0[1]*v0[1] + v0[2]*v0[2]);
-
-        for (k = 0; k<3; k++) {
-            v0[k] = v0[k] / v0_norm;
-        }
-
-        for (j = 0; j < 3; j++) {
-            particles->position[j][i] = r0[j];
-            particles->normal[j][i] = v0[j];
-            //tr_xyz[3*i + j] = r0[j];
-            //tr_q[3*i + j] = v0[j];
-        }
-
-        particles->area[i] = TriangleArea(r);
-        //tr_area[i] = TriangleArea(r);
-        sum += particles->area[i];
-    }
-
-    printf("Total suface area = %.17f\n",sum);
-
     return 0;
-}
-
-
-
-/* function computing the area of a triangle given vertices coodinates */
-static double TriangleArea(double v[3][3])
-{
-    int i;
-    double a[3], b[3], c[3], aa, bb, cc, ss, area;
-
-    for (i = 0; i <= 2; i++) {
-        a[i] = v[i][0] - v[i][1];
-        b[i] = v[i][0] - v[i][2];
-        c[i] = v[i][1] - v[i][2];
-    }
-
-    aa = sqrt(a[0]*a[0] + a[1]*a[1] + a[2]*a[2]);
-    bb = sqrt(b[0]*b[0] + b[1]*b[1] + b[2]*b[2]);
-    cc = sqrt(c[0]*c[0] + c[1]*c[1] + c[2]*c[2]);
-
-    ss = 0.5 * (aa + bb + cc);
-    area = sqrt(ss * (ss-aa) * (ss-bb) * (ss-cc));
-
-    return(area);
 }
