@@ -1,17 +1,23 @@
-/*
- * C header to routine to mesh surfaces and read in surface data for tabipb
- *
- * C version authored by:
- * Leighton Wilson, University of Michigan, Ann Arbor, MI
- * Jiahui Chen, Southern Methodist University, Dallas, TX
- *
- * Based on package originally written in FORTRAN by:
- * Weihua Geng, Southern Methodist University, Dallas, TX
- * Robery Krasny, University of Michigan, Ann Arbor, MI
- *
- * Last modified by Leighton Wilson, 01/12/2018
- */
-
+/**************************************************************************
+* FILE NAME: readin.h                                                     *
+*                                                                         *
+* PURPOSE: header for readin routine responsible for meshing surface and  *
+*          and reading in surface data, called by tabipb routine          *
+*                                                                         *
+* AUTHORS: Leighton Wilson, University of Michigan, Ann Arbor, MI         *
+*          Jiahui Chen, Southern Methodist University, Dallas, TX         *
+*                                                                         *
+* BASED ON PACKAGE ORIGINALLY WRITTEN IN FORTRAN BY:                      *
+*          Weihua Geng, Southern Methodist University, Dallas, TX         *
+*          Robery Krasny, University of Michigan, Ann Arbor, MI           *
+*                                                                         *
+* DEVELOPMENT HISTORY:                                                    *
+*                                                                         *
+* Date        Author            Description Of Change                     *
+* ----        ------            ---------------------                     *
+* 01/12/2018  Leighton Wilson   Created                                   *
+*                                                                         *
+**************************************************************************/
 
 #ifndef H_READIN_H
 #define H_READIN_H

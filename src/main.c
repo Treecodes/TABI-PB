@@ -1,18 +1,26 @@
-/*
- * C version authored by:
- * Jiahui Chen, Southern Methodist University, Dallas, TX
- * Leighton Wilson, University of Michigan, Ann Arbor, MI
- *
- * Based on package originally written in FORTRAN by:
- * Weihua Geng, Southern Methodist University, Dallas, TX
- * Robery Krasny, University of Michigan, Ann Arbor, MI
- *
- * Fixing readin of pqrs by Leighton, 01/14/2018
- * Works for Sphinx by Jiahui, 7/14/2016
- * Rebuild the architecture of wrapper by Jiahui, 6/30/2016
- * Build matrix free and nanoshaper by Leighton, 6/23/2016
- *
- */
+/**************************************************************************
+* FILE NAME: main.c                                                       *
+*                                                                         *
+* PURPOSE: calls primary tabipb routine and prints output when running    *
+*          as standalone                                                  *
+*                                                                         *
+* AUTHORS: Leighton Wilson, University of Michigan, Ann Arbor, MI         *
+*          Jiahui Chen, Southern Methodist University, Dallas, TX         *
+*                                                                         *
+* BASED ON PACKAGE ORIGINALLY WRITTEN IN FORTRAN BY:                      *
+*          Weihua Geng, Southern Methodist University, Dallas, TX         *
+*          Robery Krasny, University of Michigan, Ann Arbor, MI           *
+*                                                                         *
+* DEVELOPMENT HISTORY:                                                    *
+*                                                                         *
+* Date        Author            Description Of Change                     *
+* ----        ------            ---------------------                     *
+* 01/14/2018  Leighton Wilson   Fixing read in of PQRs                    *
+* 07/14/2016  Jiahui Chen       Added Sphinx support                      *
+* 06/30/2016  Jiahui Chen       Rebuilt wrapper architecture              *
+* 06/23/2016  Leighton Wilson   Added NanoShaper support                  *
+*                                                                         *
+**************************************************************************/
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -27,7 +35,7 @@
 int main(int argc, char **argv)
 {
   /* main reads the input file, writes xyzr file for msms and sets up position,
-     raduis and charges */
+     radius and charges */
 
     FILE *fp, *wfp;
     char c[16];

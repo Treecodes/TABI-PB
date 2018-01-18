@@ -224,7 +224,6 @@ int gmres_(n, b, x, restrt, work, ldw, h, ldh, iter, resid, matvec, psolve,
 	//getchar();
 
     if (dnrm2_(n, &x[1], &c__1) != 0.) {
-printf("call matvec at line 207\n");
 /*        AV is temporary workspace here. */
 
 		dcopy_(n, &b[1], &c__1, &work[av * work_dim1 + 1], &c__1);
@@ -327,7 +326,7 @@ L30:
 	    ldw, &h[i + cs * h_dim1], &h[i + sn * h_dim1]);
     *resid = (d__1 = work[i + 1 + s * work_dim1], abs(d__1)) / bnrm2;
 
-	printf("iteration no.=%ld, error=%e\n", *iter, *resid);
+	printf("iteration no. = %ld, error = %e\n", *iter, *resid);
 
     if (*resid <= tol) {
 	update_(&i, n, &x[1], &h[h_offset], ldh, &work[y * work_dim1 + 1], &
@@ -353,7 +352,6 @@ L50:
 /*        (AV is temporary workspace here.) */
 
     dcopy_(n, &b[1], &c__1, &work[av * work_dim1 + 1], &c__1);
-//printf("call matvec at line 327\n");
     (*matvec)(&c_b7, &x[1], &c_b8, &work[av * work_dim1 + 1]);
 //	(*matvec)(&x[1], &work[av * work_dim1 + 1]);
     (*psolve)(&work[r * work_dim1 + 1], &work[av * work_dim1 + 1]);

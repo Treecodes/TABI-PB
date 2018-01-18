@@ -1,21 +1,23 @@
-/*
- * C header for helper routines for treecode in tabipb
- *
- * C version authored by:
- * Leighton Wilson, University of Michigan, Ann Arbor, MI
- * Jiahui Chen, Southern Methodist University, Dallas, TX
- *
- * Based on package originally written in FORTRAN by:
- * Weihua Geng, Southern Methodist University, Dallas, TX
- * Robery Krasny, University of Michigan, Ann Arbor, MI
- *
- * Added TriangleArea routine by Leighton Wilson, 01/15/2018
- * Created by Leighton Wilson, 01/12/2018
- */
-
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/* helper functions                                          * * * */
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/**************************************************************************
+* FILE NAME: utilities.h                                                  *
+*                                                                         *
+* PURPOSE: header for helper routines                                     *
+*                                                                         *
+* AUTHORS: Leighton Wilson, University of Michigan, Ann Arbor, MI         *
+*          Jiahui Chen, Southern Methodist University, Dallas, TX         *
+*                                                                         *
+* BASED ON PACKAGE ORIGINALLY WRITTEN IN FORTRAN BY:                      *
+*          Weihua Geng, Southern Methodist University, Dallas, TX         *
+*          Robery Krasny, University of Michigan, Ann Arbor, MI           *
+*                                                                         *
+* DEVELOPMENT HISTORY:                                                    *
+*                                                                         *
+* Date        Author            Description Of Change                     *
+* ----        ------            ---------------------                     *
+* 01/15/2018  Leighton Wilson   Moved TriangleArea from readin.c          *
+* 01/12/2018  Leighton Wilson   Localized all global variables            *
+*                                                                         *
+**************************************************************************/
 
 #ifndef H_UTILITY_ROUTINES_H
 #define H_UTILITY_ROUTINES_H
@@ -27,5 +29,3 @@ double MaxVal(double *variables, int number);
 double TriangleArea(double v[3][3]);
 
 #endif /* H_UTILITY_ROUTINES_H */
-
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */

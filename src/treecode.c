@@ -1,17 +1,27 @@
-/*
- * C routines for setting up and executing the treecode for tabipb
- *
- * C version authored by:
- * Jiahui Chen, Southern Methodist University, Dallas, TX
- * Leighton Wilson, University of Michigan, Ann Arbor, MI
- *
- * Based on package originally written in FORTRAN by:
- * Weihua Geng, Southern Methodist University, Dallas, TX
- * Robery Krasny, University of Michigan, Ann Arbor, MI
- *
- * Flattened moment arrays and simplified orders, 01/14/2018
- * Localized all global variables by Leighton Wilson, 01/11/2018
- */
+/**************************************************************************
+* FILE NAME: treecode.c                                                   *
+*                                                                         *
+* PURPOSE: Contains all treecode-related functions and variables,         *
+*          including treecode initialization and finalization functions   *
+*          that interface with tabipb.c, and matrix-vector multiplication *
+*          and solve functions that interface with run_gmres.c            *
+*                                                                         *
+* AUTHORS: Leighton Wilson, University of Michigan, Ann Arbor, MI         *
+*          Jiahui Chen, Southern Methodist University, Dallas, TX         *
+*                                                                         *
+* BASED ON PACKAGE ORIGINALLY WRITTEN IN FORTRAN BY:                      *
+*          Weihua Geng, Southern Methodist University, Dallas, TX         *
+*          Robery Krasny, University of Michigan, Ann Arbor, MI           *
+*                                                                         *
+* DEVELOPMENT HISTORY:                                                    *
+*                                                                         *
+* Date        Author            Description Of Change                     *
+* ----        ------            ---------------------                     *
+* 01/14/2018  Leighton Wilson   Flattened moment arrays and simplified    *
+*                               orders                                    *
+* 01/11/2018  Leighton Wilson   Localized all global variables            *
+*                                                                         *
+**************************************************************************/
 
 #include <stdio.h>
 #include <math.h>
@@ -25,7 +35,6 @@
 
 #include "global_params.h"
 #include "array.h"
-
 #include "tree_node_struct.h"
 #include "particle_struct.h"
 #include "TABIPBstruct.h"
@@ -59,7 +68,7 @@ static double ***s_b = NULL;
 static double ****s_der_coeff = NULL;
 static int s_kk[16][3];
 
-/* these arrays point to arrays located in TreeParticles */
+/* these point to arrays located in TreeParticles */
 static double **s_particle_position = NULL;
 static double **s_particle_normal = NULL;
 static double *s_particle_area = NULL;
@@ -100,12 +109,12 @@ static int s_RemoveMoments(TreeNode *p);
 static int s_RemoveNode(TreeNode *p);
 
 
-
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* TreecodeInitialization and Finalization are used by       * * * */
 /* tabipb() to interface with the treecode                   * * * */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+/**********************************************************/
 int TreecodeInitialization(TABIPBparm *parm, int nface,
                            TreeParticles *particles)
 {
@@ -185,7 +194,6 @@ int TreecodeInitialization(TABIPBparm *parm, int nface,
                     for (mm = 0; mm < 3; mm++) {
                         if (s_kk[idx][mm] != 0) {
                             for (nn = 0; nn < s_kk[idx][mm]; nn++)
-                                /* nn in fortran */
                                 s_der_coeff[i][j][k][idx] *= (ijk[mm] + (nn+1));
                         }
                     }
@@ -249,6 +257,7 @@ int TreecodeInitialization(TABIPBparm *parm, int nface,
 
     return 0;
 }
+/**********************************************************/
 
 
 /********************************************************/
@@ -326,7 +335,7 @@ int TreecodeFinalization(TreeParticles *particles)
 
     return 0;
 }
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/**********************************************************/
 
 
 
@@ -394,6 +403,7 @@ int matvec(double *alpha, double *tpoten_old, double *beta, double *tpoten) {
 
     return 0;
 }
+/**********************************************************/
 
 
 /**********************************************************/
@@ -412,8 +422,7 @@ int psolve(double *z, double *r) {
 
         return 0;
 }
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
+/**********************************************************/
 
 
 
@@ -617,6 +626,9 @@ static int s_CreateTree(TreeNode *p, int ibeg, int iend, double xyzmm[6],
 
     return 0;
 }
+/**********************************************************/
+
+
 /********************************************************/
 static int s_PartitionEight(double xyzmms[6][8], double xl, double yl,
                             double zl, double lmax, double x_mid, double y_mid,

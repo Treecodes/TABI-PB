@@ -1,15 +1,22 @@
-/*
- * C code for a safe memory allocation routine
- *
- * This C code written by:
- * Leighton Wilson, University of Michigan, Ann Arbor, MI
- *
- * Based on the work of Rouben Rostamian, presented in
- * "Programming Projects in C for Students of Engineering,
- *  Science, and Mathematics"
- *
- * Last modified by Leighton Wilson, 06/23/2016
- */
+/**************************************************************************
+* FILE NAME: xmalloc.c                                                    *
+*                                                                         *
+* PURPOSE: safe memory allocation routine used by array.h                 *
+*                                                                         *
+* AUTHORS: Leighton Wilson, University of Michigan, Ann Arbor, MI         *
+*          Jiahui Chen, Southern Methodist University, Dallas, TX         *
+*                                                                         *
+* BASED ON WORK OF:                                                       *
+*          Rouben Rostamian, presented in "Programming Projects in C for  *
+*          Students of Engineering, Science, and Mathematics"             *
+*                                                                         *
+* DEVELOPMENT HISTORY:                                                    *
+*                                                                         *
+* Date        Author            Description Of Change                     *
+* ----        ------            ---------------------                     *
+* 06/23/2016  Leighton Wilson   Created                                   *
+*                                                                         *
+**************************************************************************/
 
 #include <stdio.h>
 #include "xmalloc.h"

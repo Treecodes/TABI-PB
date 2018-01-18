@@ -1,16 +1,23 @@
-/*
- * C routine for setting up and calling GMRes
- *
- * C version authored by:
- * Leighton Wilson, University of Michigan, Ann Arbor, MI
- * Jiahui Chen, Southern Methodist University, Dallas, TX
- *
- * Based on package originally written in FORTRAN by:
- * Weihua Geng, Southern Methodist University, Dallas, TX
- * Robery Krasny, University of Michigan, Ann Arbor, MI
- *
- * Last modified by Leighton Wilson, 01/11/2018
- */
+/**************************************************************************
+* FILE NAME: run_gmres.c                                                  *
+*                                                                         *
+* PURPOSE: Wraps GMRes routine called by tabipb.c, links to psolve and    *
+*          matvec routines located in treecode.c                          *
+*                                                                         *
+* AUTHORS: Leighton Wilson, University of Michigan, Ann Arbor, MI         *
+*          Jiahui Chen, Southern Methodist University, Dallas, TX         *
+*                                                                         *
+* BASED ON PACKAGE ORIGINALLY WRITTEN IN FORTRAN BY:                      *
+*          Weihua Geng, Southern Methodist University, Dallas, TX         *
+*          Robery Krasny, University of Michigan, Ann Arbor, MI           *
+*                                                                         *
+* DEVELOPMENT HISTORY:                                                    *
+*                                                                         *
+* Date        Author            Description Of Change                     *
+* ----        ------            ---------------------                     *
+* 01/11/2018  Leighton Wilson   Created, moved from tabipb routine        *
+*                                                                         *
+**************************************************************************/
 
 #include <math.h>
 #include <stdlib.h>
@@ -21,7 +28,7 @@
 #include "array.h"
 #include "particle_struct.h"
 
-
+/********************************************************/
 int RunGMRES(int nface, double *source_term, double *xvct)
 {
     int i;
@@ -56,3 +63,4 @@ int RunGMRES(int nface, double *source_term, double *xvct)
 
     return 0;
 }
+/********************************************************/

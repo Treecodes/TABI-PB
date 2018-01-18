@@ -1,16 +1,25 @@
-/*
- * C routine to mesh surfaces and read in surface data for tabipb
- *
- * C version authored by:
- * Leighton Wilson, University of Michigan, Ann Arbor, MI
- * Jiahui Chen, Southern Methodist University, Dallas, TX
- *
- * Based on package originally written in FORTRAN by:
- * Weihua Geng, Southern Methodist University, Dallas, TX
- * Robery Krasny, University of Michigan, Ann Arbor, MI
- *
- * Last changed at 8/05/2016: Adding Windows support for msms and NanoShaper
- */
+/**************************************************************************
+* FILE NAME: readin.c                                                     *
+*                                                                         *
+* PURPOSE: meshes surface with msms or NanoShaper and reads in surface    *
+*          data, called by tabipb routine                                 *
+*                                                                         *
+* AUTHORS: Leighton Wilson, University of Michigan, Ann Arbor, MI         *
+*          Jiahui Chen, Southern Methodist University, Dallas, TX         *
+*                                                                         *
+* BASED ON PACKAGE ORIGINALLY WRITTEN IN FORTRAN BY:                      *
+*          Weihua Geng, Southern Methodist University, Dallas, TX         *
+*          Robery Krasny, University of Michigan, Ann Arbor, MI           *
+*                                                                         *
+* DEVELOPMENT HISTORY:                                                    *
+*                                                                         *
+* Date        Author            Description Of Change                     *
+* ----        ------            ---------------------                     *
+* 01/12/2018  Leighton Wilson   Created                                   *
+* 08/05/2016  Leighton Wilson   Adding Windows support for msms and       *
+*                               NanoShaper                                *
+*                                                                         *
+**************************************************************************/
 
 #include <time.h>
 #include <stdio.h>
@@ -26,7 +35,6 @@
 
 #include "TABIPBstruct.h"
 #include "particle_struct.h"
-
 
 /* function to read in molecule information */
 int Readin(TABIPBparm *parm, TABIPBvars *vars)
@@ -164,13 +172,11 @@ int Readin(TABIPBparm *parm, TABIPBvars *vars)
     }
 
     if (parm->mesh_flag == 0) {
-        ierr=fscanf(fp,"%d %d %lf %lf ",&nface,&natm_msms,&den,&prob_rds);
-        //printf("nface=%d, natm=%d, den=%lf, prob=%lf\n", nface,natm,den,prob_rds);
+        ierr = fscanf(fp,"%d %d %lf %lf ",&nface,&natm_msms,&den,&prob_rds);
     } else if (parm->mesh_flag == 1 ||
                parm->mesh_flag == 2 ||
                parm->mesh_flag == 3) {
-        ierr=fscanf(fp,"%d ",&nface);
-        //printf("nface=%d, natm=%d, den=%lf, prob=%lf\n", nface,natm,den,prob_rds);
+        ierr = fscanf(fp,"%d ",&nface);
     }
 
     make_matrix(face, 3, nface);
@@ -234,15 +240,11 @@ int Readin(TABIPBparm *parm, TABIPBvars *vars)
             dist_local = sqrt(dist_local);
 
             if (dist_local < 1e-5) {
-//                     printf("particles %d and %d are too close: %e\n",
-//                            i,j,dist_local);
                 goto exit;
             }
         }
 
         if (area_local < 1e-5) {
-//                     printf("Triangle %d has small area: %e\n",
-//                            i, area_local);
             goto exit;
         }
 

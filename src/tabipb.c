@@ -1,21 +1,27 @@
-/*
- * C routine to interface tabipb with apbs
- *
- * C version authored by:
- * Leighton Wilson, University of Michigan, Ann Arbor, MI
- * Jiahui Chen, Southern Methodist University, Dallas, TX
- *
- * Based on package originally written in FORTRAN by:
- * Weihua Geng, Southern Methodist University, Dallas, TX
- * Robery Krasny, University of Michigan, Ann Arbor, MI
- *
- * Rewriting interface and localizing functions by Leighton, 01/14/2018
- * Creating GMRes interface by Leighton, 01/12/2018
- * Works for Sphinx by Jiahui, 7/14/2016
- * Rebuild the architecture of wrapper by Jiahui, 6/30/2016
- * Build matrix free and nanoshaper by Leighton, 6/23/2016
- *
- */
+/**************************************************************************
+* FILE NAME: tabipb.c                                                     *
+*                                                                         *
+* PURPOSE: Setup and run the TABI-PB solver                               *
+*                                                                         *
+* AUTHORS: Leighton Wilson, University of Michigan, Ann Arbor, MI         *
+*          Jiahui Chen, Southern Methodist University, Dallas, TX         *
+*                                                                         *
+* BASED ON PACKAGE ORIGINALLY WRITTEN IN FORTRAN BY:                      *
+*          Weihua Geng, Southern Methodist University, Dallas, TX         *
+*          Robery Krasny, University of Michigan, Ann Arbor, MI           *
+*                                                                         *
+* DEVELOPMENT HISTORY:                                                    *
+*                                                                         *
+* Date        Author            Description Of Change                     *
+* ----        ------            ---------------------                     *
+* 01/14/2018  Leighton Wilson   Rewriting interface and localizing        *
+                                functions                                 *
+* 01/12/2018  Leighton Wilson   Creating GMRes interface                  *
+* 07/14/2016  Jiahui Chen       Building support for Sphinx               *
+* 06/20/2016  Jiahui Chen       Rebuilding wrapper architecture           *
+* 06/23/2016  Leighton Wilson   Rebuilding input to support NanoShaper    *
+*                                                                         *
+**************************************************************************/
 
 #include <stdio.h>
 #include <math.h>
@@ -33,7 +39,6 @@
 #include "TABIPBstruct.h"
 #include "particle_struct.h"
 
-
 /* internal functions */
 static int s_ConstructTreeParticles(TABIPBvars *vars,
                                     TreeParticles *particles);
@@ -46,15 +51,9 @@ static double s_ComputeSolvationEnergy(TABIPBparm *parm, TABIPBvars *vars,
 static double s_ComputeCoulombEnergy(TABIPBparm *parm, TABIPBvars *vars);
 
 
+/********************************************************/
 int TABIPB(TABIPBparm *parm, TABIPBvars *vars) {
-  /* Assemble the TABIPBparm out side this subroutine, and pass the three arrays */
-  /* TABIPBparm a structure of parameters: file path, file name, density,
-     probe radius, epsp, epsw, bulk_strength, treecode order, treecode maxparnode,
-     treecode theta, mesh flag, and number of lines in pqr file */
-  /* t_chrpos, t_atmchr and t_atmrad are three arrays of position, charges and
-     raduis */
 
-  /* variables local to main */
     double energy_solvation;
     double energy_coulomb;
     TreeParticles *particles = malloc(sizeof *particles);;
@@ -66,8 +65,7 @@ int TABIPB(TABIPBparm *parm, TABIPBvars *vars) {
 
     printf("\nSetting up the TABI input...\n");
 
-  /***************constant*****************/
-    
+    /* set up needed TABIPBparm constants */
     parm->eps = parm->epsw/parm->epsp;
     parm->kappa2 = BULK_COEFF * parm->bulk_strength / parm->epsw / parm->temp;
     parm->kappa = sqrt(parm->kappa2);
@@ -98,6 +96,7 @@ int TABIPB(TABIPBparm *parm, TABIPBvars *vars) {
     /* scale potential to proper units and copy to TABIPBvars */
     s_OutputPotential(vars, particles);
 
+    /* deconstruct particles */
     free_matrix(particles->position);
     free_matrix(particles->normal);
     free_vector(particles->area);
@@ -106,8 +105,7 @@ int TABIPB(TABIPBparm *parm, TABIPBvars *vars) {
     
     return 0;
 }
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
+/********************************************************/
 
 
 
@@ -119,9 +117,6 @@ int TABIPB(TABIPBparm *parm, TABIPBvars *vars) {
 static int s_ConstructTreeParticles(TABIPBvars *vars, TreeParticles *particles)
 {
 /* function to construct particles used by tree */
-/*  tr_xyz: The position of the particles on surface */
-/*    tr_q: The normal direction at the particle location */
-/* tr_area: The triangular area of each element */
 
     int i, j, k;
     int idx[3];
@@ -238,7 +233,6 @@ static double s_ComputeSolvationEnergy(TABIPBparm *parm, TABIPBvars *vars,
     for (j = 0; j < vars->nface; j++) {
         chrptl[j] = 0.0;
 
-  /* r[] = tr_xyz[] & v[] = tr_q[] */
         r[0] = particles->position[0][j];
         r[1] = particles->position[1][j];
         r[2] = particles->position[2][j];
@@ -248,7 +242,6 @@ static double s_ComputeSolvationEnergy(TABIPBparm *parm, TABIPBvars *vars,
         v[2] = particles->normal[2][j];
 
         for (i = 0; i < vars->natm; i++) {
-  /* s = chrpos[] & r_s = r[]-s[] */
             s[0] = vars->chrpos[3*i];
             s[1] = vars->chrpos[3*i + 1];
             s[2] = vars->chrpos[3*i + 2];

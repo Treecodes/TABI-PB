@@ -1,25 +1,31 @@
-/*
- * C helper routines for treecode in tabipb
- *
- * C version authored by:
- * Leighton Wilson, University of Michigan, Ann Arbor, MI
- * Jiahui Chen, Southern Methodist University, Dallas, TX
- *
- * Based on package originally written in FORTRAN by:
- * Weihua Geng, Southern Methodist University, Dallas, TX
- * Robery Krasny, University of Michigan, Ann Arbor, MI
- *
- * Added TriangleArea by Leighton Wilson, 01/15/2018
- * Created by Leighton Wilson, 01/12/2018
- */
+/**************************************************************************
+* FILE NAME: utilities.c                                                  *
+*                                                                         *
+* PURPOSE: Contains helper routines for calculating min and max values    *
+*          in an array (used by treecode.c and tabipb.c), as well as      *
+*          routine to calculate triangle area (used by readin.c and       *
+*          tabipb.c)                                                      *
+*                                                                         *
+* AUTHORS: Leighton Wilson, University of Michigan, Ann Arbor, MI         *
+*          Jiahui Chen, Southern Methodist University, Dallas, TX         *
+*                                                                         *
+* BASED ON PACKAGE ORIGINALLY WRITTEN IN FORTRAN BY:                      *
+*          Weihua Geng, Southern Methodist University, Dallas, TX         *
+*          Robery Krasny, University of Michigan, Ann Arbor, MI           *
+*                                                                         *
+* DEVELOPMENT HISTORY:                                                    *
+*                                                                         *
+* Date        Author            Description Of Change                     *
+* ----        ------            ---------------------                     *
+* 01/15/2018  Leighton Wilson   Moved TriangleArea from readin.c, moved   *
+*                               Partition to its own file                 *
+* 01/12/2018  Leighton Wilson   Localized all global variables            *
+*                                                                         *
+**************************************************************************/
 
 #include <math.h>
 
 #include "utilities.h"
-
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/* helper functions                                          * * * */
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**********************************************************/
 double MinVal(double *variables, int number) 
@@ -76,8 +82,6 @@ double TriangleArea(double v[3][3])
     ss = 0.5 * (aa + bb + cc);
     area = sqrt(ss * (ss-aa) * (ss-bb) * (ss-cc));
 
-    return(area);
+    return area;
 }
 /**********************************************************/
-
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */

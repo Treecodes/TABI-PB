@@ -1,16 +1,24 @@
-/*
- * C routines for printing tabipb output
- *
- * C version authored by:
- * Leighton Wilson, University of Michigan, Ann Arbor, MI
- * Jiahui Chen, Southern Methodist University, Dallas, TX
- *
- * Based on package originally written in FORTRAN by:
- * Weihua Geng, Southern Methodist University, Dallas, TX
- * Robery Krasny, University of Michigan, Ann Arbor, MI
- *
- * Last modified by Leighton Wilson, 01/12/2018
- */
+/**************************************************************************
+* FILE NAME: print_output.c                                               *
+*                                                                         *
+* PURPOSE: Print TABI-PB output to screen or to file.                     *
+*          Routines called by main (when running standalone) or the APBS  *
+*          wrapper after returning from the primary tabipb routine        *
+*                                                                         *
+* AUTHORS: Leighton Wilson, University of Michigan, Ann Arbor, MI         *
+*          Jiahui Chen, Southern Methodist University, Dallas, TX         *
+*                                                                         *
+* BASED ON PACKAGE ORIGINALLY WRITTEN IN FORTRAN BY:                      *
+*          Weihua Geng, Southern Methodist University, Dallas, TX         *
+*          Robery Krasny, University of Michigan, Ann Arbor, MI           *
+*                                                                         *
+* DEVELOPMENT HISTORY:                                                    *
+*                                                                         *
+* Date        Author            Description Of Change                     *
+* ----        ------            ---------------------                     *
+* 01/12/2018  Leighton Wilson   Created; moved from tabipb.c              *
+*                                                                         *
+**************************************************************************/
 
 #include <stdio.h>
 
@@ -19,23 +27,18 @@
 #include "global_params.h"
 #include "TABIPBstruct.h"
 
-
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/* output printing functions                                 * * * */
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
-/************************************/
+/********************************************************/
 int OutputPrint(TABIPBvars *vars)
 {
     int i;
 
     printf("\nSolvation energy = %f kJ/mol", vars->soleng);
     printf("\nFree energy = %f kJ/mol\n\n", vars->soleng+vars->couleng);
-    printf("The max and min potential and normal derivatives on elements area:\n");
+    printf("The max and min potential and normal derivatives on elements:\n");
     printf("potential %f %f\n", vars->max_xvct, vars->min_xvct);
     printf("norm derv %f %f\n\n", vars->max_der_xvct,
                                   vars->min_der_xvct);
-    printf("The max and min potential and normal derivatives on vertices area:\n");
+    printf("The max and min potential and normal derivatives on vertices:\n");
     printf("potential %f %f\n", vars->max_vert_ptl, vars->min_vert_ptl);
     printf("norm derv %f %f\n\n", vars->max_der_vert_ptl,
                                   vars->min_der_vert_ptl);
@@ -50,15 +53,17 @@ int OutputPrint(TABIPBvars *vars)
                 vars->vert_ptl[i], vars->vert_ptl[i + vars->nspt]);
 
     for (i = 0; i < vars->nface; i++)
-        fprintf(fp, "%d %d %d\n", vars->face[0][i], vars->face[1][i], vars->face[2][i]);
+        fprintf(fp, "%d %d %d\n", vars->face[0][i], vars->face[1][i],
+                                  vars->face[2][i]);
 
     fclose(fp);
 
     return 0;
 }
+/********************************************************/
 
 
-/************************************/
+/********************************************************/
 int OutputVTK(TABIPBparm *parm, TABIPBvars *vars)
 {
     char i_char1[20], nspt_str[20],
@@ -128,3 +133,4 @@ int OutputVTK(TABIPBparm *parm, TABIPBvars *vars)
 
     return 0;
 }
+/********************************************************/

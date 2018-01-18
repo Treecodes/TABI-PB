@@ -1,17 +1,23 @@
-/*
- * C routine to interface tabipb with apbs
- *
- * C version authored by:
- * Jiahui Chen, Southern Methodist University, Dallas, TX
- * Leighton Wilson, University of Michigan, Ann Arbor, MI
- *
- * Based on package originally written in FORTRAN by:
- * Weihua Geng, Southern Methodist University, Dallas, TX
- * Robery Krasny, University of Michigan, Ann Arbor, MI
- *
- * Last modified by Leighton Wilson, 01/12/2018
- * Rebuild the architecture of wrapper at 6/29/2016
- */
+/**************************************************************************
+* FILE NAME: TABIPBWrap.c                                                 *
+*                                                                         *
+* PURPOSE: routines to interface TABI-PB caller with APBS and Sphinx      *
+*                                                                         *
+* AUTHORS: Leighton Wilson, University of Michigan, Ann Arbor, MI         *
+*          Jiahui Chen, Southern Methodist University, Dallas, TX         *
+*                                                                         *
+* BASED ON PACKAGE ORIGINALLY WRITTEN IN FORTRAN BY:                      *
+*          Weihua Geng, Southern Methodist University, Dallas, TX         *
+*          Robery Krasny, University of Michigan, Ann Arbor, MI           *
+*                                                                         *
+* DEVELOPMENT HISTORY:                                                    *
+*                                                                         *
+* Date        Author            Description Of Change                     *
+* ----        ------            ---------------------                     *
+* 01/12/2018  Leighton Wilson   Modified included headers                 *
+* 06/29/2016  Jiahui Chen       Rebuilding wrapper architecture           *
+*                                                                         *
+**************************************************************************/
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -22,7 +28,7 @@
 #include "array.h"
 #include "TABIPBstruct.h"
 
-
+/**********************************************************/
 int apbs2tabipb_(TABIPBparm *parm, TABIPBvars *vars)
 {
     FILE *wfp;
@@ -45,8 +51,10 @@ int apbs2tabipb_(TABIPBparm *parm, TABIPBvars *vars)
 
     return 0;
 }
+/**********************************************************/
 
 
+/**********************************************************/
 int sphinx2tabipb(TABIPBparm *parm, TABIPBvars *vars)
 {
     FILE *wfp;
@@ -71,3 +79,4 @@ int sphinx2tabipb(TABIPBparm *parm, TABIPBvars *vars)
 
     return 0;
 }
+/**********************************************************/

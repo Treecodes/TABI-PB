@@ -1,21 +1,25 @@
-/*
- * C header file for global variables of tabipb
- *
- * C version authored by:
- * Jiahui Chen, Southern Methodist University, Dallas, TX
- * Leighton Wilson, University of Michigan, Ann Arbor, MI
- *
- * Based on package originally written in FORTRAN by:
- * Weihua Geng, Southern Methodist University, Dallas, TX
- * Robery Krasny, University of Michigan, Ann Arbor, MI
- *
- * Last modified by Leighton Wilson, 01/12/2018
- */
+/**************************************************************************
+* FILE NAME: global_params.h                                              *
+*                                                                         *
+* PURPOSE: global parameters used to define units, pi                     *
+*                                                                         *
+* AUTHORS: Leighton Wilson, University of Michigan, Ann Arbor, MI         *
+*          Jiahui Chen, Southern Methodist University, Dallas, TX         *
+*                                                                         *
+* BASED ON PACKAGE ORIGINALLY WRITTEN IN FORTRAN BY:                      *
+*          Weihua Geng, Southern Methodist University, Dallas, TX         *
+*          Robery Krasny, University of Michigan, Ann Arbor, MI           *
+*                                                                         *
+* DEVELOPMENT HISTORY:                                                    *
+*                                                                         *
+* Date        Author            Description Of Change                     *
+* ----        ------            ---------------------                     *
+* 01/12/2018  Leighton Wilson   Created, moved from tabipb header         *
+*                                                                         *
+**************************************************************************/
 
 #ifndef H_GLOBAL_PARAMS_H
 #define H_GLOBAL_PARAMS_H
-
-/*constants */
 
 #define PI 3.14159265358979324
 #define ONE_OVER_4PI 0.079577471545948
