@@ -38,9 +38,9 @@ int main(int argc, char **argv)
      radius and charges */
 
     FILE *fp, *wfp;
-    char c[16];
+    char c[256];
     char fname_tp[256];
-    char c1[10], c2[10], c3[10], c4[10], c5[10];
+    char c1[120], c2[120], c3[120], c4[10], c5[10];
     double a1, a2, a3, b1, b2;
     double density, radius, epsp, epsw, bulk_strength, theta, temp;
     int maxparnode, order, mesh_flag, output_datafile, ierr, i;
@@ -55,53 +55,89 @@ int main(int argc, char **argv)
     timer_start("TOTAL_TIME");
 #endif  
 
+    if (argc < 2) {
+        printf("No input file specified. Exiting.\n");
+        return 1;
+    }
+
     TABIPBparm *main_parm = malloc(sizeof *main_parm);
     TABIPBvars *main_vars = malloc(sizeof *main_vars);
 
 /********************************************************/
-
-    fp = fopen("usrdata.in", "r");
-    ierr = fscanf(fp, "%s %s", c, main_parm->fname);
-
-    ierr = fscanf(fp, "%s %lf", c, &density);
-    main_parm->density = density;
-
-    ierr = fscanf(fp, "%s %lf", c, &radius);
-    main_parm->probe_radius = radius;
-
-    ierr = fscanf(fp, "%s %lf", c, &epsp);
-    main_parm->epsp = epsp;
-
-    ierr = fscanf(fp, "%s %lf", c, &epsw);
-    main_parm->epsw = epsw;
-
-    ierr = fscanf(fp, "%s %lf", c, &bulk_strength);
-    main_parm->bulk_strength = bulk_strength;
-
-    ierr = fscanf(fp, "%s %lf", c, &temp);
-    main_parm->temp = temp;
-
-    ierr = fscanf(fp, "%s %d", c, &order);
-    main_parm->order = order;
-
-    ierr = fscanf(fp, "%s %d", c, &maxparnode);
-    main_parm->maxparnode = maxparnode;
-
-    ierr = fscanf(fp, "%s %lf", c, &theta);
-    main_parm->theta = theta;
-
-    ierr = fscanf(fp, "%s %d", c, &mesh_flag);
-    main_parm->mesh_flag = mesh_flag;
-
-    ierr = fscanf(fp, "%s %d", c, &output_datafile);
-    main_parm->output_datafile = output_datafile;
+    
+    fp = fopen(argv[1], "r");
+    
+    while (fgets(c, 256, fp) != NULL) {
+        sscanf(c, "%s %s %s", c1, c2, c3);
+        
+        if (strncmp(c1, "mol", 3) == 0) {
+            strcpy(main_parm->fname, c2);
+            
+        } else if (strcmp(c1, "sdens") == 0) {
+            main_parm->density = atof(c2);
+            
+        } else if (strcmp(c1, "srad") == 0) {
+            main_parm->probe_radius = atof(c2);
+            
+        } else if (strcmp(c1, "pdie") == 0) {
+            main_parm->epsp = atof(c2);
+            
+        } else if (strcmp(c1, "sdie") == 0) {
+            main_parm->epsw = atof(c2);
+            
+        } else if (strcmp(c1, "bulk") == 0) {
+            main_parm->bulk_strength = atof(c2);
+            
+        } else if (strcmp(c1, "temp") == 0) {
+            main_parm->temp = atof(c2);
+            
+        } else if (strcmp(c1, "tree_order") == 0) {
+            main_parm->order = atoi(c2);
+            
+        } else if (strcmp(c1, "tree_n0") == 0) {
+            main_parm->maxparnode = atoi(c2);
+            
+        } else if (strcmp(c1, "tree_mac") == 0) {
+            main_parm->theta = atof(c2);
+            
+        } else if (strcmp(c1, "mesh") == 0) {
+            if (strcmp(c2, "MSMS") == 0 || strcmp(c2, "msms") == 0) {
+                main_parm->mesh_flag = 0;
+                
+            } else if (strcmp(c2, "NanoShaper") == 0 ||
+                       strcmp(c2, "nanoshaper") == 0 ||
+                       strcmp(c2, "NANOSHAPER") == 0) {
+                
+                if (strcmp(c3, "SES") == 0 ||
+                    strcmp(c3, "ses") == 0 ||
+                    strcmp(c3, "Ses") == 0) {
+                    main_parm->mesh_flag = 1;
+                    
+                } else if (strcmp(c3, "SKIN") == 0 ||
+                           strcmp(c3, "skin") == 0 ||
+                           strcmp(c3, "Skin") == 0) {
+                    main_parm->mesh_flag = 2;
+                    
+                } else {
+                    main_parm->mesh_flag = 1;
+                }
+            }
+                
+        } else if (strcmp(c1, "outdata") == 0) {
+            if (strcmp(c2, "dat") == 0 || strcmp(c2, "DAT") == 0) {
+                main_parm->output_datafile = 0;
+                
+            } else if (strcmp(c2, "vtk") == 0 || strcmp(c2, "VTK") == 0) {
+                main_parm->output_datafile = 1;
+            }
+        }
+    }
+    
     fclose(fp);
 
 /********************************************************/
-    sprintf(main_parm->fpath, "");
-
-    sprintf(fname_tp, "%s%s.pqr", main_parm->fpath, main_parm->fname);
-    fp = fopen(fname_tp, "r");
+    
+    fp = fopen(main_parm->fname, "r");
 
     sprintf(fname_tp, "molecule.xyzr");
     wfp = fopen(fname_tp, "w");
@@ -143,7 +179,7 @@ int main(int argc, char **argv)
     ierr = TABIPB(main_parm, main_vars);
 
     ierr = OutputPrint(main_vars);
-    if (output_datafile == 1) {
+    if (main_parm->output_datafile == 1) {
         ierr = OutputVTK(main_parm, main_vars);
     }
 

@@ -1,12 +1,12 @@
-fname 1aie
-den 1 
-probe_radius 1.4
-epsp 1
-epsw 80
-bulk_strength 0.30
-temp 300
-order 3
-maxparnode 500
-max 0.8
-mesh 1
-outdata 1
+mol         1aie.pqr
+sdens       1 
+srad        1.4
+pdie        1
+sdie        80
+bulk        0.30
+temp        300
+tree_order  3
+tree_n0     500
+tree_mac    0.8
+mesh        NanoShaper SES
+outdata     VTK
