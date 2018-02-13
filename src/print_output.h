@@ -16,6 +16,7 @@
 *                                                                         *
 * Date        Author            Description Of Change                     *
 * ----        ------            ---------------------                     *
+* 02/10/2018  Leighton Wilson   Separated out DAT creation file           *
 * 01/12/2018  Leighton Wilson   Created                                   *
 *                                                                         *
 **************************************************************************/
@@ -26,7 +27,7 @@
 #include "TABIPBstruct.h"
 
 int OutputPrint(TABIPBvars *vars);
-
+int OutputDAT(TABIPBparm *parm, TABIPBvars *vars);
 int OutputVTK(TABIPBparm *parm, TABIPBvars *vars);
 
 #endif /* H_PRINT_OUTPUT_H */

@@ -16,6 +16,7 @@
 *                                                                         *
 * Date        Author            Description Of Change                     *
 * ----        ------            ---------------------                     *
+* 02/10/2018  Leighton Wilson   Updated output printing                   *
 * 01/12/2018  Leighton Wilson   Created; moved from tabipb.c              *
 *                                                                         *
 **************************************************************************/
@@ -30,8 +31,6 @@
 /********************************************************/
 int OutputPrint(TABIPBvars *vars)
 {
-    int i;
-
     printf("\nSolvation energy = %f kJ/mol", vars->soleng);
     printf("\nFree energy = %f kJ/mol\n\n", vars->soleng+vars->couleng);
     printf("The max and min potential and normal derivatives on elements:\n");
@@ -43,7 +42,20 @@ int OutputPrint(TABIPBvars *vars)
     printf("norm derv %f %f\n\n", vars->max_der_vert_ptl,
                                   vars->min_der_vert_ptl);
 
-    FILE *fp = fopen("surface_potential.dat", "w");
+    return 0;
+}
+/********************************************************/
+
+
+/********************************************************/
+int OutputDAT(TABIPBparm *parm, TABIPBvars *vars)
+{
+    char fname[256];
+    int i;
+    
+    sprintf(fname, "%s.dat", parm->fname);
+
+    FILE *fp = fopen(fname, "w");
     fprintf(fp, "%d %d\n", vars->nspt, vars->nface);
 
     for (i = 0; i < vars->nspt; i++)
@@ -55,7 +67,6 @@ int OutputPrint(TABIPBvars *vars)
     for (i = 0; i < vars->nface; i++)
         fprintf(fp, "%d %d %d\n", vars->face[0][i], vars->face[1][i],
                                   vars->face[2][i]);
-
     fclose(fp);
 
     return 0;
@@ -66,20 +77,20 @@ int OutputPrint(TABIPBvars *vars)
 /********************************************************/
 int OutputVTK(TABIPBparm *parm, TABIPBvars *vars)
 {
-    char i_char1[20], nspt_str[20],
-         nface_str[20], nface4_str[20];
+    char c1[20], fname[256], nspt_str[20], nface_str[20], nface4_str[20];
     int i;
 
     sprintf(nspt_str, "%d", vars->nspt);
     sprintf(nface_str, "%d", vars->nface);
     sprintf(nface4_str, "%d", vars->nface * 4);
 
-    sprintf(i_char1, "mesh flag: %d", parm->mesh_flag);
+    sprintf(c1, "mesh flag: %d", parm->mesh_flag);
+    sprintf(fname, "%s.vtk", parm->fname);
 
-    FILE *fp = fopen("surface_potential.vtk", "w");
+    FILE *fp = fopen(fname, "w");
 
     fprintf(fp, "# vtk DataFile Version 1.0\n");
-    fprintf(fp, "mesh for protein %s, with %s\n", parm->fname, i_char1);
+    fprintf(fp, "mesh for protein %s, with %s\n", parm->fname, c1);
     fprintf(fp, "ASCII\n");
     fprintf(fp, "DATASET POLYDATA\n\n");
 

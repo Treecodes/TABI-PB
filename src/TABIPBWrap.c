@@ -47,7 +47,12 @@ int apbs2tabipb_(TABIPBparm *parm, TABIPBvars *vars)
     ierr = TABIPB(parm, vars);
 
     ierr = OutputPrint(vars);
-    if (parm->output_datafile == 1) ierr = OutputVTK(parm, vars);
+    
+    if (parm->output_datafile == 1) {
+        ierr = OutputDAT(parm, vars);
+    } else if (parm->output_datafile == 2) {
+        ierr = OutputVTK(parm, vars);
+    }
 
     return 0;
 }

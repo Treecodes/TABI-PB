@@ -15,7 +15,7 @@
 * Date        Author            Description Of Change                     *
 * ----        ------            ---------------------                     *
 * 01/14/2018  Leighton Wilson   Rewriting interface and localizing        *
-                                functions                                 *
+*                               functions                                 *
 * 01/12/2018  Leighton Wilson   Creating GMRes interface                  *
 * 07/14/2016  Jiahui Chen       Building support for Sphinx               *
 * 06/20/2016  Jiahui Chen       Rebuilding wrapper architecture           *
@@ -57,11 +57,6 @@ int TABIPB(TABIPBparm *parm, TABIPBvars *vars) {
     double energy_solvation;
     double energy_coulomb;
     TreeParticles *particles = malloc(sizeof *particles);;
-
-    printf("\n              Treecode order: %d", parm->order);
-    printf("\n Max # of particles per leaf: %d", parm->maxparnode);
-    printf("\n                 MAC (theta): %f\n", parm->theta);
-    printf("\n                   Mesh flag: %d\n", parm->mesh_flag);
 
     printf("\nSetting up the TABI input...\n");
 

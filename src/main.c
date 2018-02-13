@@ -15,6 +15,7 @@
 *                                                                         *
 * Date        Author            Description Of Change                     *
 * ----        ------            ---------------------                     *
+* 02/10/2018  Leighton Wilson   Adding support for multiple PQRs          *
 * 01/14/2018  Leighton Wilson   Fixing read in of PQRs                    *
 * 07/14/2016  Jiahui Chen       Added Sphinx support                      *
 * 06/30/2016  Jiahui Chen       Rebuilt wrapper architecture              *
@@ -38,12 +39,10 @@ int main(int argc, char **argv)
      radius and charges */
 
     FILE *fp, *wfp;
-    char c[256];
-    char fname_tp[256];
+    char c[256], fname_tp[256], list_mol[10][256];
     char c1[120], c2[120], c3[120], c4[10], c5[10];
     double a1, a2, a3, b1, b2;
-    double density, radius, epsp, epsw, bulk_strength, theta, temp;
-    int maxparnode, order, mesh_flag, output_datafile, ierr, i;
+    int ierr, i, j, num_mol = 0;
 
   /* timing functions for *nix systems */
 #ifndef _WIN32                                                                     
@@ -61,17 +60,21 @@ int main(int argc, char **argv)
     }
 
     TABIPBparm *main_parm = malloc(sizeof *main_parm);
-    TABIPBvars *main_vars = malloc(sizeof *main_vars);
+    TABIPBvars *main_vars;
 
 /********************************************************/
     
     fp = fopen(argv[1], "r");
     
+    main_parm->output_datafile = 0;
+    
     while (fgets(c, 256, fp) != NULL) {
         sscanf(c, "%s %s %s", c1, c2, c3);
         
         if (strncmp(c1, "mol", 3) == 0) {
-            strcpy(main_parm->fname, c2);
+            num_mol++;
+            strcpy(list_mol[num_mol-1], c2);
+            //strcpy(main_parm->fname, c2);
             
         } else if (strcmp(c1, "sdens") == 0) {
             main_parm->density = atof(c2);
@@ -125,10 +128,10 @@ int main(int argc, char **argv)
                 
         } else if (strcmp(c1, "outdata") == 0) {
             if (strcmp(c2, "dat") == 0 || strcmp(c2, "DAT") == 0) {
-                main_parm->output_datafile = 0;
+                main_parm->output_datafile = 1;
                 
             } else if (strcmp(c2, "vtk") == 0 || strcmp(c2, "VTK") == 0) {
-                main_parm->output_datafile = 1;
+                main_parm->output_datafile = 2;
             }
         }
     }
@@ -136,63 +139,73 @@ int main(int argc, char **argv)
     fclose(fp);
 
 /********************************************************/
+    for (j = 0; j < num_mol; j++) {
     
-    fp = fopen(main_parm->fname, "r");
-
-    sprintf(fname_tp, "molecule.xyzr");
-    wfp = fopen(fname_tp, "w");
-
-    main_parm->number_of_lines = 0;
-    while (fscanf(fp, "%s %s %s %s %s %lf %lf %lf %lf %lf",
-           c1, c2, c3, c4, c5, &a1, &a2, &a3, &b1, &b2) != EOF) {
-        if (strncmp(c1, "ATOM", 4) == 0) {
-            fprintf(wfp, "%f %f %f %f\n", a1, a2, a3, b2);
-            main_parm->number_of_lines++;
-        }
-    }
-
-    fclose(wfp);
-    printf("Finished assembling atomic information (.xyzr) file...\n");
-
-    make_vector(main_vars->chrpos, 3 * main_parm->number_of_lines);
-    make_vector(main_vars->atmchr, main_parm->number_of_lines);
-    make_vector(main_vars->atmrad, main_parm->number_of_lines);
-
-    rewind(fp);
-    i = 0;
+        printf("\n\n*** BEGINNING RUN %d: molecule file %s ***\n",
+               j+1, list_mol[j]);
     
-    while (fscanf(fp, "%s %s %s %s %s %lf %lf %lf %lf %lf",
-           c1, c2, c3, c4, c5, &a1, &a2, &a3, &b1, &b2) != EOF) {
-        if (strncmp(c1, "ATOM", 4) == 0) {
-            main_vars->chrpos[3*i] = a1;
-            main_vars->chrpos[3*i + 1] = a2;
-            main_vars->chrpos[3*i + 2] = a3;
-            main_vars->atmchr[i] = b1;
-            main_vars->atmrad[i] = b2;
-            i++;
+        main_vars = malloc(sizeof(TABIPBvars));
+        
+        strcpy(main_parm->fname, list_mol[j]);
+        fp = fopen(main_parm->fname, "r");
+        
+        sprintf(fname_tp, "molecule.xyzr");
+        wfp = fopen(fname_tp, "w");
+
+        main_parm->number_of_lines = 0;
+        while (fscanf(fp, "%s %s %s %s %s %lf %lf %lf %lf %lf",
+               c1, c2, c3, c4, c5, &a1, &a2, &a3, &b1, &b2) != EOF) {
+            if (strncmp(c1, "ATOM", 4) == 0) {
+                fprintf(wfp, "%f %f %f %f\n", a1, a2, a3, b2);
+                main_parm->number_of_lines++;
+            }
         }
+
+        fclose(wfp);
+
+        make_vector(main_vars->chrpos, 3 * main_parm->number_of_lines);
+        make_vector(main_vars->atmchr, main_parm->number_of_lines);
+        make_vector(main_vars->atmrad, main_parm->number_of_lines);
+
+        rewind(fp);
+        i = 0;
+    
+        while (fscanf(fp, "%s %s %s %s %s %lf %lf %lf %lf %lf",
+               c1, c2, c3, c4, c5, &a1, &a2, &a3, &b1, &b2) != EOF) {
+            if (strncmp(c1, "ATOM", 4) == 0) {
+                main_vars->chrpos[3*i] = a1;
+                main_vars->chrpos[3*i + 1] = a2;
+                main_vars->chrpos[3*i + 2] = a3;
+                main_vars->atmchr[i] = b1;
+                main_vars->atmrad[i] = b2;
+                i++;
+            }
+        }
+
+        fclose(fp);
+
+        ierr = TABIPB(main_parm, main_vars);
+
+        ierr = OutputPrint(main_vars);
+        
+        if (main_parm->output_datafile == 1) {
+            ierr = OutputDAT(main_parm, main_vars);
+        } else if (main_parm->output_datafile == 2) {
+            ierr = OutputVTK(main_parm, main_vars);
+        }
+
+        free_vector(main_vars->atmchr);
+        free_vector(main_vars->chrpos);
+        free_vector(main_vars->atmrad);
+        free_vector(main_vars->vert_ptl); // allocate in output_potential()
+        free_vector(main_vars->xvct);
+        free_matrix(main_vars->vert);
+        free_matrix(main_vars->snrm);
+        free_matrix(main_vars->face);
+        free(main_vars);
     }
-
-    fclose(fp);
-    printf("Finished assembling charge structures from .pqr file...\n");
-
-    ierr = TABIPB(main_parm, main_vars);
-
-    ierr = OutputPrint(main_vars);
-    if (main_parm->output_datafile == 1) {
-        ierr = OutputVTK(main_parm, main_vars);
-    }
-
+    
     free(main_parm);
-    free_vector(main_vars->atmchr);
-    free_vector(main_vars->chrpos);
-    free_vector(main_vars->atmrad);
-    free_vector(main_vars->vert_ptl); // allocate in output_potential()
-    free_vector(main_vars->xvct);
-    free_matrix(main_vars->vert);
-    free_matrix(main_vars->snrm);
-    free_matrix(main_vars->face);
-    free(main_vars);
 
 #ifndef _WIN32
     timer_end();

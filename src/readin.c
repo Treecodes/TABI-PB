@@ -43,12 +43,12 @@ int Readin(TABIPBparm *parm, TABIPBvars *vars)
     char c;
     char fname_tp[256];
 
-    int i, j, k, i1, i2, i3, j1, j2, j3, ii, jj, kk;
+    int i, j, i1, i2, i3, j1, j2, j3, ii, jj, kk;
     int nfacenew, nface, ichanged, ierr;
     int natm_msms;
 
-    double den, prob_rds, a1, a2, a3, b1, b2, b3, v0_norm;
-    int idx, jface[3], iface[3];
+    double den, prob_rds, a1, a2, a3, b1, b2, b3;
+    int jface[3], iface[3];
     double dist_local, area_local;
     double r[3][3], xx[3], yy[3];
 
@@ -259,7 +259,7 @@ int Readin(TABIPBparm *parm, TABIPBvars *vars)
 
         nfacenew = nfacenew - 1;
     }
-    printf("\n%d faces have been deleted...\n", nface - nfacenew);
+    printf("\n%d faces have been deleted.\n", nface - nfacenew);
     nface = nfacenew;
 
     vars->nface = nface;

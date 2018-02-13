@@ -228,10 +228,11 @@ int TreecodeInitialization(TABIPBparm *parm, int nface,
     s_Setup(xyz_limits);
 
     s_tree_root = (TreeNode*)calloc(1, sizeof(TreeNode));
-    printf("Creating tree for %d particles with max %d per node\n",
-           s_numpars, s_max_per_leaf);
 
     s_CreateTree(s_tree_root, 0, s_numpars-1, xyz_limits, level);
+    
+    printf("Created tree for %d particles with max %d per node.\n\n",
+           s_numpars, s_max_per_leaf);
 
     memcpy(temp_normal[0], s_particle_normal[0], s_numpars*sizeof(double));
     memcpy(temp_normal[1], s_particle_normal[1], s_numpars*sizeof(double));
@@ -318,7 +319,6 @@ int TreecodeFinalization(TreeParticles *particles)
 
     s_RemoveNode(s_tree_root);
     free(s_tree_root);
-    printf("Cleaning up the tree structure...\n");
 
 /***********variables in setup************/
     free_vector(s_cf1);
@@ -331,7 +331,7 @@ int TreecodeFinalization(TreeParticles *particles)
     free_vector(s_order_arr);
 /*****************************************/
 
-    printf("Memory has been cleaned for TABIPB!\n\n");
+    printf("\nTABIPB tree structure has been deallocated.\n\n");
 
     return 0;
 }
@@ -477,9 +477,9 @@ static int s_Setup(double xyz_limits[6])
     xyz_limits[4] = MinVal(s_particle_position[2], s_numpars);
     xyz_limits[5] = MaxVal(s_particle_position[2], s_numpars);
 
-    printf("x-limits of box: %f, %f\n", xyz_limits[0], xyz_limits[1]);
-    printf("y-limits of box: %f, %f\n", xyz_limits[2], xyz_limits[3]);
-    printf("z-limits of box: %f, %f\n", xyz_limits[4], xyz_limits[5]);
+    //printf("x-limits of box: %f, %f\n", xyz_limits[0], xyz_limits[1]);
+    //printf("y-limits of box: %f, %f\n", xyz_limits[2], xyz_limits[3]);
+    //printf("z-limits of box: %f, %f\n", xyz_limits[4], xyz_limits[5]);
 
     make_vector(s_order_arr, s_numpars);
 
@@ -808,8 +808,6 @@ static int s_ComputeMoments(TreeNode *p)
                     for (k3 = 0; k3 < s_order+1-k1-k2; k3++) {
 
                         txyz = tx*ty*tz;
-                        //p->ms[j][k1][k2][k3] += s_source_charge[i][0][j] * txyz;
-                        
                         p->ms[j][ii] += s_source_charge[i][0][j] * txyz;
                         ii++;
                         
@@ -831,10 +829,6 @@ static int s_ComputeMoments(TreeNode *p)
                 for (k3 = 0; k3 < s_order+1-k1-k2; k3++) {
 
                     txyz = tx*ty*tz;
-                    //p->ms[7][k1][k2][k3] += s_source_charge[i][0][7] * txyz;
-                    //p->ms[10][k1][k2][k3] += s_source_charge[i][0][10] * txyz;
-                    //p->ms[13][k1][k2][k3] += s_source_charge[i][0][13] * txyz;
-
                     p->ms[7][ii] += s_source_charge[i][0][7] * txyz;
                     p->ms[10][ii] += s_source_charge[i][0][10] * txyz;
                     p->ms[13][ii] += s_source_charge[i][0][13] * txyz;
@@ -853,13 +847,6 @@ static int s_ComputeMoments(TreeNode *p)
     for (k1 = 0; k1 < s_order+1; k1++) {
         for (k2 = 0; k2 < s_order+1-k1; k2++) {
             for (k3 = 0; k3 < s_order+1-k1-k2; k3++) {
-                //p->ms[8][k1][k2][k3] = p->ms[7][k1][k2][k3];
-                //p->ms[9][k1][k2][k3] = p->ms[7][k1][k2][k3];
-                //p->ms[11][k1][k2][k3] = p->ms[10][k1][k2][k3];
-                //p->ms[12][k1][k2][k3] = p->ms[10][k1][k2][k3];
-                //p->ms[14][k1][k2][k3] = p->ms[13][k1][k2][k3];
-                //p->ms[15][k1][k2][k3] = p->ms[13][k1][k2][k3];
-                
                 p->ms[8][ii] = p->ms[7][ii];
                 p->ms[9][ii] = p->ms[7][ii];
                 p->ms[11][ii] = p->ms[10][ii];
