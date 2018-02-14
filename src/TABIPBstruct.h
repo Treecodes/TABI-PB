@@ -40,6 +40,11 @@ typedef struct sTABIPBparm {
     double epsp;
     double epsw;
     double bulk_strength;
+    
+    /* set and used locally */
+    double eps;
+    double kappa;
+    double kappa2;
 
    /* treecode_parm */
     int order;
@@ -54,11 +59,6 @@ typedef struct sTABIPBparm {
 
    /* output of potential data: 1 output vtk */
     int output_datafile;
-    
-    /* set and used locally */
-    double eps;
-    double kappa;
-    double kappa2;
 
 } TABIPBparm;
 

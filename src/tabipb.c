@@ -27,6 +27,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
+#include <mpi.h>
 
 #include "tabipb.h"
 #include "readin.h"

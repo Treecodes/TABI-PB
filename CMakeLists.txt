@@ -79,9 +79,14 @@ endif()
 ################################################
 ##### Make a directory for the executable
 ################################################
+option(ENABLE_MPI_BUILD "build MPI parallel" OFF)
 file(MAKE_DIRECTORY build/bin)
 
 include_directories("/src")
+
+  if(ENABLE_MPI_BUILD)
+    find_package(MPI REQUIRED)
+  endif()
 
   # FFLAGS depend on the compiler
   get_filename_component (C_COMPILER_NAME ${CMAKE_C_COMPILER} NAME)
@@ -114,6 +119,10 @@ include_directories("/src")
           src/print_output.c src/utilities.c src/xmalloc.c src/pp_timer.c)
   endif()
 
+  if(ENABLE_MPI_BUILD)
+    target_link_libraries(tabipb ${MPI_C_LIBRARIES})
+    include_directories(SYSTEM ${MPI_C_INCLUDE_PATH})
+  endif()
 
 ################################################
 ###### APBS components

@@ -26,6 +26,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <mpi.h>
 
 #include "tabipb.h"
 #include "print_output.h"
@@ -43,6 +44,9 @@ int main(int argc, char **argv)
     char c1[120], c2[120], c3[120], c4[10], c5[10];
     double a1, a2, a3, b1, b2;
     int ierr, i, j, num_mol = 0;
+    
+    int rank, num_procs;
+    MPI_Status status;
 
   /* timing functions for *nix systems */
 #ifndef _WIN32                                                                     
@@ -52,93 +56,128 @@ int main(int argc, char **argv)
 
 #ifndef _WIN32                                                                     
     timer_start("TOTAL_TIME");
-#endif  
+#endif
 
-    if (argc < 2) {
-        printf("No input file specified. Exiting.\n");
-        return 1;
+    ierr = MPI_Init(&argc, &argv);
+    
+    ierr = MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    ierr = MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
+    
+    printf("On proc %d of %d\n", rank, num_procs);
+
+    if (rank == 0) {
+        if (argc < 2) {
+            printf("No input file specified. Exiting.\n");
+            return 1;
+        }
     }
-
+    
     TABIPBparm *main_parm = malloc(sizeof *main_parm);
     TABIPBvars *main_vars;
 
 /********************************************************/
+    if (rank == 0) {
     
-    fp = fopen(argv[1], "r");
+        fp = fopen(argv[1], "r");
     
-    main_parm->output_datafile = 0;
+        main_parm->output_datafile = 0;
     
-    while (fgets(c, 256, fp) != NULL) {
-        sscanf(c, "%s %s %s", c1, c2, c3);
+        while (fgets(c, 256, fp) != NULL) {
+            sscanf(c, "%s %s %s", c1, c2, c3);
         
-        if (strncmp(c1, "mol", 3) == 0) {
-            num_mol++;
-            strcpy(list_mol[num_mol-1], c2);
-            //strcpy(main_parm->fname, c2);
+            if (strncmp(c1, "mol", 3) == 0) {
+                num_mol++;
+                strcpy(list_mol[num_mol-1], c2);
             
-        } else if (strcmp(c1, "sdens") == 0) {
-            main_parm->density = atof(c2);
+            } else if (strcmp(c1, "sdens") == 0) {
+                main_parm->density = atof(c2);
             
-        } else if (strcmp(c1, "srad") == 0) {
-            main_parm->probe_radius = atof(c2);
+            } else if (strcmp(c1, "srad") == 0) {
+                main_parm->probe_radius = atof(c2);
             
-        } else if (strcmp(c1, "pdie") == 0) {
-            main_parm->epsp = atof(c2);
+            } else if (strcmp(c1, "pdie") == 0) {
+                main_parm->epsp = atof(c2);
             
-        } else if (strcmp(c1, "sdie") == 0) {
-            main_parm->epsw = atof(c2);
+            } else if (strcmp(c1, "sdie") == 0) {
+                main_parm->epsw = atof(c2);
             
-        } else if (strcmp(c1, "bulk") == 0) {
-            main_parm->bulk_strength = atof(c2);
+            } else if (strcmp(c1, "bulk") == 0) {
+                main_parm->bulk_strength = atof(c2);
             
-        } else if (strcmp(c1, "temp") == 0) {
-            main_parm->temp = atof(c2);
+            } else if (strcmp(c1, "temp") == 0) {
+                main_parm->temp = atof(c2);
             
-        } else if (strcmp(c1, "tree_order") == 0) {
-            main_parm->order = atoi(c2);
+            } else if (strcmp(c1, "tree_order") == 0) {
+                main_parm->order = atoi(c2);
             
-        } else if (strcmp(c1, "tree_n0") == 0) {
-            main_parm->maxparnode = atoi(c2);
+            } else if (strcmp(c1, "tree_n0") == 0) {
+                main_parm->maxparnode = atoi(c2);
             
-        } else if (strcmp(c1, "tree_mac") == 0) {
-            main_parm->theta = atof(c2);
+            } else if (strcmp(c1, "tree_mac") == 0) {
+                main_parm->theta = atof(c2);
             
-        } else if (strcmp(c1, "mesh") == 0) {
-            if (strcmp(c2, "MSMS") == 0 || strcmp(c2, "msms") == 0) {
-                main_parm->mesh_flag = 0;
+            } else if (strcmp(c1, "mesh") == 0) {
+                if (strcmp(c2, "MSMS") == 0 || strcmp(c2, "msms") == 0) {
+                    main_parm->mesh_flag = 0;
                 
-            } else if (strcmp(c2, "NanoShaper") == 0 ||
-                       strcmp(c2, "nanoshaper") == 0 ||
-                       strcmp(c2, "NANOSHAPER") == 0) {
+                } else if (strcmp(c2, "NanoShaper") == 0 ||
+                           strcmp(c2, "nanoshaper") == 0 ||
+                           strcmp(c2, "NANOSHAPER") == 0) {
                 
-                if (strcmp(c3, "SES") == 0 ||
-                    strcmp(c3, "ses") == 0 ||
-                    strcmp(c3, "Ses") == 0) {
-                    main_parm->mesh_flag = 1;
+                    if (strcmp(c3, "SES") == 0 ||
+                        strcmp(c3, "ses") == 0 ||
+                        strcmp(c3, "Ses") == 0) {
+                        main_parm->mesh_flag = 1;
                     
-                } else if (strcmp(c3, "SKIN") == 0 ||
-                           strcmp(c3, "skin") == 0 ||
-                           strcmp(c3, "Skin") == 0) {
-                    main_parm->mesh_flag = 2;
+                    } else if (strcmp(c3, "SKIN") == 0 ||
+                               strcmp(c3, "skin") == 0 ||
+                               strcmp(c3, "Skin") == 0) {
+                        main_parm->mesh_flag = 2;
                     
-                } else {
-                    main_parm->mesh_flag = 1;
+                    } else {
+                        main_parm->mesh_flag = 1;
+                    }
+                }
+                
+            } else if (strcmp(c1, "outdata") == 0) {
+                if (strcmp(c2, "dat") == 0 || strcmp(c2, "DAT") == 0) {
+                    main_parm->output_datafile = 1;
+                
+                } else if (strcmp(c2, "vtk") == 0 || strcmp(c2, "VTK") == 0) {
+                    main_parm->output_datafile = 2;
                 }
             }
-                
-        } else if (strcmp(c1, "outdata") == 0) {
-            if (strcmp(c2, "dat") == 0 || strcmp(c2, "DAT") == 0) {
-                main_parm->output_datafile = 1;
-                
-            } else if (strcmp(c2, "vtk") == 0 || strcmp(c2, "VTK") == 0) {
-                main_parm->output_datafile = 2;
-            }
         }
+    
+        fclose(fp);
     }
     
-    fclose(fp);
+    //COPY PARM TO OTHER PROCESSORS
+    
+    int nitems = 5;
+    int blocklengths[5] = {512, 9, 2, 1, 3};
+    MPI_Datatype types[5] = {MPI_CHAR, MPI_DOUBLE, MPI_INT,
+                             MPI_DOUBLE, MPI_INT};
+    MPI_Datatype mpi_tabipbparm_type;
+    MPI_Aint offsets[5];
+    
+    offsets[0] = offsetof(TABIPBparm, fpath);
+    offsets[1] = offsetof(TABIPBparm, density);
+    offsets[2] = offsetof(TABIPBparm, order);
+    offsets[3] = offsetof(TABIPBparm, theta);
+    offsets[4] = offsetof(TABIPBparm, mesh_flag);
+    
+    MPI_Type_create_struct(nitems, blocklengths, offsets, types,
+                           &mpi_tabipbparm_type);
+    MPI_Type_commit(&mpi_tabipbparm_type);
+    
+    MPI_Bcast(main_parm, 1, mpi_tabipbparm_type, 0, MPI_COMM_WORLD);
 
 /********************************************************/
+
+//TO DO: Parallelize this.
+    if (rank == 0) {
+
     for (j = 0; j < num_mol; j++) {
     
         printf("\n\n*** BEGINNING RUN %d: molecule file %s ***\n",
@@ -211,5 +250,10 @@ int main(int argc, char **argv)
     timer_end();
 #endif
 
+    } // all just on root proc
+    
+    ierr = MPI_Type_free(&mpi_tabipbparm_type);
+    ierr = MPI_Finalize();
+    
     return 0;
 }
