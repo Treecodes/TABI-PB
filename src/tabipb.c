@@ -57,9 +57,16 @@ int TABIPB(TABIPBparm *parm, TABIPBvars *vars) {
 
     double energy_solvation;
     double energy_coulomb;
-    TreeParticles *particles = malloc(sizeof *particles);;
+    TreeParticles *particles = malloc(sizeof *particles);
+    
+    int rank, num_procs, ierr;
+    
+    ierr = MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    ierr = MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
 
-    printf("\nSetting up the TABI input...\n");
+    if (rank == 0) {
+        printf("\nSetting up the TABI input...\n");
+    }
 
     /* set up needed TABIPBparm constants */
     parm->eps = parm->epsw/parm->epsp;
@@ -114,10 +121,15 @@ static int s_ConstructTreeParticles(TABIPBvars *vars, TreeParticles *particles)
 {
 /* function to construct particles used by tree */
 
-    int i, j, k;
+    int i, j, k, ierr;
     int idx[3];
     double sum = 0.0, v0_norm;
     double r0[3], v0[3], v[3][3], r[3][3];
+    
+    int rank, num_procs;
+    
+    ierr = MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    ierr = MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
     
     make_matrix(particles->position, 3, vars->nface);
     make_matrix(particles->normal, 3, vars->nface);
@@ -157,7 +169,9 @@ static int s_ConstructTreeParticles(TABIPBvars *vars, TreeParticles *particles)
         sum += particles->area[i];
     }
 
-    printf("Total suface area = %.17f\n" ,sum);
+    if (rank == 0) {
+        printf("Total suface area = %.17f\n", sum);
+    }
 
     return 0;
 }
@@ -349,7 +363,6 @@ static int s_OutputPotential(TABIPBvars *vars, TreeParticles *particles)
 
     memcpy(vars->xvct, particles->xvct, 2 * vars->nface * sizeof(double));
 
-    
     for (i = 0; i < vars->nspt; i++) {
         tot_length = 0.0;
         for (j = 0; j < ind_vert[nface_vert - 1][i]; j++) {

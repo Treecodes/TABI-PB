@@ -62,8 +62,6 @@ int main(int argc, char **argv)
     
     ierr = MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     ierr = MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
-    
-    printf("On proc %d of %d\n", rank, num_procs);
 
     if (rank == 0) {
         if (argc < 2) {
@@ -172,65 +170,81 @@ int main(int argc, char **argv)
     MPI_Type_commit(&mpi_tabipbparm_type);
     
     MPI_Bcast(main_parm, 1, mpi_tabipbparm_type, 0, MPI_COMM_WORLD);
+    MPI_Bcast(list_mol, 10*256, MPI_CHAR, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&num_mol, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
 /********************************************************/
 
 //TO DO: Parallelize this.
-    if (rank == 0) {
-
+    
     for (j = 0; j < num_mol; j++) {
     
-        printf("\n\n*** BEGINNING RUN %d: molecule file %s ***\n",
-               j+1, list_mol[j]);
-    
         main_vars = malloc(sizeof(TABIPBvars));
-        
         strcpy(main_parm->fname, list_mol[j]);
-        fp = fopen(main_parm->fname, "r");
+    
+        if (rank == 0) {
+            printf("\n\n*** BEGINNING RUN %d: molecule file %s ***\n",
+                   j+1, list_mol[j]);
         
-        sprintf(fname_tp, "molecule.xyzr");
-        wfp = fopen(fname_tp, "w");
+            fp = fopen(main_parm->fname, "r");
+        
+            sprintf(fname_tp, "molecule.xyzr");
+            wfp = fopen(fname_tp, "w");
 
-        main_parm->number_of_lines = 0;
-        while (fscanf(fp, "%s %s %s %s %s %lf %lf %lf %lf %lf",
-               c1, c2, c3, c4, c5, &a1, &a2, &a3, &b1, &b2) != EOF) {
-            if (strncmp(c1, "ATOM", 4) == 0) {
-                fprintf(wfp, "%f %f %f %f\n", a1, a2, a3, b2);
-                main_parm->number_of_lines++;
+            main_parm->number_of_lines = 0;
+            while (fscanf(fp, "%s %s %s %s %s %lf %lf %lf %lf %lf",
+                   c1, c2, c3, c4, c5, &a1, &a2, &a3, &b1, &b2) != EOF) {
+                if (strncmp(c1, "ATOM", 4) == 0) {
+                    fprintf(wfp, "%f %f %f %f\n", a1, a2, a3, b2);
+                    main_parm->number_of_lines++;
+                }
             }
-        }
 
-        fclose(wfp);
+            fclose(wfp);
+        }
+        
+        MPI_Bcast(&main_parm->number_of_lines, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
         make_vector(main_vars->chrpos, 3 * main_parm->number_of_lines);
         make_vector(main_vars->atmchr, main_parm->number_of_lines);
         make_vector(main_vars->atmrad, main_parm->number_of_lines);
 
-        rewind(fp);
-        i = 0;
+        if (rank == 0) {
+            rewind(fp);
+            i = 0;
     
-        while (fscanf(fp, "%s %s %s %s %s %lf %lf %lf %lf %lf",
-               c1, c2, c3, c4, c5, &a1, &a2, &a3, &b1, &b2) != EOF) {
-            if (strncmp(c1, "ATOM", 4) == 0) {
-                main_vars->chrpos[3*i] = a1;
-                main_vars->chrpos[3*i + 1] = a2;
-                main_vars->chrpos[3*i + 2] = a3;
-                main_vars->atmchr[i] = b1;
-                main_vars->atmrad[i] = b2;
-                i++;
+            while (fscanf(fp, "%s %s %s %s %s %lf %lf %lf %lf %lf",
+                   c1, c2, c3, c4, c5, &a1, &a2, &a3, &b1, &b2) != EOF) {
+                if (strncmp(c1, "ATOM", 4) == 0) {
+                    main_vars->chrpos[3*i] = a1;
+                    main_vars->chrpos[3*i + 1] = a2;
+                    main_vars->chrpos[3*i + 2] = a3;
+                    main_vars->atmchr[i] = b1;
+                    main_vars->atmrad[i] = b2;
+                    i++;
+                }
             }
-        }
 
-        fclose(fp);
+            fclose(fp);
+        }
+        
+        MPI_Bcast(main_vars->chrpos, 3 * main_parm->number_of_lines,
+                  MPI_DOUBLE, 0, MPI_COMM_WORLD);
+        MPI_Bcast(main_vars->atmchr, main_parm->number_of_lines,
+                  MPI_DOUBLE, 0, MPI_COMM_WORLD);
+        MPI_Bcast(main_vars->atmrad, main_parm->number_of_lines,
+                  MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
         ierr = TABIPB(main_parm, main_vars);
-
-        ierr = OutputPrint(main_vars);
         
-        if (main_parm->output_datafile == 1) {
-            ierr = OutputDAT(main_parm, main_vars);
-        } else if (main_parm->output_datafile == 2) {
-            ierr = OutputVTK(main_parm, main_vars);
+        if (rank == 0) {
+            ierr = OutputPrint(main_vars);
+            
+            if (main_parm->output_datafile == 1) {
+                ierr = OutputDAT(main_parm, main_vars);
+            } else if (main_parm->output_datafile == 2) {
+                ierr = OutputVTK(main_parm, main_vars);
+            }
         }
 
         free_vector(main_vars->atmchr);
@@ -249,8 +263,6 @@ int main(int argc, char **argv)
 #ifndef _WIN32
     timer_end();
 #endif
-
-    } // all just on root proc
     
     ierr = MPI_Type_free(&mpi_tabipbparm_type);
     ierr = MPI_Finalize();
