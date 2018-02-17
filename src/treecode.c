@@ -27,7 +27,10 @@
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
-#include <mpi.h>
+
+#ifdef MPI_ENABLED
+    #include <mpi.h>
+#endif
 
 #include "treecode_tabipb_interface.h"
 #include "treecode_gmres_interface.h"
@@ -129,10 +132,12 @@ int TreecodeInitialization(TABIPBparm *parm, int nface,
     
     double xyz_limits[6];
     
-    int rank, num_procs;
+    int rank = 0, num_procs = 1;
     
+#ifdef MPI_ENABLED
     ierr = MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     ierr = MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
+#endif
 
     if (rank == 0) {
         printf("\nInitializing treecode...\n");
@@ -279,10 +284,12 @@ int TreecodeFinalization(TreeParticles *particles)
     double *temp_area, *temp_source, *temp_xvct;
     double **temp_normal, **temp_position;
     
-    int rank, num_procs;
+    int rank = 0, num_procs = 1;
     
+#ifdef MPI_ENABLED
     ierr = MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     ierr = MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
+#endif
 
 /***********reorder particles*************/
 
@@ -373,10 +380,12 @@ int matvec(double *alpha, double *tpoten_old, double *beta, double *tpoten) {
     double *tpoten_temp;
     
     int particles_per_process;
-    int rank, num_procs;
+    int rank = 0, num_procs = 1;
     
+#ifdef MPI_ENABLED
     ierr = MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     ierr = MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
+#endif
     
     make_vector(tpoten_temp, 2 * s_numpars);
     memcpy(tpoten_temp, tpoten, 2 * s_numpars * sizeof(double));
@@ -434,10 +443,13 @@ int matvec(double *alpha, double *tpoten_old, double *beta, double *tpoten) {
         }
     }
     
+#ifdef MPI_ENABLED
     ierr = MPI_Allreduce(tpoten, tpoten_temp, 2 * s_numpars,
                          MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    
+
     memcpy(tpoten, tpoten_temp, 2 * s_numpars * sizeof(double));
+#endif
+
     free_vector(tpoten_temp);
 
     s_RemoveMoments(s_tree_root);
@@ -482,10 +494,12 @@ static int s_Setup(double xyz_limits[6])
     int i, j, k, ierr;
     double t1;
 
-    int rank, num_procs;
+    int rank = 0, num_procs = 1;
     
+#ifdef MPI_ENABLED
     ierr = MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     ierr = MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
+#endif
     
     if (rank == 0) {
         printf("Setting up arrays for Taylor expansion...\n");

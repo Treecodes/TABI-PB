@@ -27,7 +27,10 @@
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
-#include <mpi.h>
+
+#ifdef MPI_ENABLED
+    #include <mpi.h>
+#endif
 
 #include "tabipb.h"
 #include "readin.h"
@@ -59,10 +62,12 @@ int TABIPB(TABIPBparm *parm, TABIPBvars *vars) {
     double energy_coulomb;
     TreeParticles *particles = malloc(sizeof *particles);
     
-    int rank, num_procs, ierr;
+    int rank = 0, num_procs = 1, ierr;
     
+#ifdef MPI_ENABLED
     ierr = MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     ierr = MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
+#endif
 
     if (rank == 0) {
         printf("\nSetting up the TABI input...\n");
@@ -126,10 +131,12 @@ static int s_ConstructTreeParticles(TABIPBvars *vars, TreeParticles *particles)
     double sum = 0.0, v0_norm;
     double r0[3], v0[3], v[3][3], r[3][3];
     
-    int rank, num_procs;
+    int rank = 0, num_procs = 1;
     
+#ifdef MPI_ENABLED
     ierr = MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     ierr = MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
+#endif
     
     make_matrix(particles->position, 3, vars->nface);
     make_matrix(particles->normal, 3, vars->nface);

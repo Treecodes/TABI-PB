@@ -26,7 +26,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <mpi.h>
+
+#ifdef MPI_ENABLED
+    #include <mpi.h>
+#endif
 
 #include "tabipb.h"
 #include "print_output.h"
@@ -45,8 +48,11 @@ int main(int argc, char **argv)
     double a1, a2, a3, b1, b2;
     int ierr, i, j, num_mol = 0;
     
-    int rank, num_procs;
+    int rank = 0, num_procs = 1;
+    
+#ifdef MPI_ENABLED
     MPI_Status status;
+#endif
 
   /* timing functions for *nix systems */
 #ifndef _WIN32                                                                     
@@ -58,10 +64,12 @@ int main(int argc, char **argv)
     timer_start("TOTAL_TIME");
 #endif
 
+#ifdef MPI_ENABLED
     ierr = MPI_Init(&argc, &argv);
     
     ierr = MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     ierr = MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
+#endif
 
     if (rank == 0) {
         if (argc < 2) {
@@ -152,6 +160,7 @@ int main(int argc, char **argv)
     
     //COPY PARM TO OTHER PROCESSORS
     
+#ifdef MPI_ENABLED
     int nitems = 5;
     int blocklengths[5] = {512, 9, 2, 1, 3};
     MPI_Datatype types[5] = {MPI_CHAR, MPI_DOUBLE, MPI_INT,
@@ -172,6 +181,7 @@ int main(int argc, char **argv)
     MPI_Bcast(main_parm, 1, mpi_tabipbparm_type, 0, MPI_COMM_WORLD);
     MPI_Bcast(list_mol, 10*256, MPI_CHAR, 0, MPI_COMM_WORLD);
     MPI_Bcast(&num_mol, 1, MPI_INT, 0, MPI_COMM_WORLD);
+#endif
 
 /********************************************************/
 
@@ -203,7 +213,9 @@ int main(int argc, char **argv)
             fclose(wfp);
         }
         
+#ifdef MPI_ENABLED
         MPI_Bcast(&main_parm->number_of_lines, 1, MPI_INT, 0, MPI_COMM_WORLD);
+#endif
 
         make_vector(main_vars->chrpos, 3 * main_parm->number_of_lines);
         make_vector(main_vars->atmchr, main_parm->number_of_lines);
@@ -227,13 +239,15 @@ int main(int argc, char **argv)
 
             fclose(fp);
         }
-        
+
+#ifdef MPI_ENABLED
         MPI_Bcast(main_vars->chrpos, 3 * main_parm->number_of_lines,
                   MPI_DOUBLE, 0, MPI_COMM_WORLD);
         MPI_Bcast(main_vars->atmchr, main_parm->number_of_lines,
                   MPI_DOUBLE, 0, MPI_COMM_WORLD);
         MPI_Bcast(main_vars->atmrad, main_parm->number_of_lines,
                   MPI_DOUBLE, 0, MPI_COMM_WORLD);
+#endif
 
         ierr = TABIPB(main_parm, main_vars);
         
@@ -263,9 +277,11 @@ int main(int argc, char **argv)
 #ifndef _WIN32
     timer_end();
 #endif
-    
+
+#ifdef MPI_ENABLED
     ierr = MPI_Type_free(&mpi_tabipbparm_type);
     ierr = MPI_Finalize();
+#endif
     
     return 0;
 }

@@ -26,7 +26,10 @@
 #include <math.h>
 #include <string.h>
 #include <stdlib.h>
-#include <mpi.h>
+
+#ifdef MPI_ENABLED
+    #include <mpi.h>
+#endif
 
 #include "readin.h"
 #include "utilities.h"
@@ -55,10 +58,12 @@ int Readin(TABIPBparm *parm, TABIPBvars *vars)
 
     int **face_copy, **face;
     
-    int rank, num_procs;
+    int rank = 0, num_procs = 1;
     
+#ifdef MPI_ENABLED
     ierr = MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     ierr = MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
+#endif
 
   /* Run msms */
     if (rank == 0) {
@@ -150,7 +155,9 @@ int Readin(TABIPBparm *parm, TABIPBvars *vars)
         }
     }
     
+#ifdef MPI_ENABLED
     MPI_Bcast(&vars->nspt, 1, MPI_INT, 0, MPI_COMM_WORLD);
+#endif
 
    /*allocate variables for vertices file*/
     vars->natm = parm->number_of_lines;    //natm is number of lines in .xyzr
@@ -276,7 +283,9 @@ int Readin(TABIPBparm *parm, TABIPBvars *vars)
         vars->nface = nface;
     }
     
+#ifdef MPI_ENABLED
     MPI_Bcast(&vars->nface, 1, MPI_INT, 0, MPI_COMM_WORLD);
+#endif
 
     make_matrix(vars->face, 3, vars->nface);
     make_vector(vars->xvct, 2 * vars->nface);
@@ -295,7 +304,8 @@ int Readin(TABIPBparm *parm, TABIPBvars *vars)
         remove("molecule.vert");
         remove("molecule.face");
     }
-    
+  
+#ifdef MPI_ENABLED
     MPI_Bcast(vars->vert[0], vars->nspt, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     MPI_Bcast(vars->vert[1], vars->nspt, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     MPI_Bcast(vars->vert[2], vars->nspt, MPI_DOUBLE, 0, MPI_COMM_WORLD);
@@ -305,6 +315,7 @@ int Readin(TABIPBparm *parm, TABIPBvars *vars)
     MPI_Bcast(vars->face[0], vars->nface, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(vars->face[1], vars->nface, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(vars->face[2], vars->nface, MPI_INT, 0, MPI_COMM_WORLD);
+#endif
 
     return 0;
 }

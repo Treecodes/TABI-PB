@@ -82,10 +82,9 @@ endif()
 option(ENABLE_MPI_BUILD "build MPI parallel" OFF)
 file(MAKE_DIRECTORY build/bin)
 
-include_directories("/src")
-
   if(ENABLE_MPI_BUILD)
     find_package(MPI REQUIRED)
+    add_definitions(-DMPI_ENABLED)
   endif()
 
   # FFLAGS depend on the compiler
@@ -107,16 +106,16 @@ include_directories("/src")
 # C code for standalone; don't include pp_timer.c in Windows version
   if(WIN32)
         add_executable(tabipb
-          src/main.c src/tabipb.c src/gmres.c src/daxpy.c src/dcopy.c src/ddot.c
-          src/dgemv.c src/dnrm2.c src/drot.c src/drotg.c src/dscal.c src/d_sign.c
-          src/dtrsv.c src/partition.c src/run_gmres.c src/readin.c src/treecode.c
-          src/print_output.c src/utilities.c src/xmalloc.c)
+          main.c tabipb.c gmres.c daxpy.c dcopy.c ddot.c
+          dgemv.c dnrm2.c drot.c drotg.c dscal.c d_sign.c
+          dtrsv.c partition.c run_gmres.c readin.c treecode.c
+          print_output.c utilities.c xmalloc.c)
   else()
         add_executable(tabipb
-          src/main.c src/tabipb.c src/gmres.c src/daxpy.c src/dcopy.c src/ddot.c
-          src/dgemv.c src/dnrm2.c src/drot.c src/drotg.c src/dscal.c src/d_sign.c
-          src/dtrsv.c src/partition.c src/run_gmres.c src/readin.c src/treecode.c
-          src/print_output.c src/utilities.c src/xmalloc.c src/pp_timer.c)
+          main.c tabipb.c gmres.c daxpy.c dcopy.c ddot.c
+          dgemv.c dnrm2.c drot.c drotg.c dscal.c d_sign.c
+          dtrsv.c partition.c run_gmres.c readin.c treecode.c
+          print_output.c utilities.c xmalloc.c pp_timer.c)
   endif()
 
   if(ENABLE_MPI_BUILD)
