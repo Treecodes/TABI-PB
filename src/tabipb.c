@@ -257,7 +257,7 @@ static double s_ComputeSolvationEnergy(TABIPBparm *parm, TABIPBvars *vars,
                                        TreeParticles *particles)
 {
   /* local variables */
-    int i, j, ii, faces_per_process, ierr;
+    int i, j, ii, ierr, atms_per_process;
     double sumrs, irs, rs, G0, Gk, kappa_rs, exp_kappa_rs;
     double cos_theta, G1, G2, L1, L2;
     double r[3], v[3], s[3], r_s[3];
@@ -272,12 +272,10 @@ static double s_ComputeSolvationEnergy(TABIPBparm *parm, TABIPBvars *vars,
 #endif
 
     make_vector(chrptl, vars->nface);
-    faces_per_process = vars->nface / num_procs;
-
-    for (ii = 0; ii <= faces_per_process; ii++) {
-        j = ii * num_procs + rank;
+    atms_per_process = vars->natm / num_procs;
         
-    if (j < vars->nface) {
+    for (j = 0; j < vars->nface; j++) {
+
         chrptl[j] = 0.0;
 
         r[0] = particles->position[0][j];
@@ -288,7 +286,12 @@ static double s_ComputeSolvationEnergy(TABIPBparm *parm, TABIPBvars *vars,
         v[1] = particles->normal[1][j];
         v[2] = particles->normal[2][j];
 
-        for (i = 0; i < vars->natm; i++) {
+
+        for (ii = 0; ii <= atms_per_process; ii++) {
+            i = ii * num_procs + rank;
+
+        if (i < vars->natm) {
+
             s[0] = vars->chrpos[3*i];
             s[1] = vars->chrpos[3*i + 1];
             s[2] = vars->chrpos[3*i + 2];
@@ -319,7 +322,7 @@ static double s_ComputeSolvationEnergy(TABIPBparm *parm, TABIPBvars *vars,
                        + L2*particles->xvct[vars->nface+j])
                        * particles->area[j];
         }
-    }
+        }
     }
     
 #ifdef MPI_ENABLED
