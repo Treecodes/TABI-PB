@@ -193,14 +193,26 @@ static int s_ComputeSourceTerm(TABIPBparm *parm, TABIPBvars *vars,
  * S1=sum(qk*G0)/e1 S2=sim(qk*G0')/e1 */
 
 /* local variables */
-    int i, j;
+    int i, j, ii, faces_per_process, ierr;
     double sumrs, cos_theta, irs, G0, G1;
     double r_s[3];
 
+    int rank = 0, num_procs = 1;
+    
+#ifdef MPI_ENABLED
+    ierr = MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    ierr = MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
+#endif
 
-    for (i = 0; i < vars->nface; i++) {
+    faces_per_process = vars->nface / num_procs;
+
+    for (ii = 0; ii <= faces_per_process; ii++) {
+        i = ii * num_procs + rank;
+        
+    if (i < vars->nface) {
         particles->source_term[i] = 0.0;
         particles->source_term[i + vars->nface] = 0.0;
+
         for (j = 0; j < vars->natm; j++) {
 
   /* r_s = distance of charge position to triangular */
@@ -228,6 +240,12 @@ static int s_ComputeSourceTerm(TABIPBparm *parm, TABIPBvars *vars,
                                                      * G1 / parm->epsp;
         }
     }
+    }
+
+#ifdef MPI_ENABLED
+    ierr = MPI_Allreduce(MPI_IN_PLACE, particles->source_term, 2 * vars->nface,
+                         MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+#endif
 
     return 0;
 }
@@ -239,15 +257,27 @@ static double s_ComputeSolvationEnergy(TABIPBparm *parm, TABIPBvars *vars,
                                        TreeParticles *particles)
 {
   /* local variables */
-    int i, j;
+    int i, j, ii, faces_per_process, ierr;
     double sumrs, irs, rs, G0, Gk, kappa_rs, exp_kappa_rs;
     double cos_theta, G1, G2, L1, L2;
     double r[3], v[3], s[3], r_s[3];
     double *chrptl;
     double energy_solvation = 0.0;
 
+    int rank = 0, num_procs = 1;
+
+#ifdef MPI_ENABLED
+    ierr = MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    ierr = MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
+#endif
+
     make_vector(chrptl, vars->nface);
-    for (j = 0; j < vars->nface; j++) {
+    faces_per_process = vars->nface / num_procs;
+
+    for (ii = 0; ii <= faces_per_process; ii++) {
+        j = ii * num_procs + rank;
+        
+    if (j < vars->nface) {
         chrptl[j] = 0.0;
 
         r[0] = particles->position[0][j];
@@ -290,7 +320,13 @@ static double s_ComputeSolvationEnergy(TABIPBparm *parm, TABIPBvars *vars,
                        * particles->area[j];
         }
     }
+    }
     
+#ifdef MPI_ENABLED
+    ierr = MPI_Allreduce(MPI_IN_PLACE, chrptl, vars->nface,
+                         MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+#endif
+
     for (i = 0; i < vars->nface; i++) {
         energy_solvation += chrptl[i];
     }
@@ -314,7 +350,7 @@ static double s_ComputeCoulombEnergy(TABIPBparm *parm, TABIPBvars *vars)
         r[1] = vars->chrpos[3*i + 1];
         r[2] = vars->chrpos[3*i + 2];
         
-        for (j = i+1; j < vars->natm; j++){
+        for (j = i+1; j < vars->natm; j++) {
             diff[0] = r[0] - vars->chrpos[3*j];
             diff[1] = r[1] - vars->chrpos[3*j + 1];
             diff[2] = r[2] - vars->chrpos[3*j + 2];

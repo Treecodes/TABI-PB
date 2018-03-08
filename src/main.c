@@ -185,7 +185,6 @@ int main(int argc, char **argv)
 
 /********************************************************/
 
-//TO DO: Parallelize this.
     
     for (j = 0; j < num_mol; j++) {
     

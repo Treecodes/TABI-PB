@@ -401,8 +401,6 @@ int matvec(double *alpha, double *tpoten_old, double *beta, double *tpoten) {
     
     particles_per_process = s_numpars / num_procs;
 
-    //for (i = 0; i < s_numpars; i++) {
-    
     for (ii = 0; ii <= particles_per_process; ii++) {
         i = ii * num_procs + rank;
         
@@ -444,10 +442,8 @@ int matvec(double *alpha, double *tpoten_old, double *beta, double *tpoten) {
     }
     
 #ifdef MPI_ENABLED
-    ierr = MPI_Allreduce(tpoten, tpoten_temp, 2 * s_numpars,
+    ierr = MPI_Allreduce(MPI_IN_PLACE, tpoten, 2 * s_numpars,
                          MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-
-    memcpy(tpoten, tpoten_temp, 2 * s_numpars * sizeof(double));
 #endif
 
     free_vector(tpoten_temp);
