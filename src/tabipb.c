@@ -86,10 +86,10 @@ int TABIPB(TABIPBparm *parm, TABIPBvars *vars) {
     s_ComputeSourceTerm(parm, vars, particles);
 
     /* set up treecode */
-    TreecodeInitialization(parm, vars->nface, particles);
+    TreecodeInitialization(parm, vars->nspt, particles);
 
     /* call GMRES */
-    RunGMRES(vars->nface, particles->source_term, particles->xvct);
+    RunGMRES(vars->nspt, particles->source_term, particles->xvct);
 
     /* compute solvation and coulombic energy */
     energy_solvation = s_ComputeSolvationEnergy(parm, vars, particles);
@@ -97,6 +97,9 @@ int TABIPB(TABIPBparm *parm, TABIPBvars *vars) {
 
     vars->soleng = energy_solvation * UNITS_PARA;
     vars->couleng = energy_coulomb * UNITS_COEFF;
+
+
+    //FIX PAST HERE
 
     /* deallocate treecode variables and reorder particles */
     TreecodeFinalization(particles);
@@ -109,6 +112,7 @@ int TABIPB(TABIPBparm *parm, TABIPBvars *vars) {
     free_matrix(particles->normal);
     free_vector(particles->area);
     free_vector(particles->source_term);
+    free_vector(particles->xvct);
     free(particles);
     
     return 0;
@@ -130,6 +134,7 @@ static int s_ConstructTreeParticles(TABIPBvars *vars, TreeParticles *particles)
     int idx[3];
     double sum = 0.0, v0_norm;
     double r0[3], v0[3], v[3][3], r[3][3];
+    int *nspt_num_faces;
     
     int rank = 0, num_procs = 1;
     
@@ -137,7 +142,8 @@ static int s_ConstructTreeParticles(TABIPBvars *vars, TreeParticles *particles)
     ierr = MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     ierr = MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
 #endif
-    
+
+/*    
     make_matrix(particles->position, 3, vars->nface);
     make_matrix(particles->normal, 3, vars->nface);
     make_vector(particles->area, vars->nface);
@@ -175,10 +181,55 @@ static int s_ConstructTreeParticles(TABIPBvars *vars, TreeParticles *particles)
         particles->area[i] = TriangleArea(r);
         sum += particles->area[i];
     }
+*/
+
+    //NODE PATCH METHOD
+
+    make_matrix(particles->position, 3, vars->nspt);
+    make_matrix(particles->normal, 3, vars->nspt);
+    make_vector(particles->area, vars->nspt);
+    make_vector(particles->source_term, 2 * vars->nspt);
+    make_vector(particles->xvct, 2 * vars->nspt);
+    make_vector(nspt_num_faces, vars->nspt);
+
+    for (i = 0; i < vars->nspt; i++) {
+        for (j = 0; j < 3; j++) {
+            particles->position[j][i] = vars->vert[j][i];
+            particles->normal[j][i] = vars->snrm[j][i];
+        }
+        particles->area[i] = 0.0;
+        nspt_num_faces[i] = 0;
+    }
+
+    for (i = 0; i < vars->nface; i++) {
+        for (j = 0; j < 3; j++) {
+            idx[j] = vars->face[j][i];
+        }
+
+        for (j = 0; j < 3; j++) {
+            for (k = 0; k < 3; k++) {
+                r[j][k] = vars->vert[j][idx[k]-1];
+            }
+        }
+
+        for (j = 0; j < 0; j++) {
+            particles->area[idx[j]-1] += TriangleArea(r);
+            nspt_num_faces[idx[j]-1]++;
+        }
+    }
+
+
+
+    for (i = 0; i < vars->nspt; i++) {
+        particles->area[i] /= (double)nspt_num_faces[i];
+        sum += particles->area[i];
+    }
 
     if (rank == 0) {
         printf("Total suface area = %.17f\n", sum);
     }
+
+    free_vector(nspt_num_faces);
 
     return 0;
 }
@@ -204,14 +255,14 @@ static int s_ComputeSourceTerm(TABIPBparm *parm, TABIPBvars *vars,
     ierr = MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
 #endif
 
-    faces_per_process = vars->nface / num_procs;
+    faces_per_process = vars->nspt / num_procs;
 
     for (ii = 0; ii <= faces_per_process; ii++) {
         i = ii * num_procs + rank;
         
-    if (i < vars->nface) {
+    if (i < vars->nspt) {
         particles->source_term[i] = 0.0;
-        particles->source_term[i + vars->nface] = 0.0;
+        particles->source_term[i + vars->nspt] = 0.0;
 
         for (j = 0; j < vars->natm; j++) {
 
@@ -236,14 +287,14 @@ static int s_ComputeSourceTerm(TABIPBparm *parm, TABIPBvars *vars,
 
   /* update source term */
             particles->source_term[i] += vars->atmchr[j] * G0 / parm->epsp;
-            particles->source_term[vars->nface + i] += vars->atmchr[j]
+            particles->source_term[vars->nspt + i] += vars->atmchr[j]
                                                      * G1 / parm->epsp;
         }
     }
     }
 
 #ifdef MPI_ENABLED
-    ierr = MPI_Allreduce(MPI_IN_PLACE, particles->source_term, 2 * vars->nface,
+    ierr = MPI_Allreduce(MPI_IN_PLACE, particles->source_term, 2 * vars->nspt,
                          MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 #endif
 
@@ -271,10 +322,10 @@ static double s_ComputeSolvationEnergy(TABIPBparm *parm, TABIPBvars *vars,
     ierr = MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
 #endif
 
-    make_vector(chrptl, vars->nface);
+    make_vector(chrptl, vars->nspt);
     atms_per_process = vars->natm / num_procs;
         
-    for (j = 0; j < vars->nface; j++) {
+    for (j = 0; j < vars->nspt; j++) {
 
         chrptl[j] = 0.0;
 
@@ -319,18 +370,18 @@ static double s_ComputeSolvationEnergy(TABIPBparm *parm, TABIPBvars *vars,
 
             chrptl[j] += vars->atmchr[i]
                        * (L1*particles->xvct[j]
-                       + L2*particles->xvct[vars->nface+j])
+                       + L2*particles->xvct[vars->nspt+j])
                        * particles->area[j];
         }
         }
     }
     
 #ifdef MPI_ENABLED
-    ierr = MPI_Allreduce(MPI_IN_PLACE, chrptl, vars->nface,
+    ierr = MPI_Allreduce(MPI_IN_PLACE, chrptl, vars->nspt,
                          MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 #endif
 
-    for (i = 0; i < vars->nface; i++) {
+    for (i = 0; i < vars->nspt; i++) {
         energy_solvation += chrptl[i];
     }
     
@@ -382,74 +433,73 @@ static int s_OutputPotential(TABIPBvars *vars, TreeParticles *particles)
     para_temp = UNITS_COEFF * 4 * PI;
     
     
-    make_matrix(ind_vert, nface_vert, vars->nspt);
+    //make_matrix(ind_vert, nface_vert, vars->nspt);
     make_vector(vars->vert_ptl, 2 * vars->nspt);
     
-    for (i = 0; i < nface_vert; i++) {
-        for (j = 0; j < vars->nspt; j++) {
-            ind_vert[i][j] = 0;
-        }
-    }
-    
-    for (i = 0; i < 2 * vars->nspt; i++) {
-        vars->vert_ptl[i] = 0.0;
-    }
+    //for (i = 0; i < nface_vert; i++) {
+    //    for (j = 0; j < vars->nspt; j++) {
+    //        ind_vert[i][j] = 0;
+    //    }
+    //}
+    //
+    //for (i = 0; i < 2 * vars->nspt; i++) {
+    //    vars->vert_ptl[i] = 0.0;
+    //}
+    //
+    //for (i = 0; i < vars->nface; i++) {
+    //    for (j = 0; j < 3; j++) {
+    //        for (k = 0; k < nface_vert - 1; k++) {
+    //            if (ind_vert[k][vars->face[j][i] - 1] == 0) {
+    //                ind_vert[k][vars->face[j][i] - 1] = i + 1;
+    //                ind_vert[nface_vert - 1][vars->face[j][i] - 1] += 1;
+    //                break;
+    //            }
+    //        }
+    //    }
+    //}
 
-    for (i = 0; i < vars->nface; i++) {
-        for (j = 0; j < 3; j++) {
-            for (k = 0; k < nface_vert - 1; k++) {
-                if (ind_vert[k][vars->face[j][i] - 1] == 0) {
-                    ind_vert[k][vars->face[j][i] - 1] = i + 1;
-                    ind_vert[nface_vert - 1][vars->face[j][i] - 1] += 1;
-                    break;
-                }
-            }
-        }
-    }
+    //memcpy(vars->xvct, particles->xvct, 2 * vars->nface * sizeof(double));
+    memcpy(vars->vert_ptl, particles->xvct, 2 * vars->nspt * sizeof(double));
 
-    memcpy(vars->xvct, particles->xvct, 2 * vars->nface * sizeof(double));
-
-    for (i = 0; i < vars->nspt; i++) {
-        tot_length = 0.0;
-        for (j = 0; j < ind_vert[nface_vert - 1][i]; j++) {
+    //for (i = 0; i < vars->nspt; i++) {
+    //    tot_length = 0.0;
+    //    for (j = 0; j < ind_vert[nface_vert - 1][i]; j++) {
       /* distance between vertices and centroid */
-            aa[0] = particles->position[0][ind_vert[j][i]-1]
-                  - vars->vert[0][i];
-            aa[1] = particles->position[1][ind_vert[j][i]-1]
-                  - vars->vert[1][i];
-            aa[2] = particles->position[2][ind_vert[j][i]-1]
-                  - vars->vert[2][i];
-            dot_aa = aa[0]*aa[0] + aa[1]*aa[1] + aa[2]*aa[2];
-            loc_length = sqrt(dot_aa);
+    //        aa[0] = particles->position[0][ind_vert[j][i]-1]
+    //              - vars->vert[0][i];
+    //        aa[1] = particles->position[1][ind_vert[j][i]-1]
+    //              - vars->vert[1][i];
+    //        aa[2] = particles->position[2][ind_vert[j][i]-1]
+    //              - vars->vert[2][i];
+    //        dot_aa = aa[0]*aa[0] + aa[1]*aa[1] + aa[2]*aa[2];
+    //        loc_length = sqrt(dot_aa);
+    //
+    //        vars->vert_ptl[i] += 1.0/loc_length*vars->xvct[ind_vert[j][i]-1];
+    //        vars->vert_ptl[i + vars->nspt] += 1.0 / loc_length
+    //                              * vars->xvct[ind_vert[j][i]+vars->nface-1];
+    //        tot_length += 1.0/loc_length;
+    //    }
+    //    vars->vert_ptl[i] /= tot_length;
+    //    vars->vert_ptl[i + vars->nspt] /= tot_length;
+    //}
 
-            vars->vert_ptl[i] += 1.0/loc_length*vars->xvct[ind_vert[j][i]-1];
-            vars->vert_ptl[i + vars->nspt] += 1.0 / loc_length
-                                  * vars->xvct[ind_vert[j][i]+vars->nface-1];
-            tot_length += 1.0/loc_length;
-        }
-        vars->vert_ptl[i] /= tot_length;
-        vars->vert_ptl[i + vars->nspt] /= tot_length;
-    }
+    //for (i = 0; i < 2 * vars->nface; i++)
+    //    vars->xvct[i] *= para_temp;
 
-    for (i = 0; i < 2 * vars->nface; i++)
-        vars->xvct[i] *= para_temp;
-
-    for (i = 0; i < vars->nspt; i++) {
+    for (i = 0; i < 2 * vars->nspt; i++)
         vars->vert_ptl[i] *= para_temp;
-        vars->vert_ptl[i + vars->nspt] *= para_temp;
-    }
 
-    vars->max_xvct = MaxVal(vars->xvct, vars->nface);
-    vars->min_xvct = MinVal(vars->xvct, vars->nface);
-    vars->max_der_xvct = MaxVal(vars->xvct + vars->nface, vars->nface);
-    vars->min_der_xvct = MinVal(vars->xvct + vars->nface, vars->nface);
+    //vars->max_xvct = MaxVal(vars->xvct, vars->nface);
+    //vars->min_xvct = MinVal(vars->xvct, vars->nface);
+    //vars->max_der_xvct = MaxVal(vars->xvct + vars->nface, vars->nface);
+    //vars->min_der_xvct = MinVal(vars->xvct + vars->nface, vars->nface);
 
     vars->max_vert_ptl = MaxVal(vars->vert_ptl, vars->nspt);
     vars->min_vert_ptl = MinVal(vars->vert_ptl, vars->nspt);
     vars->max_der_vert_ptl = MaxVal(vars->vert_ptl + vars->nspt, vars->nspt);
     vars->min_der_vert_ptl = MinVal(vars->vert_ptl + vars->nspt, vars->nspt);
 
-    free_matrix(ind_vert);
+    //free_matrix(ind_vert);
 
     return 0;
 }
