@@ -98,9 +98,6 @@ int TABIPB(TABIPBparm *parm, TABIPBvars *vars) {
     vars->soleng = energy_solvation * UNITS_PARA;
     vars->couleng = energy_coulomb * UNITS_COEFF;
 
-
-    //FIX PAST HERE
-
     /* deallocate treecode variables and reorder particles */
     TreecodeFinalization(particles);
 
@@ -133,8 +130,7 @@ static int s_ConstructTreeParticles(TABIPBvars *vars, TreeParticles *particles)
     int i, j, k, ierr;
     int idx[3];
     double sum = 0.0, v0_norm;
-    double r0[3], v0[3], v[3][3], r[3][3];
-    int *nspt_num_faces;
+    double r[3][3];
     
     int rank = 0, num_procs = 1;
     
@@ -143,45 +139,6 @@ static int s_ConstructTreeParticles(TABIPBvars *vars, TreeParticles *particles)
     ierr = MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
 #endif
 
-/*    
-    make_matrix(particles->position, 3, vars->nface);
-    make_matrix(particles->normal, 3, vars->nface);
-    make_vector(particles->area, vars->nface);
-    make_vector(particles->source_term, 2 * vars->nface);
-    make_vector(particles->xvct, 2 * vars->nface);
-
-    for (i = 0; i < vars->nface; i++) {
-        for (j = 0; j < 3; j++) {
-            idx[j] = vars->face[j][i];
-        }
-
-        for (j = 0; j < 3; j++) {
-            r0[j] = 0;
-            v0[j] = 0;
-
-            for (k = 0; k < 3; k++) {
-                r0[j] = r0[j] + vars->vert[j][idx[k]-1] / 3.0;
-                v0[j] = v0[j] + vars->snrm[j][idx[k]-1] / 3.0;
-                r[j][k] = vars->vert[j][idx[k]-1];
-                v[j][k] = vars->snrm[j][idx[k]-1];
-            }
-        }
-
-        v0_norm = sqrt(v0[0]*v0[0] + v0[1]*v0[1] + v0[2]*v0[2]);
-
-        for (k = 0; k<3; k++) {
-            v0[k] = v0[k] / v0_norm;
-        }
-
-        for (j = 0; j < 3; j++) {
-            particles->position[j][i] = r0[j];
-            particles->normal[j][i] = v0[j];
-        }
-
-        particles->area[i] = TriangleArea(r);
-        sum += particles->area[i];
-    }
-*/
 
     //NODE PATCH METHOD
 
@@ -190,7 +147,6 @@ static int s_ConstructTreeParticles(TABIPBvars *vars, TreeParticles *particles)
     make_vector(particles->area, vars->nspt);
     make_vector(particles->source_term, 2 * vars->nspt);
     make_vector(particles->xvct, 2 * vars->nspt);
-    make_vector(nspt_num_faces, vars->nspt);
 
     for (i = 0; i < vars->nspt; i++) {
         for (j = 0; j < 3; j++) {
@@ -198,7 +154,6 @@ static int s_ConstructTreeParticles(TABIPBvars *vars, TreeParticles *particles)
             particles->normal[j][i] = vars->snrm[j][i];
         }
         particles->area[i] = 0.0;
-        nspt_num_faces[i] = 0;
     }
 
     for (i = 0; i < vars->nface; i++) {
@@ -213,25 +168,20 @@ static int s_ConstructTreeParticles(TABIPBvars *vars, TreeParticles *particles)
         }
 
         for (j = 0; j < 3; j++) {
-            //printf("%d, %d: idx %d, area %lf\n", i, j, idx[j]-1, TriangleArea(r));
             particles->area[idx[j]-1] += TriangleArea(r);
-            nspt_num_faces[idx[j]-1]++;
         }
     }
 
 
 
     for (i = 0; i < vars->nspt; i++) {
-    //    printf("%d: %lf, %d\n", i, particles->area[i], nspt_num_faces[i]);
-        particles->area[i] /= (double)nspt_num_faces[i];
+        particles->area[i] /= 3.0;
         sum += particles->area[i];
     }
 
     if (rank == 0) {
         printf("Total suface area = %.17f\n", sum);
     }
-
-    free_vector(nspt_num_faces);
 
     return 0;
 }
