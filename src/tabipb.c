@@ -212,7 +212,8 @@ static int s_ConstructTreeParticles(TABIPBvars *vars, TreeParticles *particles)
             }
         }
 
-        for (j = 0; j < 0; j++) {
+        for (j = 0; j < 3; j++) {
+            //printf("%d, %d: idx %d, area %lf\n", i, j, idx[j]-1, TriangleArea(r));
             particles->area[idx[j]-1] += TriangleArea(r);
             nspt_num_faces[idx[j]-1]++;
         }
@@ -221,6 +222,7 @@ static int s_ConstructTreeParticles(TABIPBvars *vars, TreeParticles *particles)
 
 
     for (i = 0; i < vars->nspt; i++) {
+    //    printf("%d: %lf, %d\n", i, particles->area[i], nspt_num_faces[i]);
         particles->area[i] /= (double)nspt_num_faces[i];
         sum += particles->area[i];
     }
