@@ -119,8 +119,7 @@ static int s_RemoveNode(TreeNode *p);
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**********************************************************/
-int TreecodeInitialization(TABIPBparm *parm, int nface,
-                           TreeParticles *particles)
+int TreecodeInitialization(TABIPBparm *parm, TreeParticles *particles)
 {
     /* set up variables used in treecode */
     /* local variables*/
@@ -144,7 +143,7 @@ int TreecodeInitialization(TABIPBparm *parm, int nface,
     }
 
     /* setting variables global to file */
-    s_numpars = nface;
+    s_numpars = particles->num_particles;
     s_order = parm->order;
     s_max_per_leaf = parm->maxparnode;
     theta = parm->theta;

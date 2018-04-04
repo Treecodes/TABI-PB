@@ -87,10 +87,10 @@ int TABIPB(TABIPBparm *parm, TABIPBvars *vars) {
     s_ComputeSourceTerm(parm, vars, particles);
 
     /* set up treecode */
-    TreecodeInitialization(parm, vars->nspt, particles);
+    TreecodeInitialization(parm, particles);
 
     /* call GMRES */
-    RunGMRES(vars->nspt, particles->source_term, particles->xvct, &iter);
+    RunGMRES(particles->num_particles, particles->source_term, particles->xvct, &iter);
 
     /* compute solvation and coulombic energy */
     energy_solvation = s_ComputeSolvationEnergy(parm, vars, particles);
@@ -143,12 +143,13 @@ static int s_ConstructTreeParticles(TABIPBvars *vars, TreeParticles *particles)
 
 
     //NODE PATCH METHOD
+    particles->num_particles = vars->nspt;
 
-    make_matrix(particles->position, 3, vars->nspt);
-    make_matrix(particles->normal, 3, vars->nspt);
-    make_vector(particles->area, vars->nspt);
-    make_vector(particles->source_term, 2 * vars->nspt);
-    make_vector(particles->xvct, 2 * vars->nspt);
+    make_matrix(particles->position, 3, particles->num_particles);
+    make_matrix(particles->normal, 3, particles->num_particles);
+    make_vector(particles->area, particles->num_particles);
+    make_vector(particles->source_term, 2 * particles->num_particles);
+    make_vector(particles->xvct, 2 * particles->num_particles);
 
     for (i = 0; i < vars->nspt; i++) {
         for (j = 0; j < 3; j++) {
@@ -176,7 +177,7 @@ static int s_ConstructTreeParticles(TABIPBvars *vars, TreeParticles *particles)
 
 
 
-    for (i = 0; i < vars->nspt; i++) {
+    for (i = 0; i < particles->num_particles; i++) {
         particles->area[i] /= 3.0;
         sum += particles->area[i];
     }
@@ -210,14 +211,14 @@ static int s_ComputeSourceTerm(TABIPBparm *parm, TABIPBvars *vars,
     ierr = MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
 #endif
 
-    faces_per_process = vars->nspt / num_procs;
+    faces_per_process = particles->num_particles / num_procs;
 
     for (ii = 0; ii <= faces_per_process; ii++) {
         i = ii * num_procs + rank;
         
-    if (i < vars->nspt) {
+    if (i < particles->num_particles) {
         particles->source_term[i] = 0.0;
-        particles->source_term[i + vars->nspt] = 0.0;
+        particles->source_term[i + particles->num_particles] = 0.0;
 
         for (j = 0; j < vars->natm; j++) {
 
@@ -242,14 +243,15 @@ static int s_ComputeSourceTerm(TABIPBparm *parm, TABIPBvars *vars,
 
   /* update source term */
             particles->source_term[i] += vars->atmchr[j] * G0 / parm->epsp;
-            particles->source_term[vars->nspt + i] += vars->atmchr[j]
-                                                     * G1 / parm->epsp;
+            particles->source_term[particles->num_particles + i] += vars->atmchr[j]
+                                                                  * G1 / parm->epsp;
         }
     }
     }
 
 #ifdef MPI_ENABLED
-    ierr = MPI_Allreduce(MPI_IN_PLACE, particles->source_term, 2 * vars->nspt,
+    ierr = MPI_Allreduce(MPI_IN_PLACE, particles->source_term, 
+                         2 * particles->num_particles,
                          MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 #endif
 
@@ -277,10 +279,10 @@ static double s_ComputeSolvationEnergy(TABIPBparm *parm, TABIPBvars *vars,
     ierr = MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
 #endif
 
-    make_vector(chrptl, vars->nspt);
+    make_vector(chrptl, particles->num_particles);
     atms_per_process = vars->natm / num_procs;
         
-    for (j = 0; j < vars->nspt; j++) {
+    for (j = 0; j < particles->num_particles; j++) {
 
         chrptl[j] = 0.0;
 
@@ -325,18 +327,18 @@ static double s_ComputeSolvationEnergy(TABIPBparm *parm, TABIPBvars *vars,
 
             chrptl[j] += vars->atmchr[i]
                        * (L1*particles->xvct[j]
-                       + L2*particles->xvct[vars->nspt+j])
+                       + L2*particles->xvct[particles->num_particles + j])
                        * particles->area[j];
         }
         }
     }
     
 #ifdef MPI_ENABLED
-    ierr = MPI_Allreduce(MPI_IN_PLACE, chrptl, vars->nspt,
+    ierr = MPI_Allreduce(MPI_IN_PLACE, chrptl, particles->num_particles,
                          MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 #endif
 
-    for (i = 0; i < vars->nspt; i++) {
+    for (i = 0; i < particles->num_particles; i++) {
         energy_solvation += chrptl[i];
     }
     

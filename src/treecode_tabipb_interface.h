@@ -26,8 +26,7 @@
 #include "particle_struct.h"
 
 /* functions used by tabipb() to interface with treecode */
-int TreecodeInitialization(TABIPBparm *parm, int nface,
-                           TreeParticles *particles);
+int TreecodeInitialization(TABIPBparm *parm, TreeParticles *particles);
 
 int TreecodeFinalization(TreeParticles *particles);
 
