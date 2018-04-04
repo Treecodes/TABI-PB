@@ -21,6 +21,6 @@
 #ifndef H_RUN_GMRES_H
 #define H_RUN_GMRES_H
 
-int RunGMRES(int nface, double *source_term, double *xvct);
+int RunGMRES(int nface, double *source_term, double *xvct, long int *iter);
 
 #endif /* H_RUN_GMRES_H */
