@@ -103,20 +103,12 @@ file(MAKE_DIRECTORY build/bin)
     message ("C compiler: " ${C_COMPILER_NAME})
   endif ()
 
-# C code for standalone; don't include pp_timer.c in Windows version
-  if(WIN32)
-        add_executable(tabipb
-          main.c tabipb.c gmres.c daxpy.c dcopy.c ddot.c
-          dgemv.c dnrm2.c drot.c drotg.c dscal.c d_sign.c
-          dtrsv.c partition.c run_gmres.c readin.c treecode.c
-          print_output.c utilities.c xmalloc.c)
-  else()
-        add_executable(tabipb
-          main.c tabipb.c gmres.c daxpy.c dcopy.c ddot.c
-          dgemv.c dnrm2.c drot.c drotg.c dscal.c d_sign.c
-          dtrsv.c partition.c run_gmres.c readin.c treecode.c
-          print_output.c utilities.c xmalloc.c pp_timer.c)
-  endif()
+# C code for standalone
+  add_executable(tabipb
+    main.c tabipb.c gmres.c daxpy.c dcopy.c ddot.c
+    dgemv.c dnrm2.c drot.c drotg.c dscal.c d_sign.c
+    dtrsv.c partition.c run_gmres.c readin.c treecode.c
+    print_output.c utilities.c xmalloc.c)
 
   if(ENABLE_MPI_BUILD)
     target_link_libraries(tabipb ${MPI_C_LIBRARIES})

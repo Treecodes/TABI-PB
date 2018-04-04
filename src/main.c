@@ -26,6 +26,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 
 #ifdef MPI_ENABLED
     #include <mpi.h>
@@ -53,16 +54,6 @@ int main(int argc, char **argv)
     
 #ifdef MPI_ENABLED
     MPI_Status status;
-#endif
-
-  /* timing functions for *nix systems */
-#ifndef _WIN32                                                                     
-    extern void timer_start();
-    extern void timer_end();
-#endif
-
-#ifndef _WIN32                                                                     
-    timer_start("TOTAL_TIME");
 #endif
 
 #ifdef MPI_ENABLED
@@ -249,7 +240,12 @@ int main(int argc, char **argv)
                   MPI_DOUBLE, 0, MPI_COMM_WORLD);
 #endif
 
+        clock_t cpu_begin = clock();
+
         ierr = TABIPB(main_parm, main_vars);
+
+        clock_t cpu_end = clock();
+        cpu_time = (double)(end - begin) / CLOCKS_PER_SEC;
         
         if (rank == 0) {
             ierr = OutputPrint(main_vars);
@@ -277,10 +273,6 @@ int main(int argc, char **argv)
     }
     
     free(main_parm);
-
-#ifndef _WIN32
-    timer_end();
-#endif
 
 #ifdef MPI_ENABLED
     ierr = MPI_Type_free(&mpi_tabipbparm_type);
