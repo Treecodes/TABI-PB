@@ -162,7 +162,7 @@ int OutputCSV(TABIPBparm *parm, TABIPBvars *vars, double cpu_time)
 
     FILE *fp = fopen(fname, "a");
 
-    fprintf(fp, "%s, %s, %d, %s, %d, "
+    fprintf(fp, "%s, %s, %d, %s, %f, "
                 "%f, %d, "
                 "%f, %d, %d, %f, %f, "
                 "%f, %f, %f, %f, "
