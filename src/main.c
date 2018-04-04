@@ -143,6 +143,9 @@ int main(int argc, char **argv)
                 
                 } else if (strcmp(c2, "vtk") == 0 || strcmp(c2, "VTK") == 0) {
                     main_parm->output_datafile = 2;
+
+                } else if (strcmp(c2, "csv") == 0 || strcmp(c2, "CSV") == 0) {
+                    main_parm->output_datafile = 3;
                 }
             }
         }

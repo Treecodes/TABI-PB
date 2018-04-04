@@ -164,9 +164,9 @@ int OutputCSV(TABIPBparm *parm, TABIPBvars *vars, double cpu_time)
 
     fprintf(fp, "%s, %s, %d, %s, %f, "
                 "%f, %d, "
-                "%f, %d, %d, %f, %f, "
-                "%f, %f, %f, %f, "
-                "%f, %d \n", 
+                "%e, %d, %d, %e, %e, "
+                "%e, %e, %e, %e, "
+                "%e, %d \n", 
             timestr, parm->fname, vars->natm, meshtype, parm->density, 
             parm->theta, parm->order, 
             vars->soleng, vars->nspt, vars->nface, 1.0/vars->nface, vars->surface_area,
