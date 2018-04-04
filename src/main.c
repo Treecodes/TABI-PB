@@ -245,7 +245,7 @@ int main(int argc, char **argv)
         ierr = TABIPB(main_parm, main_vars);
 
         clock_t cpu_end = clock();
-        cpu_time = (double)(end - begin) / CLOCKS_PER_SEC;
+        cpu_time = (double)(cpu_end - cpu_begin) / CLOCKS_PER_SEC;
         
         if (rank == 0) {
             ierr = OutputPrint(main_vars);
