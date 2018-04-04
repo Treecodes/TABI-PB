@@ -47,6 +47,7 @@ int main(int argc, char **argv)
     char c1[120], c2[120], c3[120], c4[10], c5[10];
     double a1, a2, a3, b1, b2;
     int ierr, i, j, num_mol = 0;
+    double cpu_time;
     
     int rank = 0, num_procs = 1;
     
@@ -255,8 +256,12 @@ int main(int argc, char **argv)
             
             if (main_parm->output_datafile == 1) {
                 ierr = OutputDAT(main_parm, main_vars);
+
             } else if (main_parm->output_datafile == 2) {
                 ierr = OutputVTK(main_parm, main_vars);
+            
+            } else if (main_parm->output_datafile == 3) {
+                ierr = OutputCSV(main_parm, main_vars, cpu_time);
             }
         }
 

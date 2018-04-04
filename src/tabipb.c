@@ -63,6 +63,7 @@ int TABIPB(TABIPBparm *parm, TABIPBvars *vars) {
     TreeParticles *particles = malloc(sizeof *particles);
     
     int rank = 0, num_procs = 1, ierr;
+    long int iter;
     
 #ifdef MPI_ENABLED
     ierr = MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -89,7 +90,7 @@ int TABIPB(TABIPBparm *parm, TABIPBvars *vars) {
     TreecodeInitialization(parm, vars->nspt, particles);
 
     /* call GMRES */
-    RunGMRES(vars->nspt, particles->source_term, particles->xvct);
+    RunGMRES(vars->nspt, particles->source_term, particles->xvct, &iter);
 
     /* compute solvation and coulombic energy */
     energy_solvation = s_ComputeSolvationEnergy(parm, vars, particles);
@@ -97,6 +98,7 @@ int TABIPB(TABIPBparm *parm, TABIPBvars *vars) {
 
     vars->soleng = energy_solvation * UNITS_PARA;
     vars->couleng = energy_coulomb * UNITS_COEFF;
+    vars->gmres_iter = (int)iter;
 
     /* deallocate treecode variables and reorder particles */
     TreecodeFinalization(particles);
@@ -181,6 +183,7 @@ static int s_ConstructTreeParticles(TABIPBvars *vars, TreeParticles *particles)
 
     if (rank == 0) {
         printf("Total suface area = %.17f\n", sum);
+        vars->surface_area = sum;
     }
 
     return 0;

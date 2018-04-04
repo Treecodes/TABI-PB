@@ -76,6 +76,9 @@ typedef struct sTABIPBvars {
 
     /* number of vertices and faces */
     int nspt, nface;
+
+    /* surface area of mesh */
+    double surface_area;
     
     /* positions and normals of vertices */
     double **vert, **snrm;
@@ -89,6 +92,9 @@ typedef struct sTABIPBvars {
     double *xvct;
     double max_xvct, min_xvct;
     double max_der_xvct, min_der_xvct;
+
+    /* iterations for GMRes convergence */
+    int gmres_iter;
 
     /* connectivity data for surface triangulation */
     int **face;
