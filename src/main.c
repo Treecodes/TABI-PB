@@ -196,8 +196,11 @@ int main(int argc, char **argv)
             wfp = fopen(fname_tp, "w");
 
             main_parm->number_of_lines = 0;
-            while (fscanf(fp, "%s %s %s %s %s %lf %lf %lf %lf %lf",
-                   c1, c2, c3, c4, c5, &a1, &a2, &a3, &b1, &b2) != EOF) {
+
+            while (fgets(c, sizeof(c), fp)) {
+                sscanf(c, "%s %s %s %s %s %lf %lf %lf %lf %lf",
+                       c1, c2, c3, c4, c5, &a1, &a2, &a3, &b1, &b2);
+
                 if (strncmp(c1, "ATOM", 4) == 0) {
                     fprintf(wfp, "%f %f %f %f\n", a1, a2, a3, b2);
                     main_parm->number_of_lines++;
@@ -219,8 +222,10 @@ int main(int argc, char **argv)
             rewind(fp);
             i = 0;
     
-            while (fscanf(fp, "%s %s %s %s %s %lf %lf %lf %lf %lf",
-                   c1, c2, c3, c4, c5, &a1, &a2, &a3, &b1, &b2) != EOF) {
+            while (fgets(c, sizeof(c), fp)) {
+                sscanf(c, "%s %s %s %s %s %lf %lf %lf %lf %lf",
+                       c1, c2, c3, c4, c5, &a1, &a2, &a3, &b1, &b2);
+
                 if (strncmp(c1, "ATOM", 4) == 0) {
                     main_vars->chrpos[3*i] = a1;
                     main_vars->chrpos[3*i + 1] = a2;

@@ -113,6 +113,7 @@ int Readin(TABIPBparm *parm, TABIPBvars *vars)
             fprintf(nsfp, "Check_duplicated_vertices = true\n");
             fprintf(nsfp, "Save_Status_map = false\n");
             fprintf(nsfp, "Save_PovRay = false\n");
+            fprintf(nsfp, "Max_ses_patches_per_auxiliary_grid_2d_cell = %d\n", 800);
 
             fclose(nsfp);
 
