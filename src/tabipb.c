@@ -418,6 +418,15 @@ static int s_OutputPotential(TABIPBvars *vars, TreeParticles *particles)
     //memcpy(vars->xvct, particles->xvct, 2 * vars->nface * sizeof(double));
     memcpy(vars->vert_ptl, particles->xvct, 2 * vars->nspt * sizeof(double));
 
+    for (i = 0; i < vars->nface; i++) {
+        vars->xvct[i] = 0.0;
+        for (j = 0; j < 3; j++) {
+            vars->xvct[i] += vars->vert_ptl[vars->face[j][i]-1];
+        }
+        vars->xvct[i] /= 3.0;
+    }
+
+
     //for (i = 0; i < vars->nspt; i++) {
     //    tot_length = 0.0;
     //    for (j = 0; j < ind_vert[nface_vert - 1][i]; j++) {
@@ -443,13 +452,15 @@ static int s_OutputPotential(TABIPBvars *vars, TreeParticles *particles)
     //for (i = 0; i < 2 * vars->nface; i++)
     //    vars->xvct[i] *= para_temp;
 
-    for (i = 0; i < 2 * vars->nspt; i++)
+    for (i = 0; i < 2 * vars->nspt; i++) {
         vars->vert_ptl[i] *= para_temp;
+        vars->xvct[i] *= para_temp;
+    }
 
-    //vars->max_xvct = MaxVal(vars->xvct, vars->nface);
-    //vars->min_xvct = MinVal(vars->xvct, vars->nface);
-    //vars->max_der_xvct = MaxVal(vars->xvct + vars->nface, vars->nface);
-    //vars->min_der_xvct = MinVal(vars->xvct + vars->nface, vars->nface);
+    vars->max_xvct = MaxVal(vars->xvct, vars->nface);
+    vars->min_xvct = MinVal(vars->xvct, vars->nface);
+    vars->max_der_xvct = MaxVal(vars->xvct + vars->nface, vars->nface);
+    vars->min_der_xvct = MinVal(vars->xvct + vars->nface, vars->nface);
 
     vars->max_vert_ptl = MaxVal(vars->vert_ptl, vars->nspt);
     vars->min_vert_ptl = MinVal(vars->vert_ptl, vars->nspt);
