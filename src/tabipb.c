@@ -420,10 +420,13 @@ static int s_OutputPotential(TABIPBvars *vars, TreeParticles *particles)
 
     for (i = 0; i < vars->nface; i++) {
         vars->xvct[i] = 0.0;
+        vars->xvct[vars->nface + i] = 0.0;
         for (j = 0; j < 3; j++) {
             vars->xvct[i] += vars->vert_ptl[vars->face[j][i]-1];
+            vars->xvct[vars->nface + i] += vars->vert_ptl[vars->nspt + vars->face[j][i]-1];
         }
         vars->xvct[i] /= 3.0;
+        vars->xvct[vars->nface + i] /= 3.0;
     }
 
 
@@ -449,13 +452,11 @@ static int s_OutputPotential(TABIPBvars *vars, TreeParticles *particles)
     //    vars->vert_ptl[i + vars->nspt] /= tot_length;
     //}
 
-    //for (i = 0; i < 2 * vars->nface; i++)
-    //    vars->xvct[i] *= para_temp;
-
-    for (i = 0; i < 2 * vars->nspt; i++) {
-        vars->vert_ptl[i] *= para_temp;
+    for (i = 0; i < 2 * vars->nface; i++)
         vars->xvct[i] *= para_temp;
-    }
+
+    for (i = 0; i < 2 * vars->nspt; i++)
+        vars->vert_ptl[i] *= para_temp;
 
     vars->max_xvct = MaxVal(vars->xvct, vars->nface);
     vars->min_xvct = MinVal(vars->xvct, vars->nface);
