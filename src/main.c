@@ -57,11 +57,8 @@ int main(int argc, char **argv)
   /* main reads the input file, writes xyzr file for msms and sets up position,
      radius and charges */
 
-    FILE *fp, *wfp;
-    char c[256], name[256], list_mol[2][3][256];
-    char c1[120], c2[120], c3[120], c4[10], c5[10];
-    double a1, a2, a3, b1, b2;
-    int ierr, i, j, num_mol;
+    char name[256], list_mol[2][3][256];
+    int ierr, j, num_mol;
     double cpu_time;
     int rank, num_procs;
     
@@ -347,10 +344,9 @@ static int s_BroadcastParms(TABIPBparm *main_parm, int *num_mol,
 static int s_SetupXYZRFile(TABIPBparm *parm)
 {
     FILE *fp, *wfp;
-    char c[256], fname_tp[256];
-    char c1[120], c2[120], c3[120], c4[10], c5[10];
+    char c[256], c1[120], c2[120], c3[120], c4[10], c5[10];
     double a1, a2, a3, b1, b2;
-    int i, ierr, rank = 0;
+    int ierr, rank = 0;
 
 #ifdef MPI_ENABLED
     ierr = MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -433,8 +429,7 @@ static int s_SetupAtomicVars(TABIPBparm *parm, TABIPBvars *vars)
 {
 
     FILE *fp;
-    char c[256], fname_tp[256], list_mol[2][3][256];
-    char c1[120], c2[120], c3[120], c4[10], c5[10];
+    char c[256], c1[120], c2[120], c3[120], c4[10], c5[10];
     double a1, a2, a3, b1, b2;
     int i, ierr, rank = 0;
 

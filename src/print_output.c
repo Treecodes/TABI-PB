@@ -83,7 +83,7 @@ int OutputDAT(char name[256], TABIPBvars *vars)
 /********************************************************/
 int OutputVTK(char name[256], TABIPBvars *vars)
 {
-    char c1[20], fname[256], nspt_str[20], nface_str[20], nface4_str[20];
+    char fname[256], nspt_str[20], nface_str[20], nface4_str[20];
     int i;
     
     sprintf(nspt_str, "%d", vars->nspt);

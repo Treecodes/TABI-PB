@@ -125,10 +125,8 @@ static int s_ConstructTreeParticles(TABIPBvars *vars, TreeParticles *particles)
 {
 /* function to construct particles used by tree */
 
-    int i, j, k, ierr;
-    int idx[3];
-    double sum = 0.0, v0_norm;
-    double r[3][3];
+    int i, j, k, ierr, idx[3];
+    double r[3][3], sum = 0.0;
     
     int rank = 0, num_procs = 1;
     
@@ -377,8 +375,8 @@ static double s_ComputeCoulombEnergy(TABIPBparm *parm, TABIPBvars *vars)
 /********************************************************/
 static int s_OutputPotential(TABIPBvars *vars, TreeParticles *particles)
 {
-    int i, j, k;
-    double tot_length, loc_length, aa[3], dot_aa, para_temp;
+    int i, j;
+    double para_temp;
 
     para_temp = UNITS_COEFF * 4 * PI;
     
