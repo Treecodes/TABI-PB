@@ -2,7 +2,7 @@
 * FILE NAME: readin.c                                                     *
 *                                                                         *
 * PURPOSE: meshes surface with msms or NanoShaper and reads in surface    *
-*          data, called by tabipb routine                                 *
+*          data                                                           *
 *                                                                         *
 * AUTHORS: Leighton Wilson, University of Michigan, Ann Arbor, MI         *
 *          Jiahui Chen, Southern Methodist University, Dallas, TX         *
@@ -164,6 +164,7 @@ int Readin(TABIPBparm *parm, TABIPBvars *vars)
     vars->natm = parm->number_of_lines;    //natm is number of lines in .xyzr
     make_matrix(vars->vert, 3, vars->nspt);
     make_matrix(vars->snrm, 3, vars->nspt);
+    make_vector(vars->vert_ptl, 2 * vars->nspt);
 
     if (rank == 0) {
         for (i = 0; i <= vars->nspt-1; i++) {

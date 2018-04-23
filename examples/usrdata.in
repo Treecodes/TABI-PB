@@ -1,4 +1,5 @@
 mol         1aie.pqr
+mesh        NanoShaper SES
 sdens       1 
 srad        1.4
 pdie        1
@@ -8,5 +9,3 @@ temp        300
 tree_order  3
 tree_n0     500
 tree_mac    0.8
-mesh        NanoShaper SES
-outdata     VTK

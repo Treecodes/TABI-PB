@@ -33,7 +33,6 @@
 #endif
 
 #include "tabipb.h"
-#include "readin.h"
 #include "treecode_tabipb_interface.h"
 #include "run_gmres.h"
 #include "utilities.h"
@@ -78,9 +77,6 @@ int TABIPB(TABIPBparm *parm, TABIPBvars *vars) {
     parm->eps = parm->epsw/parm->epsp;
     parm->kappa2 = BULK_COEFF * parm->bulk_strength / parm->epsw / parm->temp;
     parm->kappa = sqrt(parm->kappa2);
-
-    /* generate surface meshes from .xyzr and save in TABIPBvars */
-    Readin(parm, vars);
     
     /*set up the particles struct used by treecode */
     s_ConstructTreeParticles(vars, particles);
@@ -391,7 +387,6 @@ static int s_OutputPotential(TABIPBvars *vars, TreeParticles *particles)
     
     
     //make_matrix(ind_vert, nface_vert, vars->nspt);
-    make_vector(vars->vert_ptl, 2 * vars->nspt);
     
     //for (i = 0; i < nface_vert; i++) {
     //    for (j = 0; j < vars->nspt; j++) {

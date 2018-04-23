@@ -22,6 +22,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include "readin.h"
 #include "tabipb.h"
 #include "print_output.h"
 
@@ -43,15 +44,17 @@ int apbs2tabipb_(TABIPBparm *parm, TABIPBvars *vars)
                 vars->chrpos[3*i + 2], vars->atmrad[i]);
     }
     fclose(wfp);
-
+    
+    ierr = Readin(parm, vars);
+    
     ierr = TABIPB(parm, vars);
 
     ierr = OutputPrint(vars);
     
     if (parm->output_datafile == 1) {
-        ierr = OutputDAT(parm, vars);
+        ierr = OutputDAT("tabipb_output", vars);
     } else if (parm->output_datafile == 2) {
-        ierr = OutputVTK(parm, vars);
+        ierr = OutputVTK("tabipb_output", vars);
     }
 
     return 0;

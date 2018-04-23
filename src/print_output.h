@@ -26,9 +26,9 @@
 
 #include "TABIPBstruct.h"
 
-int OutputPrint(TABIPBvars *vars);
-int OutputDAT(TABIPBparm *parm, TABIPBvars *vars);
-int OutputVTK(TABIPBparm *parm, TABIPBvars *vars);
+int OutputPrint(char name[256], TABIPBvars *vars);
+int OutputDAT(char name[256], TABIPBvars *vars);
+int OutputVTK(char name[256], TABIPBvars *vars);
 int OutputCSV(TABIPBparm *parm, TABIPBvars *vars, double cpu_time);
 
 #endif /* H_PRINT_OUTPUT_H */
