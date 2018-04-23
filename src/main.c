@@ -46,8 +46,8 @@ static int s_BroadcastParms(TABIPBparm *parm, int *num_mol,
 static int s_SetupXYZRFile(TABIPBparm *main_parm);
 static int s_SetupAtomicVars(TABIPBparm *parm, TABIPBvars *vars);
 
-static int s_InitializeRun(int *rank, int *num_procs, TABIPBparm **parm, TABIPBvars ***vars,
-                           int *argc, char ***argv);
+static int s_InitializeRun(int *argc, int *rank, int *num_procs,
+                           TABIPBparm **parm, TABIPBvars ***vars);
 static int s_FinalizeRun(TABIPBparm **parm, TABIPBvars ***vars, int num_mol);
 static int s_FreeTABIPBvars(TABIPBvars **vars);
 
@@ -74,9 +74,10 @@ int main(int argc, char **argv)
 
 /********************************************************/
 
-    //Initialize variables and MPI
+    //Initialize variables
+    ierr = s_InitializeRun(&argc, &rank, &num_procs, &main_parm, &main_vars);
+    
     //Read input file and broadcast to all processes
-    ierr = s_InitializeRun(&rank, &num_procs, &main_parm, &main_vars, &argc, &argv);
     ierr = s_ReadInputFile(argv, main_parm, &num_mol, list_mol);
     ierr = s_BroadcastParms(main_parm, &num_mol, list_mol);
 
@@ -97,7 +98,7 @@ int main(int argc, char **argv)
 
         clock_t cpu_begin = clock();
 
-        /* generate surface meshes from .xyzr and save in TABIPBvars */
+        /* generate surface meshes from .xyzr and save in main_vars */
         /* run TABIPB */
         ierr = Readin(main_parm, main_vars[j]);
         ierr = TABIPB(main_parm, main_vars[j]);
@@ -105,35 +106,33 @@ int main(int argc, char **argv)
         clock_t cpu_end = clock();
         cpu_time = (double)(cpu_end - cpu_begin) / CLOCKS_PER_SEC;
 
-        if (main_parm->output_datafile == 3) {
+        if (rank == 0 && main_parm->output_datafile == 3) {
             ierr = OutputCSV(main_parm, main_vars[j], cpu_time);
         }
     }
     
-    for (j = 0; j < num_mol; j++) {
+    if (rank == 0) {
+        for (j = 0; j < num_mol; j++) {
     
-        sprintf(name, "tabipb_run_%d", j+1);
+            sprintf(name, "tabipb_run_%d", j+1);
         
-        ierr = OutputPrint(name, main_vars[j]);
+            ierr = OutputPrint(name, main_vars[j]);
     
-        if (main_parm->output_datafile == 1) {
-            ierr = OutputDAT(name, main_vars[j]);
+            if (main_parm->output_datafile == 1) {
+                ierr = OutputDAT(name, main_vars[j]);
             
-        } else if (main_parm->output_datafile == 2) {
-            ierr = OutputVTK(name, main_vars[j]);
+            } else if (main_parm->output_datafile == 2) {
+                ierr = OutputVTK(name, main_vars[j]);
+            }
         }
     }
 
     ierr = s_FinalizeRun(&main_parm, &main_vars, num_mol);
     
-    printf("We're finalizing now on rank %d\n", rank);
-    
 #ifdef MPI_ENABLED
     ierr = MPI_Finalize();
 #endif
-    
-    printf("We're done finalizing on rank %d\n", rank);
-    
+
     return 0;
 }
 
@@ -389,8 +388,8 @@ static int s_SetupXYZRFile(TABIPBparm *parm)
 
 
 
-static int s_InitializeRun(int *rank, int *num_procs, TABIPBparm **parm, TABIPBvars ***vars,
-                           int *argc, char ***argv)
+static int s_InitializeRun(int *argc, int *rank, int *num_procs,
+                           TABIPBparm **parm, TABIPBvars ***vars)
 {
     int ierr;
     

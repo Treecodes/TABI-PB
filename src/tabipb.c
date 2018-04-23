@@ -377,40 +377,11 @@ static double s_ComputeCoulombEnergy(TABIPBparm *parm, TABIPBvars *vars)
 /********************************************************/
 static int s_OutputPotential(TABIPBvars *vars, TreeParticles *particles)
 {
-    int i, j, k, nface_vert;
+    int i, j, k;
     double tot_length, loc_length, aa[3], dot_aa, para_temp;
-    int **ind_vert;
 
-    nface_vert = 15; /* one vertex could have been involved
-                        in at most 11 triangles, so 15 is safe */
     para_temp = UNITS_COEFF * 4 * PI;
     
-    
-    //make_matrix(ind_vert, nface_vert, vars->nspt);
-    
-    //for (i = 0; i < nface_vert; i++) {
-    //    for (j = 0; j < vars->nspt; j++) {
-    //        ind_vert[i][j] = 0;
-    //    }
-    //}
-    //
-    //for (i = 0; i < 2 * vars->nspt; i++) {
-    //    vars->vert_ptl[i] = 0.0;
-    //}
-    //
-    //for (i = 0; i < vars->nface; i++) {
-    //    for (j = 0; j < 3; j++) {
-    //        for (k = 0; k < nface_vert - 1; k++) {
-    //            if (ind_vert[k][vars->face[j][i] - 1] == 0) {
-    //                ind_vert[k][vars->face[j][i] - 1] = i + 1;
-    //                ind_vert[nface_vert - 1][vars->face[j][i] - 1] += 1;
-    //                break;
-    //            }
-    //        }
-    //    }
-    //}
-
-    //memcpy(vars->xvct, particles->xvct, 2 * vars->nface * sizeof(double));
     memcpy(vars->vert_ptl, particles->xvct, 2 * vars->nspt * sizeof(double));
 
     for (i = 0; i < vars->nface; i++) {
@@ -423,29 +394,6 @@ static int s_OutputPotential(TABIPBvars *vars, TreeParticles *particles)
         vars->xvct[i] /= 3.0;
         vars->xvct[vars->nface + i] /= 3.0;
     }
-
-
-    //for (i = 0; i < vars->nspt; i++) {
-    //    tot_length = 0.0;
-    //    for (j = 0; j < ind_vert[nface_vert - 1][i]; j++) {
-      /* distance between vertices and centroid */
-    //        aa[0] = particles->position[0][ind_vert[j][i]-1]
-    //              - vars->vert[0][i];
-    //        aa[1] = particles->position[1][ind_vert[j][i]-1]
-    //              - vars->vert[1][i];
-    //        aa[2] = particles->position[2][ind_vert[j][i]-1]
-    //              - vars->vert[2][i];
-    //        dot_aa = aa[0]*aa[0] + aa[1]*aa[1] + aa[2]*aa[2];
-    //        loc_length = sqrt(dot_aa);
-    //
-    //        vars->vert_ptl[i] += 1.0/loc_length*vars->xvct[ind_vert[j][i]-1];
-    //        vars->vert_ptl[i + vars->nspt] += 1.0 / loc_length
-    //                              * vars->xvct[ind_vert[j][i]+vars->nface-1];
-    //        tot_length += 1.0/loc_length;
-    //    }
-    //    vars->vert_ptl[i] /= tot_length;
-    //    vars->vert_ptl[i + vars->nspt] /= tot_length;
-    //}
 
     for (i = 0; i < 2 * vars->nface; i++)
         vars->xvct[i] *= para_temp;
@@ -462,8 +410,6 @@ static int s_OutputPotential(TABIPBvars *vars, TreeParticles *particles)
     vars->min_vert_ptl = MinVal(vars->vert_ptl, vars->nspt);
     vars->max_der_vert_ptl = MaxVal(vars->vert_ptl + vars->nspt, vars->nspt);
     vars->min_der_vert_ptl = MinVal(vars->vert_ptl + vars->nspt, vars->nspt);
-
-    //free_matrix(ind_vert);
 
     return 0;
 }
