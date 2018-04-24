@@ -14,15 +14,6 @@
 *          Weihua Geng, Southern Methodist University, Dallas, TX         *
 *          Robery Krasny, University of Michigan, Ann Arbor, MI           *
 *                                                                         *
-* DEVELOPMENT HISTORY:                                                    *
-*                                                                         *
-* Date        Author            Description Of Change                     *
-* ----        ------            ---------------------                     *
-* 01/11/2018  Leighton Wilson   Removed unnecessary MSMS information      *
-* 07/14/2016  Jiahui Chen       Added Sphinx support                      *
-* 06/30/2016  Jiahui Chen       Rebuilt wrapper architecture              *
-* 06/23/2016  Leighton Wilson   Added NanoShaper support                  *
-*                                                                         *
 **************************************************************************/
 
 #ifndef H_TABIPB_STRUCT_H
@@ -30,12 +21,17 @@
 
 typedef struct sTABIPBparm {
 
-   /* molecule ID */
+    /* mesh program directory */
     char fpath[256];
+    
+    /* pqr file location */
     char fname[256];
+    
+    /* mesh settings */
     double density;
     double probe_radius;
 
+    /* physical parameters */
     double temp;
     double epsp;
     double epsw;
@@ -46,19 +42,20 @@ typedef struct sTABIPBparm {
     double kappa;
     double kappa2;
 
-   /* treecode_parm */
+   /* treecode parameters */
     int order;
     int maxparnode;
     double theta;
 
-   /* 0 msms, 1 NanoShaper SES, 2 NanoShaper Skin */
+   /* mesh program: 0 = msms, 1 = NanoShaper SES, 2 = NanoShaper Skin */
     int mesh_flag;
 
    /* number of atoms */
     int number_of_lines;
 
-   /* output of potential data: 1 output vtk */
-    int output_datafile;
+   /* output of potential data */
+   /* char 1: DAT, char 2: VTK, char 3: CSV */
+    char output_datafile[3];
 
 } TABIPBparm;
 

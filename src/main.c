@@ -46,6 +46,9 @@ static int s_BroadcastParms(TABIPBparm *parm, int *num_mol,
 static int s_SetupXYZRFile(TABIPBparm *main_parm);
 static int s_SetupAtomicVars(TABIPBparm *parm, TABIPBvars *vars);
 
+static int s_ConstructInteractVars(TABIPBvars **vars);
+static int s_ComputeInteractions(TABIPBvars **vars);
+
 static int s_InitializeRun(int *argc, int *rank, int *num_procs,
                            TABIPBparm **parm, TABIPBvars ***vars);
 static int s_FinalizeRun(TABIPBparm **parm, TABIPBvars ***vars, int num_mol);
@@ -103,23 +106,82 @@ int main(int argc, char **argv)
         clock_t cpu_end = clock();
         cpu_time = (double)(cpu_end - cpu_begin) / CLOCKS_PER_SEC;
 
-        if (rank == 0 && main_parm->output_datafile == 3) {
+        if (rank == 0 && main_parm->output_datafile[2] == '1') {
             ierr = OutputCSV(main_parm, main_vars[j], cpu_time);
         }
     }
     
+    //compute interaction energy if there are two molecules
+    if (num_mol > 1) {
+    
+        num_mol++;
+        main_vars[2] = malloc(sizeof(TABIPBvars));
+        
+        sprintf(main_parm->fname, "%s + %s", list_mol[0][0], list_mol[1][0]);
+        main_parm->number_of_lines = main_vars[0]->natm + main_vars[1]->natm;
+        main_parm->mesh_flag = -1;
+        main_parm->density = -1;
+        
+        //generate vars struct for interaction
+        ierr = s_ConstructInteractVars(main_vars);
+        
+        clock_t cpu_begin = clock();
+        
+        //run TABIPB
+        ierr = TABIPB(main_parm, main_vars[2]);
+        
+        clock_t cpu_end = clock();
+        cpu_time = (double)(cpu_end - cpu_begin) / CLOCKS_PER_SEC;
+        
+        if (rank == 0 && main_parm->output_datafile[2] == '1') {
+            ierr = OutputCSV(main_parm, main_vars[2], cpu_time);
+        }
+    }
+    
+    //print output files
     if (rank == 0) {
+    
         for (j = 0; j < num_mol; j++) {
     
             sprintf(name, "tabipb_run_%d", j+1);
         
             ierr = OutputPrint(name, main_vars[j]);
     
-            if (main_parm->output_datafile == 1) {
+            if (main_parm->output_datafile[0] == '1') {
                 ierr = OutputDAT(name, main_vars[j]);
             
-            } else if (main_parm->output_datafile == 2) {
+            } else if (main_parm->output_datafile[1] == '1') {
                 ierr = OutputVTK(name, main_vars[j]);
+            }
+        }
+        
+        if (num_mol == 3) {
+        
+            printf("\n\n*** OUTPUT FOR INTERACTION ENERGIES ***\n");
+            printf("\nSolvation energy of interaction = %f kJ/mol",
+                   main_vars[2]->soleng - main_vars[1]->soleng
+                 - main_vars[0]->soleng);
+            printf("\nFree energy of interaction = %f kJ/mol\n\n",
+                   main_vars[2]->soleng - main_vars[1]->soleng
+                 - main_vars[0]->soleng
+                 + main_vars[2]->couleng - main_vars[1]->couleng
+                 - main_vars[0] ->couleng);
+            
+            if (main_parm->output_datafile[0] == '1'
+             || main_parm->output_datafile[1] == '1') {
+                ierr = s_ComputeInteractions(main_vars);
+            
+                for (j = 0; j < 2; j++) {
+                
+                    sprintf(name, "interaction_diff_%d", j+1);
+                
+                    if (main_parm->output_datafile[0] == '1') {
+                        ierr = OutputDAT(name, main_vars[j]);
+            
+                    } else if (main_parm->output_datafile[1] == '1') {
+                        ierr = OutputVTK(name, main_vars[j]);
+                    }
+                }
             }
         }
     }
@@ -147,7 +209,9 @@ static int s_ReadInputFile(char **argv, TABIPBparm *main_parm,
 #endif
     
     *num_mol = 0;
-    main_parm->output_datafile = 0;
+    main_parm->output_datafile[0] = '0';
+    main_parm->output_datafile[1] = '0';
+    main_parm->output_datafile[2] = '0';
     
     if (rank == 0) {
         fp = fopen(argv[1], "r");
@@ -267,13 +331,13 @@ static int s_ReadInputFile(char **argv, TABIPBparm *main_parm,
                 
             } else if (strcmp(c1, "outdata") == 0) {
                 if (strcmp(c2, "dat") == 0 || strcmp(c2, "DAT") == 0) {
-                    main_parm->output_datafile = 1;
+                    main_parm->output_datafile[0] = '1';
                 
                 } else if (strcmp(c2, "vtk") == 0 || strcmp(c2, "VTK") == 0) {
-                    main_parm->output_datafile = 2;
+                    main_parm->output_datafile[1] = '1';
 
                 } else if (strcmp(c2, "csv") == 0 || strcmp(c2, "CSV") == 0) {
-                    main_parm->output_datafile = 3;
+                    main_parm->output_datafile[2] = '1';
                 }
             }
         }
@@ -312,25 +376,26 @@ static int s_BroadcastParms(TABIPBparm *main_parm, int *num_mol,
 {
 #ifdef MPI_ENABLED
     int ierr;
-    int nitems = 5;
-    int blocklengths[5] = {512, 9, 2, 1, 3};
-    MPI_Datatype types[5] = {MPI_CHAR, MPI_DOUBLE, MPI_INT,
-                             MPI_DOUBLE, MPI_INT};
+    int nitems = 6;
+    int blocklengths[6] = {512, 9, 2, 1, 2, 3};
+    MPI_Datatype types[6] = {MPI_CHAR, MPI_DOUBLE, MPI_INT,
+                             MPI_DOUBLE, MPI_INT, MPI_CHAR};
     MPI_Datatype mpi_tabipbparm_type;
-    MPI_Aint offsets[5];
+    MPI_Aint offsets[6];
 
     offsets[0] = offsetof(TABIPBparm, fpath);
     offsets[1] = offsetof(TABIPBparm, density);
     offsets[2] = offsetof(TABIPBparm, order);
     offsets[3] = offsetof(TABIPBparm, theta);
     offsets[4] = offsetof(TABIPBparm, mesh_flag);
+    offsets[5] = offsetof(TABIPBparm, output_datafile);
 
     MPI_Type_create_struct(nitems, blocklengths, offsets, types,
                            &mpi_tabipbparm_type);
     MPI_Type_commit(&mpi_tabipbparm_type);
 
     MPI_Bcast(main_parm, 1, mpi_tabipbparm_type, 0, MPI_COMM_WORLD);
-    MPI_Bcast(list_mol, 10*256, MPI_CHAR, 0, MPI_COMM_WORLD);
+    MPI_Bcast(list_mol, 2*3*256, MPI_CHAR, 0, MPI_COMM_WORLD);
     MPI_Bcast(num_mol, 1, MPI_INT, 0, MPI_COMM_WORLD);
     
     ierr = MPI_Type_free(&mpi_tabipbparm_type);
@@ -468,6 +533,139 @@ static int s_SetupAtomicVars(TABIPBparm *parm, TABIPBvars *vars)
     MPI_Bcast(vars->atmchr, vars->natm, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     MPI_Bcast(vars->atmrad, vars->natm, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 #endif
+
+    return 0;
+}
+
+
+
+static int s_ConstructInteractVars(TABIPBvars **vars)
+{
+    int i;
+    
+    vars[2]->natm = vars[0]->natm + vars[1]->natm;
+    vars[2]->nspt = vars[0]->nspt + vars[1]->nspt;
+    vars[2]->nface = vars[0]->nface + vars[1]->nface;
+    
+    make_vector(vars[2]->chrpos, 3 * vars[2]->natm);
+    make_vector(vars[2]->atmchr, vars[2]->natm);
+    make_vector(vars[2]->atmrad, vars[2]->natm);
+
+    make_matrix(vars[2]->vert, 3, vars[2]->nspt);
+    make_matrix(vars[2]->snrm, 3, vars[2]->nspt);
+    make_vector(vars[2]->vert_ptl, 2 * vars[2]->nspt);
+
+    make_matrix(vars[2]->face, 3, vars[2]->nface);
+    make_vector(vars[2]->xvct, 2 * vars[2]->nface);
+    
+    
+    memcpy(vars[2]->chrpos,
+           vars[0]->chrpos, 3 * vars[0]->natm * sizeof(double));
+    memcpy(&(vars[2]->chrpos[3 * vars[0]->natm]),
+           vars[1]->chrpos, 3 * vars[1]->natm * sizeof(double));
+    
+    memcpy(vars[2]->atmchr,
+           vars[0]->atmchr, vars[0]->natm * sizeof(double));
+    memcpy(&(vars[2]->atmchr[vars[0]->natm]),
+           vars[1]->atmchr, vars[1]->natm * sizeof(double));
+    
+    memcpy(vars[2]->atmrad,
+           vars[0]->atmrad, vars[0]->natm * sizeof(double));
+    memcpy(&(vars[2]->atmrad[vars[0]->natm]),
+           vars[1]->atmrad, vars[1]->natm * sizeof(double));
+    
+    
+    memcpy(vars[2]->vert[0],
+           vars[0]->vert[0], vars[0]->nspt * sizeof(double));
+    memcpy(&(vars[2]->vert[0][vars[0]->nspt]),
+           vars[1]->vert[0], vars[1]->nspt * sizeof(double));
+    
+    memcpy(vars[2]->vert[1],
+           vars[0]->vert[1], vars[0]->nspt * sizeof(double));
+    memcpy(&(vars[2]->vert[1][vars[0]->nspt]),
+           vars[1]->vert[1], vars[1]->nspt * sizeof(double));
+    
+    memcpy(vars[2]->vert[2],
+           vars[0]->vert[2], vars[0]->nspt * sizeof(double));
+    memcpy(&(vars[2]->vert[2][vars[0]->nspt]),
+           vars[1]->vert[2], vars[1]->nspt * sizeof(double));
+    
+    
+    memcpy(vars[2]->snrm[0],
+           vars[0]->snrm[0], vars[0]->nspt * sizeof(double));
+    memcpy(&(vars[2]->snrm[0][vars[0]->nspt]),
+           vars[1]->snrm[0], vars[1]->nspt * sizeof(double));
+    
+    memcpy(vars[2]->snrm[1],
+           vars[0]->snrm[1], vars[0]->nspt * sizeof(double));
+    memcpy(&(vars[2]->snrm[1][vars[0]->nspt]),
+           vars[1]->snrm[1], vars[1]->nspt * sizeof(double));
+    
+    memcpy(vars[2]->snrm[2],
+           vars[0]->snrm[2], vars[0]->nspt * sizeof(double));
+    memcpy(&(vars[2]->snrm[2][vars[0]->nspt]),
+           vars[1]->snrm[2], vars[1]->nspt * sizeof(double));
+
+
+    memcpy(vars[2]->face[0],
+           vars[0]->face[0], vars[0]->nface * sizeof(int));
+    memcpy(&(vars[2]->face[0][vars[0]->nface]),
+           vars[1]->face[0], vars[1]->nface * sizeof(int));
+
+    memcpy(vars[2]->face[1],
+           vars[0]->face[1], vars[0]->nface * sizeof(int));
+    memcpy(&(vars[2]->face[1][vars[0]->nface]),
+           vars[1]->face[1], vars[1]->nface * sizeof(int));
+    
+    memcpy(vars[2]->face[2],
+           vars[0]->face[2], vars[0]->nface * sizeof(int));
+    memcpy(&(vars[2]->face[2][vars[0]->nface]),
+           vars[1]->face[2], vars[1]->nface * sizeof(int));
+
+
+    for (i = vars[0]->nface; i < vars[2]->nface; i++) {
+        vars[2]->face[0][i] += vars[0]->nspt;
+        vars[2]->face[1][i] += vars[0]->nspt;
+        vars[2]->face[2][i] += vars[0]->nspt;
+    }
+
+    return 0;
+}
+
+
+static int s_ComputeInteractions(TABIPBvars **vars)
+{
+    int i;
+    
+    for (i = 0; i < vars[0]->nspt; i++) {
+        vars[0]->vert_ptl[i] = vars[2]->vert_ptl[i] - vars[0]->vert_ptl[i];
+        vars[0]->vert_ptl[vars[0]->nspt + i] =
+              vars[2]->vert_ptl[vars[2]->nspt + i]
+            - vars[0]->vert_ptl[vars[0]->nspt + i];
+    }
+
+    for (i = 0; i < vars[0]->nface; i++) {
+        vars[0]->xvct[i] = vars[2]->xvct[i] - vars[0]->xvct[i];
+        vars[0]->xvct[vars[0]->nface + i] =
+              vars[2]->xvct[vars[2]->nface + i]
+            - vars[0]->xvct[vars[0]->nface + i];
+    }
+    
+    for (i = 0; i < vars[1]->nspt; i++) {
+        vars[1]->vert_ptl[i] = vars[2]->vert_ptl[i]
+                             - vars[1]->vert_ptl[vars[0]->nspt + i];
+        vars[1]->vert_ptl[vars[1]->nspt + i] =
+              vars[2]->vert_ptl[vars[2]->nspt + vars[0]->nspt + i]
+            - vars[1]->vert_ptl[vars[1]->nspt + i];
+    }
+    
+    for (i = 0; i < vars[1]->nface; i++) {
+        vars[1]->xvct[i] = vars[2]->xvct[i]
+                             - vars[1]->xvct[vars[0]->nface + i];
+        vars[1]->xvct[vars[1]->nface + i] =
+              vars[2]->xvct[vars[2]->nface + vars[0]->nface + i]
+            - vars[1]->xvct[vars[1]->nface + i];
+    }
 
     return 0;
 }
