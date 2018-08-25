@@ -29,11 +29,11 @@
 #include "particle_struct.h"
 
 /********************************************************/
-int RunGMRES(int nface, double *source_term, double *xvct)
+int RunGMRES(int nface, double *source_term, double *xvct, long int *iter)
 {
     int i;
     static long int info;
-    long int RESTRT, ldw, ldh, iter, N;
+    long int RESTRT, ldw, ldh, N;
     double resid;
     double *work, *h;
 
@@ -47,7 +47,7 @@ int RunGMRES(int nface, double *source_term, double *xvct)
     N = 2 * nface;
     ldw = N;
     ldh = RESTRT + 1;
-    iter = 100;
+    *iter = 100;
     resid = 1e-4;
 
     make_vector(work, ldw * (RESTRT + 4));
@@ -56,7 +56,7 @@ int RunGMRES(int nface, double *source_term, double *xvct)
     for (i = 0; i < N; i++) xvct[i] = 0.0;
     
     gmres_(&N, source_term, xvct, &RESTRT, work, &ldw, 
-           h, &ldh, &iter, &resid, &matvec, psolve, &info);
+           h, &ldh, iter, &resid, &matvec, psolve, &info);
 
     free_vector(work);
     free_vector(h);

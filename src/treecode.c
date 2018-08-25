@@ -28,6 +28,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef MPI_ENABLED
+    #include <mpi.h>
+#endif
+
 #include "treecode_tabipb_interface.h"
 #include "treecode_gmres_interface.h"
 #include "utilities.h"
@@ -115,23 +119,31 @@ static int s_RemoveNode(TreeNode *p);
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**********************************************************/
-int TreecodeInitialization(TABIPBparm *parm, int nface,
-                           TreeParticles *particles)
+int TreecodeInitialization(TABIPBparm *parm, TreeParticles *particles)
 {
     /* set up variables used in treecode */
     /* local variables*/
-    int level, i, j, k, mm, nn, idx, ijk[3];
+    int level, i, j, k, mm, nn, idx, ijk[3], ierr;
 
     /* variables needed for reorder */
     double *temp_area, *temp_source;
     double **temp_normal;
     
     double xyz_limits[6];
+    
+    int rank = 0, num_procs = 1;
+    
+#ifdef MPI_ENABLED
+    ierr = MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    ierr = MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
+#endif
 
-    printf("\nInitializing treecode...\n");
+    if (rank == 0) {
+        printf("\nInitializing treecode...\n");
+    }
 
     /* setting variables global to file */
-    s_numpars = nface;
+    s_numpars = particles->num_particles;
     s_order = parm->order;
     s_max_per_leaf = parm->maxparnode;
     theta = parm->theta;
@@ -231,8 +243,10 @@ int TreecodeInitialization(TABIPBparm *parm, int nface,
 
     s_CreateTree(s_tree_root, 0, s_numpars-1, xyz_limits, level);
     
-    printf("Created tree for %d particles with max %d per node.\n\n",
-           s_numpars, s_max_per_leaf);
+    if (rank == 0) {
+        printf("Created tree for %d particles with max %d per node.\n\n",
+               s_numpars, s_max_per_leaf);
+    }
 
     memcpy(temp_normal[0], s_particle_normal[0], s_numpars*sizeof(double));
     memcpy(temp_normal[1], s_particle_normal[1], s_numpars*sizeof(double));
@@ -265,9 +279,16 @@ int TreecodeInitialization(TABIPBparm *parm, int nface,
 int TreecodeFinalization(TreeParticles *particles)
 {
 
-    int i;
+    int i, ierr;
     double *temp_area, *temp_source, *temp_xvct;
     double **temp_normal, **temp_position;
+    
+    int rank = 0, num_procs = 1;
+    
+#ifdef MPI_ENABLED
+    ierr = MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    ierr = MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
+#endif
 
 /***********reorder particles*************/
 
@@ -331,7 +352,9 @@ int TreecodeFinalization(TreeParticles *particles)
     free_vector(s_order_arr);
 /*****************************************/
 
-    printf("\nTABIPB tree structure has been deallocated.\n\n");
+    if (rank == 0) {
+        printf("\nTABIPB tree structure has been deallocated.\n\n");
+    }
 
     return 0;
 }
@@ -348,12 +371,24 @@ int matvec(double *alpha, double *tpoten_old, double *beta, double *tpoten) {
 /* the main part of treecode */
 /* in gmres *matvec(Alpha, X, Beta, Y) where y := alpha*A*x + beta*y */
   /* local variables */
-    int i, j, k;
+    int i, j, k, ii, ierr;
     double temp_x, temp_area;
     double temp_charge[2][16];
     double pre1, pre2;
     double peng[2], peng_old[2];
+    double *tpoten_temp;
     
+    int particles_per_process;
+    int rank = 0, num_procs = 1;
+    
+#ifdef MPI_ENABLED
+    ierr = MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    ierr = MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
+#endif
+    
+    make_vector(tpoten_temp, 2 * s_numpars);
+    memcpy(tpoten_temp, tpoten, 2 * s_numpars * sizeof(double));
+    memset(tpoten, 0, 2 * s_numpars * sizeof(double));
     
     s_ComputePBKernel(tpoten_old);
     
@@ -362,42 +397,55 @@ int matvec(double *alpha, double *tpoten_old, double *beta, double *tpoten) {
 
     pre1 = 0.50 * (1.0 + s_eps);
     pre2 = 0.50 * (1.0 + 1.0/s_eps);
+    
+    particles_per_process = s_numpars / num_procs;
 
-    for (i = 0; i < s_numpars; i++) {
-        peng[0] = 0.0;
-        peng[1] = 0.0;
-        peng_old[0] = tpoten_old[i];
-        peng_old[1] = tpoten_old[i+s_numpars];
-        s_target_position[0] = s_particle_position[0][i];
-        s_target_position[1] = s_particle_position[1][i];
-        s_target_position[2] = s_particle_position[2][i];
-        s_target_normal[0] = s_particle_normal[0][i];
-        s_target_normal[1] = s_particle_normal[1][i];
-        s_target_normal[2] = s_particle_normal[2][i];
+    for (ii = 0; ii <= particles_per_process; ii++) {
+        i = ii * num_procs + rank;
         
-        for (j = 0; j < 2; j++) {
-            for (k = 0; k < 16; k++) {
-                temp_charge[j][k] = s_target_charge[i][j][k];
+        if (i < s_numpars) {
+            peng[0] = 0.0;
+            peng[1] = 0.0;
+            peng_old[0] = tpoten_old[i];
+            peng_old[1] = tpoten_old[i+s_numpars];
+            s_target_position[0] = s_particle_position[0][i];
+            s_target_position[1] = s_particle_position[1][i];
+            s_target_position[2] = s_particle_position[2][i];
+            s_target_normal[0] = s_particle_normal[0][i];
+            s_target_normal[1] = s_particle_normal[1][i];
+            s_target_normal[2] = s_particle_normal[2][i];
+        
+            for (j = 0; j < 2; j++) {
+                for (k = 0; k < 16; k++) {
+                    temp_charge[j][k] = s_target_charge[i][j][k];
+                }
             }
-        }
 
       /* remove the singularity */
-        temp_x = s_particle_position[0][i];
-        temp_area = s_particle_area[i];
-        s_particle_position[0][i] += 100.123456789;
-        s_particle_area[i] = 0.0;
+            temp_x = s_particle_position[0][i];
+            temp_area = s_particle_area[i];
+            s_particle_position[0][i] += 100.123456789;
+            s_particle_area[i] = 0.0;
 
-    /* start to use Treecode */
-        s_RunTreecode(s_tree_root, tpoten_old, temp_charge, peng);
+      /* start to use Treecode */
+            s_RunTreecode(s_tree_root, tpoten_old, temp_charge, peng);
 
-        tpoten[i] = tpoten[i] * *beta
-                  + (pre1 * peng_old[0] - peng[0]) * *alpha;
-        tpoten[s_numpars+i] = tpoten[s_numpars+i] * *beta
-                            + (pre2 * peng_old[1] - peng[1]) * *alpha;
+            tpoten[i] = tpoten_temp[i] * *beta
+                      + (pre1 * peng_old[0] - peng[0]) * *alpha;
+            tpoten[s_numpars+i] = tpoten_temp[s_numpars+i] * *beta
+                                + (pre2 * peng_old[1] - peng[1]) * *alpha;
 
-        s_particle_position[0][i] = temp_x;
-        s_particle_area[i] = temp_area;
+            s_particle_position[0][i] = temp_x;
+            s_particle_area[i] = temp_area;
+        }
     }
+    
+#ifdef MPI_ENABLED
+    ierr = MPI_Allreduce(MPI_IN_PLACE, tpoten, 2 * s_numpars,
+                         MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+#endif
+
+    free_vector(tpoten_temp);
 
     s_RemoveMoments(s_tree_root);
 
@@ -438,10 +486,19 @@ static int s_Setup(double xyz_limits[6])
  Also, global variables are set and the Cartesian coordinates of
  the smallest box containing the particles is determined. The particle
  positions and charges are copied so that they can be restored upon exit.*/
-    int i, j, k;
+    int i, j, k, ierr;
     double t1;
 
-    printf("Setting up arrays for Taylor expansion...\n");
+    int rank = 0, num_procs = 1;
+    
+#ifdef MPI_ENABLED
+    ierr = MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    ierr = MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
+#endif
+    
+    if (rank == 0) {
+        printf("Setting up arrays for Taylor expansion...\n");
+    }
     
 /* allocate global Taylor expansion variables */
   

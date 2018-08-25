@@ -26,6 +26,10 @@
 #include "f2c.h"
 #include <stdio.h>
 
+#ifdef MPI_ENABLED
+    #include <mpi.h>
+#endif
+
 /* Table of constant values */
 
 static integer c__1 = 1;
@@ -166,6 +170,12 @@ int gmres_(n, b, x, restrt, work, ldw, h, ldh, iter, resid, matvec, psolve,
     extern /* Subroutine */ int update_();
     extern /* Subroutine */ int basis_(); 
     static doublereal tol;
+    
+    int rank = 0, ierr;
+    
+#ifdef MPI_ENABLED
+    ierr = MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+#endif
 
     /* Parameter adjustments */
 		   
@@ -326,7 +336,9 @@ L30:
 	    ldw, &h[i + cs * h_dim1], &h[i + sn * h_dim1]);
     *resid = (d__1 = work[i + 1 + s * work_dim1], abs(d__1)) / bnrm2;
 
-	printf("iteration no. = %ld, error = %e\n", *iter, *resid);
+    if (rank == 0) {
+	    printf("iteration no. = %ld, error = %e\n", *iter, *resid);
+    }
 
     if (*resid <= tol) {
 	update_(&i, n, &x[1], &h[h_offset], ldh, &work[y * work_dim1 + 1], &

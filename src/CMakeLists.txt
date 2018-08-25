@@ -79,9 +79,13 @@ endif()
 ################################################
 ##### Make a directory for the executable
 ################################################
+option(ENABLE_MPI_BUILD "build MPI parallel" OFF)
 file(MAKE_DIRECTORY build/bin)
 
-include_directories("/src")
+  if(ENABLE_MPI_BUILD)
+    find_package(MPI REQUIRED)
+    add_definitions(-DMPI_ENABLED)
+  endif()
 
   # FFLAGS depend on the compiler
   get_filename_component (C_COMPILER_NAME ${CMAKE_C_COMPILER} NAME)
@@ -90,7 +94,7 @@ include_directories("/src")
     set (CMAKE_C_FLAGS_RELEASE "-c -O3")
     set (CMAKE_C_FLAGS_DEBUG   "")
   elseif (C_COMPILER_NAME MATCHES "icc.*")
-    set (CMAKE_C_FLAGS_RELEASE "-fast -c")
+    set (CMAKE_C_FLAGS_RELEASE "-O3 -c")
     set (CMAKE_C_FLAGS_DEBUG   "")
   else ()
     set (CMAKE_C_FLAGS_RELEASE "-c -O3")
@@ -99,21 +103,17 @@ include_directories("/src")
     message ("C compiler: " ${C_COMPILER_NAME})
   endif ()
 
-# C code for standalone; don't include pp_timer.c in Windows version
-  if(WIN32)
-        add_executable(tabipb
-          src/main.c src/tabipb.c src/gmres.c src/daxpy.c src/dcopy.c src/ddot.c
-          src/dgemv.c src/dnrm2.c src/drot.c src/drotg.c src/dscal.c src/d_sign.c
-          src/dtrsv.c src/partition.c src/run_gmres.c src/readin.c src/treecode.c
-          src/print_output.c src/utilities.c src/xmalloc.c)
-  else()
-        add_executable(tabipb
-          src/main.c src/tabipb.c src/gmres.c src/daxpy.c src/dcopy.c src/ddot.c
-          src/dgemv.c src/dnrm2.c src/drot.c src/drotg.c src/dscal.c src/d_sign.c
-          src/dtrsv.c src/partition.c src/run_gmres.c src/readin.c src/treecode.c
-          src/print_output.c src/utilities.c src/xmalloc.c src/pp_timer.c)
-  endif()
+# C code for standalone
+  add_executable(tabipb
+    main.c tabipb.c gmres.c daxpy.c dcopy.c ddot.c
+    dgemv.c dnrm2.c drot.c drotg.c dscal.c d_sign.c
+    dtrsv.c partition.c run_gmres.c readin.c treecode.c
+    print_output.c utilities.c xmalloc.c)
 
+  if(ENABLE_MPI_BUILD)
+    target_link_libraries(tabipb ${MPI_C_LIBRARIES})
+    include_directories(SYSTEM ${MPI_C_INCLUDE_PATH})
+  endif()
 
 ################################################
 ###### APBS components

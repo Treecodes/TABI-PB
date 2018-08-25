@@ -10,18 +10,12 @@
 *          Weihua Geng, Southern Methodist University, Dallas, TX         *
 *          Robery Krasny, University of Michigan, Ann Arbor, MI           *
 *                                                                         *
-* DEVELOPMENT HISTORY:                                                    *
-*                                                                         *
-* Date        Author            Description Of Change                     *
-* ----        ------            ---------------------                     *
-* 01/12/2018  Leighton Wilson   Modified included headers                 *
-* 06/29/2016  Jiahui Chen       Rebuilding wrapper architecture           *
-*                                                                         *
 **************************************************************************/
 
 #include <stdlib.h>
 #include <stdio.h>
 
+#include "readin.h"
 #include "tabipb.h"
 #include "print_output.h"
 
@@ -35,7 +29,6 @@ int apbs2tabipb_(TABIPBparm *parm, TABIPBvars *vars)
     char fname_tp[256];
     int i, ierr;
 
-    //sprintf(fname_tp, "%s%s.xyzr",parm->fpath, parm->fname);
     sprintf(fname_tp, "molecule.xyzr");
     wfp = fopen(fname_tp,"w");
     for (i = 0; i < parm->number_of_lines; i++) {
@@ -43,15 +36,19 @@ int apbs2tabipb_(TABIPBparm *parm, TABIPBvars *vars)
                 vars->chrpos[3*i + 2], vars->atmrad[i]);
     }
     fclose(wfp);
-
+    
+    ierr = Readin(parm, vars);
+    
     ierr = TABIPB(parm, vars);
 
     ierr = OutputPrint(vars);
     
-    if (parm->output_datafile == 1) {
-        ierr = OutputDAT(parm, vars);
-    } else if (parm->output_datafile == 2) {
-        ierr = OutputVTK(parm, vars);
+    /* REMEMBER: These comparisons are now characters */
+    
+    if (parm->output_datafile[0] == '1') {
+        ierr = OutputDAT("tabipb_output", vars);
+    } else if (parm->output_datafile[1] == '1') {
+        ierr = OutputVTK("tabipb_output", vars);
     }
 
     return 0;
