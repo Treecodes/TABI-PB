@@ -52,6 +52,12 @@ typedef struct sTABIPBparm {
 
    /* number of atoms */
     int number_of_lines;
+    
+   /* preconditioning */
+    int precond;
+   
+   /* nonpolar energy */
+    int nonpolar;
 
    /* output of potential data */
    /* char 1: DAT, char 2: VTK, char 3: CSV */

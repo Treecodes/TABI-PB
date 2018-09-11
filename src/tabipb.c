@@ -53,8 +53,6 @@ int TABIPB(TABIPBparm *parm, TABIPBvars *vars) {
     int rank = 0, num_procs = 1, ierr;
     long int iter;
     
-    int precond = 0;
-    
 #ifdef MPI_ENABLED
     ierr = MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     ierr = MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
@@ -77,8 +75,8 @@ int TABIPB(TABIPBparm *parm, TABIPBvars *vars) {
     TreecodeInitialization(parm, particles);
 
     /* call GMRES */
-    RunGMRES(particles->num_particles, precond,
-             particles->source_term, particles->xvct, &iter);
+    RunGMRES(particles->num_particles, particles->source_term,
+             parm->precond, particles->xvct, &iter);
 
     /* compute solvation and coulombic energy */
     energy_solvation = s_ComputeSolvationEnergy(parm, vars, particles);

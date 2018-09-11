@@ -23,8 +23,8 @@
 #include "particle_struct.h"
 
 /********************************************************/
-int RunGMRES(int nface, int precond,
-             double *source_term, double *xvct, long int *iter)
+int RunGMRES(int nface, double *source_term, int precond,
+             double *xvct, long int *iter)
 {
     int i;
     static long int info;

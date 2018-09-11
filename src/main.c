@@ -11,16 +11,6 @@
 *          Weihua Geng, Southern Methodist University, Dallas, TX         *
 *          Robery Krasny, University of Michigan, Ann Arbor, MI           *
 *                                                                         *
-* DEVELOPMENT HISTORY:                                                    *
-*                                                                         *
-* Date        Author            Description Of Change                     *
-* ----        ------            ---------------------                     *
-* 02/10/2018  Leighton Wilson   Adding support for multiple PQRs          *
-* 01/14/2018  Leighton Wilson   Fixing read in of PQRs                    *
-* 07/14/2016  Jiahui Chen       Added Sphinx support                      *
-* 06/30/2016  Jiahui Chen       Rebuilt wrapper architecture              *
-* 06/23/2016  Leighton Wilson   Added NanoShaper support                  *
-*                                                                         *
 **************************************************************************/
 
 #include <stdlib.h>
@@ -339,6 +329,15 @@ static int s_ReadInputFile(char **argv, TABIPBparm *main_parm,
                 } else if (strcmp(c2, "csv") == 0 || strcmp(c2, "CSV") == 0) {
                     main_parm->output_datafile[2] = '1';
                 }
+            } else if (strcmp(c1, "precondition") == 0) {
+                main_parm->precond = 0;
+                if (strcmp(c2, "on") == 0 || strcmp(c2, "ON") == 0) {
+                    main_parm->precond = 1;
+                } else if (strcmp(c2, "off") == 0 || strcmp(c2, "OFF") == 0) {
+                    main_parm->precond = 0;
+                }
+            } else if (strcmp(c1, "nonpolar") == 0) {
+                main_parm->nonpolar = 0;
             }
         }
 
@@ -377,7 +376,7 @@ static int s_BroadcastParms(TABIPBparm *main_parm, int *num_mol,
 #ifdef MPI_ENABLED
     int ierr;
     int nitems = 6;
-    int blocklengths[6] = {512, 9, 2, 1, 2, 3};
+    int blocklengths[6] = {512, 9, 2, 1, 4, 3};
     MPI_Datatype types[6] = {MPI_CHAR, MPI_DOUBLE, MPI_INT,
                              MPI_DOUBLE, MPI_INT, MPI_CHAR};
     MPI_Datatype mpi_tabipbparm_type;
