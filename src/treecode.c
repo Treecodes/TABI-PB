@@ -104,6 +104,12 @@ static int s_ComputeDirectPB(int ibeg, int iend, double *tpoten_old,
 static int s_RemoveMoments(TreeNode *p);
 static int s_RemoveNode(TreeNode *p);
 
+/* internal preconditioning functions */
+static void leaflength(TreeNode *p, int idx, int *nrow);
+static int lu_decomp(double **A, int N, int *ipiv);
+static void lu_solve(double **matrixA, int N, int *ipiv, double *rhs);
+
+
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* TreecodeInitialization and Finalization are used by       * * * */
@@ -359,7 +365,8 @@ int TreecodeFinalization(TreeParticles *particles)
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**********************************************************/
-int matvec(double *alpha, double *tpoten_old, double *beta, double *tpoten) {
+int matvec(double *alpha, double *tpoten_old, double *beta, double *tpoten)
+{
 /* the main part of treecode */
 /* in gmres *matvec(Alpha, X, Beta, Y) where y := alpha*A*x + beta*y */
   /* local variables */
@@ -447,7 +454,8 @@ int matvec(double *alpha, double *tpoten_old, double *beta, double *tpoten) {
 
 
 /**********************************************************/
-int psolve(double *z, double *r) {
+int psolve(double *z, double *r)
+{
 /* r as original while z as scaled */
 
         int i;
@@ -465,6 +473,168 @@ int psolve(double *z, double *r) {
 /**********************************************************/
 
 
+/**********************************************************/
+int psolve_precond(double *z, double *r)
+{
+/* r as original while z as scaled */
+
+  int i, j, idx = 0, nrow = 0, nrow2, ibeg = 0, iend = 0;
+  int *ipiv, inc;
+  double **matrixA, *rhs;
+  double L1, L2, L3, L4, area;
+  double tp[3], tq[3], sp[3], sq[3];
+  double r_s[3], rs, irs, sumrs;
+  double G0, kappa_rs, exp_kappa_rs, Gk;
+  double cos_theta, cos_theta0, tp1, tp2, dot_tqsq;
+  double G10, G20, G1, G2, G3, G4;
+  double pre1, pre2;
+
+  pre1 = 0.5*(1.0+s_eps);
+  pre2 = 0.5*(1.0+1.0/s_eps);
+  
+  make_matrix(matrixA, 2*s_max_per_leaf, 2*s_max_per_leaf);
+  make_vector(ipiv, 2*s_max_per_leaf);
+  make_vector(rhs, 2*s_max_per_leaf);
+
+  while ( idx < s_numpars ) {
+    leaflength(s_tree_root, idx, &nrow);
+    nrow2 = nrow*2;
+    ibeg  = idx;
+    iend  = idx + nrow - 1;
+
+    for ( i = ibeg; i <= iend; i++ ) {
+      tp[0] = s_particle_position[0][i];
+      tp[1] = s_particle_position[1][i];
+      tp[2] = s_particle_position[2][i];
+      tq[0] = s_particle_normal[0][i];
+      tq[1] = s_particle_normal[1][i];
+      tq[2] = s_particle_normal[2][i];
+
+      for ( j = ibeg; j < i; j++ ) {
+        sp[0] = s_particle_position[0][j];
+        sp[1] = s_particle_position[1][j];
+        sp[2] = s_particle_position[2][j];
+        sq[0] = s_particle_normal[0][j];
+        sq[1] = s_particle_normal[1][j];
+        sq[2] = s_particle_normal[2][j];
+
+        r_s[0] = sp[0]-tp[0]; r_s[1] = sp[1]-tp[1]; r_s[2] = sp[2]-tp[2];
+        sumrs = r_s[0]*r_s[0] + r_s[1]*r_s[1] + r_s[2]*r_s[2];
+        rs = sqrt(sumrs);
+        irs = 1.0/rs;
+        G0 = ONE_OVER_4PI * irs;
+        kappa_rs = s_kappa * rs;
+        exp_kappa_rs = exp(-kappa_rs);
+        Gk = exp_kappa_rs * G0;
+
+        cos_theta  = (sq[0]*r_s[0] + sq[1]*r_s[1] + sq[2]*r_s[2]) * irs;
+        cos_theta0 = (tq[0]*r_s[0] + tq[1]*r_s[1] + tq[2]*r_s[2]) * irs;
+        tp1 = G0* irs;
+        tp2 = (1.0 + kappa_rs) * exp_kappa_rs;
+
+        G10 = cos_theta0 * tp1;
+        G20 = tp2 * G10;
+
+        G1 = cos_theta * tp1;
+        G2 = tp2 * G1;
+
+        dot_tqsq = sq[0]*tq[0] + sq[1]*tq[1] + sq[2]*tq[2];
+        G3 = (dot_tqsq - 3.0*cos_theta0*cos_theta) * irs*tp1;
+        G4 = tp2*G3 - s_kappa2*cos_theta0*cos_theta*Gk;
+
+        area = s_particle_area[j];
+
+        L1 = G1 - s_eps*G2;
+        L2 = G0 - Gk;
+        L3 = G4 - G3;
+        L4 = G10 - G20/s_eps;
+
+        matrixA[i-ibeg][j-ibeg] = -L1*area;
+        matrixA[i-ibeg][j+nrow-ibeg] = -L2*area;
+        matrixA[i+nrow-ibeg][j-ibeg] = -L3*area;
+        matrixA[i+nrow-ibeg][j+nrow-ibeg] = -L4*area;
+      }
+
+      matrixA[i-ibeg][i-ibeg] = pre1;
+      matrixA[i+nrow-ibeg][i+nrow-ibeg] = pre2;
+
+      for ( j = i+1; j <= iend; j++ ) {
+        sp[0] = s_particle_position[0][j];
+        sp[1] = s_particle_position[1][j];
+        sp[2] = s_particle_position[2][j];
+        sq[0] = s_particle_normal[0][j];
+        sq[1] = s_particle_normal[1][j];
+        sq[2] = s_particle_normal[2][j];
+
+        r_s[0] = sp[0]-tp[0]; r_s[1] = sp[1]-tp[1]; r_s[2] = sp[2]-tp[2];
+        sumrs = r_s[0]*r_s[0] + r_s[1]*r_s[1] + r_s[2]*r_s[2];
+        rs = sqrt(sumrs);
+        irs = 1.0/rs;
+        G0 = ONE_OVER_4PI * irs;
+        kappa_rs = s_kappa * rs;
+        exp_kappa_rs = exp(-kappa_rs);
+        Gk = exp_kappa_rs * G0;
+
+        cos_theta  = (sq[0]*r_s[0] + sq[1]*r_s[1] + sq[2]*r_s[2]) * irs;
+        cos_theta0 = (tq[0]*r_s[0] + tq[1]*r_s[1] + tq[2]*r_s[2]) * irs;
+        tp1 = G0* irs;
+        tp2 = (1.0 + kappa_rs) * exp_kappa_rs;
+
+        G10 = cos_theta0 * tp1;
+        G20 = tp2 * G10;
+
+        G1 = cos_theta * tp1;
+        G2 = tp2 * G1;
+
+        dot_tqsq = sq[0]*tq[0] + sq[1]*tq[1] + sq[2]*tq[2];
+        G3 = (dot_tqsq - 3.0*cos_theta0*cos_theta) * irs*tp1;
+        G4 = tp2*G3 - s_kappa2*cos_theta0*cos_theta*Gk;
+
+        area = s_particle_area[j];
+
+        L1 = G1 - s_eps*G2;
+        L2 = G0 - Gk;
+        L3 = G4 - G3;
+        L4 = G10 - G20/s_eps;
+
+        matrixA[i-ibeg][j-ibeg] = -L1*area;
+        matrixA[i-ibeg][j+nrow-ibeg] = -L2*area;
+        matrixA[i+nrow-ibeg][j-ibeg] = -L3*area;
+        matrixA[i+nrow-ibeg][j+nrow-ibeg] = -L4*area;
+      }
+    }
+
+    for ( i = 0; i < nrow; i++) {
+      rhs[i] = r[i+ibeg];
+      rhs[i+nrow] = r[i+ibeg+s_numpars];
+    }
+
+    inc = lu_decomp( matrixA, nrow2, ipiv );
+    lu_solve( matrixA, nrow2, ipiv, rhs );
+
+    for ( i = 0; i < nrow; i++) {
+      z[i+ibeg] = rhs[i];
+      z[i+ibeg+s_numpars] = rhs[i+nrow];
+    }
+
+    //printf("%d %d %d %d\n", idx, ibeg, iend, nrow);
+
+    idx += nrow;
+
+  }
+  free_matrix(matrixA);
+  free_vector(rhs);
+  free_vector(ipiv);
+  
+  //for ( i = 0; i < s_numpars; i++) {
+  //  z[i] = r[i]/pre1;
+  //  z[i+s_numpars] = r[i+s_numpars]/pre2;
+  //}
+  
+  return 0;
+}
+/**********************************************************/
+
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* PRIVATE internal treecode functions                       * * * */
@@ -473,11 +643,11 @@ int psolve(double *z, double *r) {
 /**********************************************************/
 static int s_Setup(double xyz_limits[6])
 {
-
 /* SETUP allocates and initializes arrays needed for the Taylor expansion.
  Also, global variables are set and the Cartesian coordinates of
  the smallest box containing the particles is determined. The particle
  positions and charges are copied so that they can be restored upon exit.*/
+ 
     int i, j, k, ierr;
     double t1;
 
@@ -917,6 +1087,7 @@ static int s_RunTreecode(TreeNode *p, double *tpoten_old, double tempq[2][16],
                          double peng[2])
 {
   /* RunTreecode() is self recurrence function */
+  
     double tx, ty, tz, dist, pengchild[2];
     int i;
 
@@ -1027,6 +1198,7 @@ static int s_ComputeCoeffs(TreeNode *p)
 /* COMP_TCOEFF computes the Taylor coefficients of the potential
  * using a recurrence formula. The center of the expansion is the
  * midpoint of the node P. s_target_position and s_order are globally defined. */
+ 
     double dx, dy, dz, ddx, ddy, ddz, dist, fac;
     double kappax, kappay, kappaz;
     int i, j, k;
@@ -1494,6 +1666,7 @@ static int s_RemoveMoments(TreeNode *p)
 {
 /* REMOVE_NODE recursively removes each node from the
  * tree and deallocates its memory for MS array if it exits. */
+ 
     int i;
 
     if (p->exist_ms == 1) {
@@ -1516,6 +1689,7 @@ static int s_RemoveNode(TreeNode *p)
 {
 /* REMOVE_NODE recursively removes each node from the
  * tree and deallocates its memory for MS array if it exits. */
+ 
     int i;
 
     if (p->num_children > 0) {
@@ -1528,4 +1702,110 @@ static int s_RemoveNode(TreeNode *p)
 
     return 0;
 }
-/********************************************************/
+/**********************************************************/
+
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/* PRIVATE functions for preconditioning                     * * * */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+/**********************************************************/
+static void leaflength(TreeNode *p, int idx, int *nrow)
+{
+/* find the leaf length */
+
+    if (idx == p->ibeg && p->num_children == 0) {
+        *nrow = p->numpar;
+    } else {
+        if (p->num_children != 0) {
+            for (int i = 0; i < p->num_children; i++)
+                leaflength(p->child[i], idx, nrow);
+        }
+     }
+
+}
+/**********************************************************/
+
+
+/**********************************************************/
+static int lu_decomp(double **A, int N, int *ipiv)
+{
+/* we're doing it this way because something is wrong with
+ * linking with CMake */
+ 
+  int i, j, k, imax;
+  double maxA, *ptr, absA, Tol = 1.0e-14;
+
+  for ( i = 0; i <= N; i++ )
+    ipiv[i] = i; // record pivoting number
+
+  for ( i = 0; i < N; i++ ) {
+    maxA = 0.0;
+    imax = i;
+    for (k = i; k < N; k++)
+      if ((absA = fabs(A[k][i])) > maxA) {
+        maxA = absA;
+        imax = k;
+      }
+
+    if (maxA < Tol) return 0; //failure, matrix is degenerate
+
+    if (imax != i) {
+      //pivoting P
+      j = ipiv[i];
+      ipiv[i] = ipiv[imax];
+      ipiv[imax] = j;
+
+      //pivoting rows of A
+      ptr = A[i];
+      A[i] = A[imax];
+      A[imax] = ptr;
+
+      //counting pivots starting from N (for determinant)
+      ipiv[N]++;
+    }
+
+    for (j = i + 1; j < N; j++) {
+      A[j][i] /= A[i][i];
+
+      for (k = i + 1; k < N; k++)
+        A[j][k] -= A[j][i] * A[i][k];
+    }
+  }
+
+  return 1;
+}
+/**********************************************************/
+
+
+/**********************************************************/
+static void lu_solve(double **matrixA, int N, int *ipiv, double *rhs)
+{
+  /* b will contain the solution */
+  
+  double *xtemp;
+
+  make_vector(xtemp, N);
+
+  for (int i = 0; i < N; i++) {
+    xtemp[i] = rhs[ipiv[i]];
+
+    for (int k = 0; k < i; k++)
+      xtemp[i] -= matrixA[i][k] * xtemp[k];
+  }
+
+  for (int i = N - 1; i >= 0; i--) {
+    for (int k = i + 1; k < N; k++)
+      xtemp[i] -= matrixA[i][k] * xtemp[k];
+
+    xtemp[i] = xtemp[i] / matrixA[i][i];
+  }
+
+  for (int i = 0; i < N; i++) {
+    rhs[i] = xtemp[i];
+  }
+  free_vector(xtemp);
+}
+/**********************************************************/
+
+

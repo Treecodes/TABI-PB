@@ -11,12 +11,6 @@
 *          Weihua Geng, Southern Methodist University, Dallas, TX         *
 *          Robery Krasny, University of Michigan, Ann Arbor, MI           *
 *                                                                         *
-* DEVELOPMENT HISTORY:                                                    *
-*                                                                         *
-* Date        Author            Description Of Change                     *
-* ----        ------            ---------------------                     *
-* 01/12/2018  Leighton Wilson   Created                                   *
-*                                                                         *
 **************************************************************************/
 
 #ifndef H_TREECODE_GMRES_INTERFACE_H
@@ -27,5 +21,7 @@ int matvec(double *alpha, double *tpoten_old,
            double *beta, double *tpoten);
 
 int psolve(double *z, double *r);
+
+int psolve_precond(double *z, double *r);
 
 #endif /* H_TREECODE_GMRES_INTERFACE_H */

@@ -10,17 +10,12 @@
 *          Weihua Geng, Southern Methodist University, Dallas, TX         *
 *          Robery Krasny, University of Michigan, Ann Arbor, MI           *
 *                                                                         *
-* DEVELOPMENT HISTORY:                                                    *
-*                                                                         *
-* Date        Author            Description Of Change                     *
-* ----        ------            ---------------------                     *
-* 01/12/2018  Leighton Wilson   Created                                   *
-*                                                                         *
 **************************************************************************/
 
 #ifndef H_RUN_GMRES_H
 #define H_RUN_GMRES_H
 
-int RunGMRES(int nface, double *source_term, double *xvct, long int *iter);
+int RunGMRES(int nface, int precond,
+             double *source_term, double *xvct, long int *iter);
 
 #endif /* H_RUN_GMRES_H */

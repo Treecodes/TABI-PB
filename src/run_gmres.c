@@ -11,12 +11,6 @@
 *          Weihua Geng, Southern Methodist University, Dallas, TX         *
 *          Robery Krasny, University of Michigan, Ann Arbor, MI           *
 *                                                                         *
-* DEVELOPMENT HISTORY:                                                    *
-*                                                                         *
-* Date        Author            Description Of Change                     *
-* ----        ------            ---------------------                     *
-* 01/11/2018  Leighton Wilson   Created, moved from tabipb routine        *
-*                                                                         *
 **************************************************************************/
 
 #include <math.h>
@@ -29,7 +23,8 @@
 #include "particle_struct.h"
 
 /********************************************************/
-int RunGMRES(int nface, double *source_term, double *xvct, long int *iter)
+int RunGMRES(int nface, int precond,
+             double *source_term, double *xvct, long int *iter)
 {
     int i;
     static long int info;
@@ -55,8 +50,13 @@ int RunGMRES(int nface, double *source_term, double *xvct, long int *iter)
     
     for (i = 0; i < N; i++) xvct[i] = 0.0;
     
-    gmres_(&N, source_term, xvct, &RESTRT, work, &ldw, 
-           h, &ldh, iter, &resid, &matvec, psolve, &info);
+    if (precond == 0) {
+        gmres_(&N, source_term, xvct, &RESTRT, work, &ldw,
+               h, &ldh, iter, &resid, &matvec, psolve, &info);
+    } else if (precond == 1) {
+        gmres_(&N, source_term, xvct, &RESTRT, work, &ldw,
+               h, &ldh, iter, &resid, &matvec, psolve_precond, &info);
+    }
 
     free_vector(work);
     free_vector(h);

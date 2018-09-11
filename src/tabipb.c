@@ -10,17 +10,6 @@
 *          Weihua Geng, Southern Methodist University, Dallas, TX         *
 *          Robery Krasny, University of Michigan, Ann Arbor, MI           *
 *                                                                         *
-* DEVELOPMENT HISTORY:                                                    *
-*                                                                         *
-* Date        Author            Description Of Change                     *
-* ----        ------            ---------------------                     *
-* 01/14/2018  Leighton Wilson   Rewriting interface and localizing        *
-*                               functions                                 *
-* 01/12/2018  Leighton Wilson   Creating GMRes interface                  *
-* 07/14/2016  Jiahui Chen       Building support for Sphinx               *
-* 06/20/2016  Jiahui Chen       Rebuilding wrapper architecture           *
-* 06/23/2016  Leighton Wilson   Rebuilding input to support NanoShaper    *
-*                                                                         *
 **************************************************************************/
 
 #include <stdio.h>
@@ -64,6 +53,8 @@ int TABIPB(TABIPBparm *parm, TABIPBvars *vars) {
     int rank = 0, num_procs = 1, ierr;
     long int iter;
     
+    int precond = 0;
+    
 #ifdef MPI_ENABLED
     ierr = MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     ierr = MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
@@ -86,7 +77,8 @@ int TABIPB(TABIPBparm *parm, TABIPBvars *vars) {
     TreecodeInitialization(parm, particles);
 
     /* call GMRES */
-    RunGMRES(particles->num_particles, particles->source_term, particles->xvct, &iter);
+    RunGMRES(particles->num_particles, precond,
+             particles->source_term, particles->xvct, &iter);
 
     /* compute solvation and coulombic energy */
     energy_solvation = s_ComputeSolvationEnergy(parm, vars, particles);
