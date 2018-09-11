@@ -13,14 +13,6 @@
 *          Weihua Geng, Southern Methodist University, Dallas, TX         *
 *          Robery Krasny, University of Michigan, Ann Arbor, MI           *
 *                                                                         *
-* DEVELOPMENT HISTORY:                                                    *
-*                                                                         *
-* Date        Author            Description Of Change                     *
-* ----        ------            ---------------------                     *
-* 01/14/2018  Leighton Wilson   Flattened moment arrays and simplified    *
-*                               orders                                    *
-* 01/11/2018  Leighton Wilson   Localized all global variables            *
-*                                                                         *
 **************************************************************************/
 
 #include <stdio.h>
@@ -1218,6 +1210,7 @@ static int s_ComputeCoeffs(TreeNode *p)
     for (k = 2; k < s_order-1; k++) {
         for (j = 2; j < s_order+1-k; j++) {
             for (i = 2; i < s_order+3-k-j; i++) {
+                /*
                 s_b[i+2][j+2][k+2] = s_cf1[i-1] * s_kappa * (dx * s_a[i+1][j+2][k+2]
                                                           - s_a[i][j+2][k+2]);
 
@@ -1229,6 +1222,30 @@ static int s_ComputeCoeffs(TreeNode *p)
                                                          - s_a[i+2][j+2][k]
                                  + s_cf1[i-1] * s_kappa * (dx * s_b[i+1][j+2][k+2]
                                                           - s_b[i][j+2][k+2]));
+                */
+
+                s_b[i+2][j+2][k+2] = s_cf1[i+j+k-1] * s_kappa 
+                                                    * (dx * s_a[i+1][j+2][k+2]
+                                                     + dy * s_a[i+2][j+1][k+2] 
+                                                     + dz * s_a[i+2][j+2][k+1] 
+                                                          - s_a[i][j+2][k+2]
+                                                          - s_a[i+2][j][k+2]
+                                                          - s_a[i+2][j+2][k]);
+
+                s_a[i+2][j+2][k+2] = fac
+                                   * (s_cf2[i+j+k-1] * (ddx * s_a[i+1][j+2][k+2]
+                                                      + ddy * s_a[i+2][j+1][k+2]
+                                                      + ddz * s_a[i+2][j+2][k+1])
+                                    - s_cf3[i+j+k-1] * (s_a[i][j+2][k+2]
+                                                      + s_a[i+2][j][k+2]
+                                                      + s_a[i+2][j+2][k])
+                                    + s_cf1[i+j+k-1] * s_kappa 
+                                                     * (dx * s_b[i+1][j+2][k+2]
+                                                     +  dy * s_b[i+2][j+1][k+2]
+                                                     +  dz * s_b[i+2][j+2][k+1]
+                                                           - s_b[i][j+2][k+2]
+                                                           - s_b[i+2][j][k+2]
+                                                           - s_b[i+2][j+2][k]));
             }
         }
     }
@@ -1370,6 +1387,9 @@ static int s_ComputeCoeffsCoulomb(TreeNode *p)
         for (j = 2; j < s_order+1-k; j++) {
             for (i = 2; i < s_order+3-k-j; i++) {
 
+
+
+                /* 
                 s_a[i+2][j+2][k+2] = fac
                                    * (ddx * s_cf2[i-1] * s_a[i+1][j+2][k+2]
                                                  + ddy * s_a[i+2][j+1][k+2]
@@ -1377,6 +1397,15 @@ static int s_ComputeCoeffsCoulomb(TreeNode *p)
                                           - s_cf3[i-1] * s_a[i][j+2][k+2]
                                                        - s_a[i+2][j][k+2]
                                                        - s_a[i+2][j+2][k]);
+                */
+
+                s_a[i+2][j+2][k+2] = fac
+                                   * (s_cf2[i+j+k-1] * (ddx * s_a[i+1][j+2][k+2]
+                                                      + ddy * s_a[i+2][j+1][k+2]
+                                                      + ddz * s_a[i+2][j+2][k+1])
+                                    - s_cf3[i+j+k-1] * (s_a[i][j+2][k+2]
+                                                      + s_a[i+2][j][k+2]
+                                                      + s_a[i+2][j+2][k]));
             }
         }
     }
