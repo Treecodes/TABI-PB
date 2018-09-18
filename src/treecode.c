@@ -1714,11 +1714,13 @@ static void leaflength(TreeNode *p, int idx, int *nrow)
 {
 /* find the leaf length */
 
+    int i;
+
     if (idx == p->ibeg && p->num_children == 0) {
         *nrow = p->numpar;
     } else {
         if (p->num_children != 0) {
-            for (int i = 0; i < p->num_children; i++)
+            for (i = 0; i < p->num_children; i++)
                 leaflength(p->child[i], idx, nrow);
         }
      }
@@ -1783,25 +1785,26 @@ static void lu_solve(double **matrixA, int N, int *ipiv, double *rhs)
 {
   /* b will contain the solution */
   
+  int i, k;
   double *xtemp;
 
   make_vector(xtemp, N);
 
-  for (int i = 0; i < N; i++) {
+  for (i = 0; i < N; i++) {
     xtemp[i] = rhs[ipiv[i]];
 
-    for (int k = 0; k < i; k++)
+    for (k = 0; k < i; k++)
       xtemp[i] -= matrixA[i][k] * xtemp[k];
   }
 
-  for (int i = N - 1; i >= 0; i--) {
-    for (int k = i + 1; k < N; k++)
+  for (i = N - 1; i >= 0; i--) {
+    for (k = i + 1; k < N; k++)
       xtemp[i] -= matrixA[i][k] * xtemp[k];
 
     xtemp[i] = xtemp[i] / matrixA[i][i];
   }
 
-  for (int i = 0; i < N; i++) {
+  for (i = 0; i < N; i++) {
     rhs[i] = xtemp[i];
   }
   free_vector(xtemp);
