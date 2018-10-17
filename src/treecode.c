@@ -20,6 +20,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <Accelerate/Accelerate.h>
+//#include <lapacke.h>
+
 #ifdef MPI_ENABLED
     #include <mpi.h>
 #endif
@@ -478,160 +481,178 @@ int psolve_precond(double *z, double *r)
 {
 /* r as original while z as scaled */
 
-  int i, j, idx = 0, nrow = 0, nrow2, ibeg = 0, iend = 0;
-  int *ipiv, inc;
-  double **matrixA, *rhs;
-  double L1, L2, L3, L4, area;
-  double tp[3], tq[3], sp[3], sq[3];
-  double r_s[3], rs, irs, sumrs;
-  double G0, kappa_rs, exp_kappa_rs, Gk;
-  double cos_theta, cos_theta0, tp1, tp2, dot_tqsq;
-  double G10, G20, G1, G2, G3, G4;
-  double pre1, pre2;
+    int i, j, idx = 0, nrow = 0, nrow2, ibeg = 0, iend = 0;
+    int *ipiv, inc, nrhs, info;
+    //double **matrixA;
+    double *columnMajorA, *rhs;
+    double L1, L2, L3, L4, area;
+    double tp[3], tq[3], sp[3], sq[3];
+    double r_s[3], rs, irs, sumrs;
+    double G0, kappa_rs, exp_kappa_rs, Gk;
+    double cos_theta, cos_theta0, tp1, tp2, dot_tqsq;
+    double G10, G20, G1, G2, G3, G4;
+    double pre1, pre2;
 
-  pre1 = 0.5*(1.0+s_eps);
-  pre2 = 0.5*(1.0+1.0/s_eps);
+    pre1 = 0.5*(1.0+s_eps);
+    pre2 = 0.5*(1.0+1.0/s_eps);
   
-  make_matrix(matrixA, 2*s_max_per_leaf, 2*s_max_per_leaf);
-  make_vector(ipiv, 2*s_max_per_leaf);
-  make_vector(rhs, 2*s_max_per_leaf);
+    //make_matrix(matrixA, 2*s_max_per_leaf, 2*s_max_per_leaf);
+    make_vector(columnMajorA, 4*s_max_per_leaf*s_max_per_leaf);
+    make_vector(ipiv, 2*s_max_per_leaf);
+    make_vector(rhs, 2*s_max_per_leaf);
 
-  while ( idx < s_numpars ) {
-    leaflength(s_tree_root, idx, &nrow);
-    nrow2 = nrow*2;
-    ibeg  = idx;
-    iend  = idx + nrow - 1;
+    while (idx < s_numpars) {
+        leaflength(s_tree_root, idx, &nrow);
+        nrow2 = nrow*2;
+        ibeg  = idx;
+        iend  = idx + nrow - 1;
 
-    for ( i = ibeg; i <= iend; i++ ) {
-      tp[0] = s_particle_position[0][i];
-      tp[1] = s_particle_position[1][i];
-      tp[2] = s_particle_position[2][i];
-      tq[0] = s_particle_normal[0][i];
-      tq[1] = s_particle_normal[1][i];
-      tq[2] = s_particle_normal[2][i];
+        memset(columnMajorA, 0, nrow2*nrow2*sizeof(double));
+        memset(ipiv, 0, nrow2*sizeof(int));
+        memset(rhs, 0, nrow2*sizeof(double));
 
-      for ( j = ibeg; j < i; j++ ) {
-        sp[0] = s_particle_position[0][j];
-        sp[1] = s_particle_position[1][j];
-        sp[2] = s_particle_position[2][j];
-        sq[0] = s_particle_normal[0][j];
-        sq[1] = s_particle_normal[1][j];
-        sq[2] = s_particle_normal[2][j];
+        for (i = ibeg; i <= iend; i++) {
+            tp[0] = s_particle_position[0][i];
+            tp[1] = s_particle_position[1][i];
+            tp[2] = s_particle_position[2][i];
+            tq[0] = s_particle_normal[0][i];
+            tq[1] = s_particle_normal[1][i];
+            tq[2] = s_particle_normal[2][i];
 
-        r_s[0] = sp[0]-tp[0]; r_s[1] = sp[1]-tp[1]; r_s[2] = sp[2]-tp[2];
-        sumrs = r_s[0]*r_s[0] + r_s[1]*r_s[1] + r_s[2]*r_s[2];
-        rs = sqrt(sumrs);
-        irs = 1.0/rs;
-        G0 = ONE_OVER_4PI * irs;
-        kappa_rs = s_kappa * rs;
-        exp_kappa_rs = exp(-kappa_rs);
-        Gk = exp_kappa_rs * G0;
+            for (j = ibeg; j < i; j++) {
+                sp[0] = s_particle_position[0][j];
+                sp[1] = s_particle_position[1][j];
+                sp[2] = s_particle_position[2][j];
+                sq[0] = s_particle_normal[0][j];
+                sq[1] = s_particle_normal[1][j];
+                sq[2] = s_particle_normal[2][j];
 
-        cos_theta  = (sq[0]*r_s[0] + sq[1]*r_s[1] + sq[2]*r_s[2]) * irs;
-        cos_theta0 = (tq[0]*r_s[0] + tq[1]*r_s[1] + tq[2]*r_s[2]) * irs;
-        tp1 = G0* irs;
-        tp2 = (1.0 + kappa_rs) * exp_kappa_rs;
+                r_s[0] = sp[0]-tp[0]; r_s[1] = sp[1]-tp[1]; r_s[2] = sp[2]-tp[2];
+                sumrs = r_s[0]*r_s[0] + r_s[1]*r_s[1] + r_s[2]*r_s[2];
+                rs = sqrt(sumrs);
+                irs = 1.0/rs;
+                G0 = ONE_OVER_4PI * irs;
+                kappa_rs = s_kappa * rs;
+                exp_kappa_rs = exp(-kappa_rs);
+                Gk = exp_kappa_rs * G0;
 
-        G10 = cos_theta0 * tp1;
-        G20 = tp2 * G10;
+                cos_theta  = (sq[0]*r_s[0] + sq[1]*r_s[1] + sq[2]*r_s[2]) * irs;
+                cos_theta0 = (tq[0]*r_s[0] + tq[1]*r_s[1] + tq[2]*r_s[2]) * irs;
+                tp1 = G0* irs;
+                tp2 = (1.0 + kappa_rs) * exp_kappa_rs;
 
-        G1 = cos_theta * tp1;
-        G2 = tp2 * G1;
+                G10 = cos_theta0 * tp1;
+                G20 = tp2 * G10;
 
-        dot_tqsq = sq[0]*tq[0] + sq[1]*tq[1] + sq[2]*tq[2];
-        G3 = (dot_tqsq - 3.0*cos_theta0*cos_theta) * irs*tp1;
-        G4 = tp2*G3 - s_kappa2*cos_theta0*cos_theta*Gk;
+                G1 = cos_theta * tp1;
+                G2 = tp2 * G1;
 
-        area = s_particle_area[j];
+                dot_tqsq = sq[0]*tq[0] + sq[1]*tq[1] + sq[2]*tq[2];
+                G3 = (dot_tqsq - 3.0*cos_theta0*cos_theta) * irs*tp1;
+                G4 = tp2*G3 - s_kappa2*cos_theta0*cos_theta*Gk;
 
-        L1 = G1 - s_eps*G2;
-        L2 = G0 - Gk;
-        L3 = G4 - G3;
-        L4 = G10 - G20/s_eps;
+                area = s_particle_area[j];
 
-        matrixA[i-ibeg][j-ibeg] = -L1*area;
-        matrixA[i-ibeg][j+nrow-ibeg] = -L2*area;
-        matrixA[i+nrow-ibeg][j-ibeg] = -L3*area;
-        matrixA[i+nrow-ibeg][j+nrow-ibeg] = -L4*area;
-      }
+                L1 = G1 - s_eps*G2;
+                L2 = G0 - Gk;
+                L3 = G4 - G3;
+                L4 = G10 - G20/s_eps;
 
-      matrixA[i-ibeg][i-ibeg] = pre1;
-      matrixA[i+nrow-ibeg][i+nrow-ibeg] = pre2;
+                //matrixA[i-ibeg][j-ibeg] = -L1*area;
+                //matrixA[i-ibeg][j+nrow-ibeg] = -L2*area;
+                //matrixA[i+nrow-ibeg][j-ibeg] = -L3*area;
+                //matrixA[i+nrow-ibeg][j+nrow-ibeg] = -L4*area;
+                columnMajorA[(j-ibeg)*nrow2 + i-ibeg] = -L1*area;
+                columnMajorA[(j+nrow-ibeg)*nrow2 + i-ibeg] = -L2*area;
+                columnMajorA[(j-ibeg)*nrow2 + i+nrow-ibeg] = -L3*area;
+                columnMajorA[(j+nrow-ibeg)*nrow2 + i+nrow-ibeg] = -L4*area;
+            }
 
-      for ( j = i+1; j <= iend; j++ ) {
-        sp[0] = s_particle_position[0][j];
-        sp[1] = s_particle_position[1][j];
-        sp[2] = s_particle_position[2][j];
-        sq[0] = s_particle_normal[0][j];
-        sq[1] = s_particle_normal[1][j];
-        sq[2] = s_particle_normal[2][j];
+            //matrixA[i-ibeg][i-ibeg] = pre1;
+            //matrixA[i+nrow-ibeg][i+nrow-ibeg] = pre2;
+            columnMajorA[(i-ibeg)*nrow2 + i-ibeg] = pre1;
+            columnMajorA[(i+nrow-ibeg)*nrow2 + i+nrow-ibeg] = pre2;
 
-        r_s[0] = sp[0]-tp[0]; r_s[1] = sp[1]-tp[1]; r_s[2] = sp[2]-tp[2];
-        sumrs = r_s[0]*r_s[0] + r_s[1]*r_s[1] + r_s[2]*r_s[2];
-        rs = sqrt(sumrs);
-        irs = 1.0/rs;
-        G0 = ONE_OVER_4PI * irs;
-        kappa_rs = s_kappa * rs;
-        exp_kappa_rs = exp(-kappa_rs);
-        Gk = exp_kappa_rs * G0;
+            for (j = i+1; j <= iend; j++) {
+                sp[0] = s_particle_position[0][j];
+                sp[1] = s_particle_position[1][j];
+                sp[2] = s_particle_position[2][j];
+                sq[0] = s_particle_normal[0][j];
+                sq[1] = s_particle_normal[1][j];
+                sq[2] = s_particle_normal[2][j];
 
-        cos_theta  = (sq[0]*r_s[0] + sq[1]*r_s[1] + sq[2]*r_s[2]) * irs;
-        cos_theta0 = (tq[0]*r_s[0] + tq[1]*r_s[1] + tq[2]*r_s[2]) * irs;
-        tp1 = G0* irs;
-        tp2 = (1.0 + kappa_rs) * exp_kappa_rs;
+                r_s[0] = sp[0]-tp[0]; r_s[1] = sp[1]-tp[1]; r_s[2] = sp[2]-tp[2];
+                sumrs = r_s[0]*r_s[0] + r_s[1]*r_s[1] + r_s[2]*r_s[2];
+                rs = sqrt(sumrs);
+                irs = 1.0/rs;
+                G0 = ONE_OVER_4PI * irs;
+                kappa_rs = s_kappa * rs;
+                exp_kappa_rs = exp(-kappa_rs);
+                Gk = exp_kappa_rs * G0;
 
-        G10 = cos_theta0 * tp1;
-        G20 = tp2 * G10;
+                cos_theta  = (sq[0]*r_s[0] + sq[1]*r_s[1] + sq[2]*r_s[2]) * irs;
+                cos_theta0 = (tq[0]*r_s[0] + tq[1]*r_s[1] + tq[2]*r_s[2]) * irs;
+                tp1 = G0 * irs;
+                tp2 = (1.0 + kappa_rs) * exp_kappa_rs;
 
-        G1 = cos_theta * tp1;
-        G2 = tp2 * G1;
+                G10 = cos_theta0 * tp1;
+                G20 = tp2 * G10;
 
-        dot_tqsq = sq[0]*tq[0] + sq[1]*tq[1] + sq[2]*tq[2];
-        G3 = (dot_tqsq - 3.0*cos_theta0*cos_theta) * irs*tp1;
-        G4 = tp2*G3 - s_kappa2*cos_theta0*cos_theta*Gk;
+                G1 = cos_theta * tp1;
+                G2 = tp2 * G1;
 
-        area = s_particle_area[j];
+                dot_tqsq = sq[0]*tq[0] + sq[1]*tq[1] + sq[2]*tq[2];
+                G3 = (dot_tqsq - 3.0*cos_theta0*cos_theta) * irs*tp1;
+                G4 = tp2*G3 - s_kappa2*cos_theta0*cos_theta*Gk;
 
-        L1 = G1 - s_eps*G2;
-        L2 = G0 - Gk;
-        L3 = G4 - G3;
-        L4 = G10 - G20/s_eps;
+                area = s_particle_area[j];
 
-        matrixA[i-ibeg][j-ibeg] = -L1*area;
-        matrixA[i-ibeg][j+nrow-ibeg] = -L2*area;
-        matrixA[i+nrow-ibeg][j-ibeg] = -L3*area;
-        matrixA[i+nrow-ibeg][j+nrow-ibeg] = -L4*area;
-      }
+                L1 = G1 - s_eps*G2;
+                L2 = G0 - Gk;
+                L3 = G4 - G3;
+                L4 = G10 - G20/s_eps;
+
+                //matrixA[i-ibeg][j-ibeg] = -L1*area;
+                //matrixA[i-ibeg][j+nrow-ibeg] = -L2*area;
+                //matrixA[i+nrow-ibeg][j-ibeg] = -L3*area;
+                //matrixA[i+nrow-ibeg][j+nrow-ibeg] = -L4*area;
+                columnMajorA[(j-ibeg)*nrow2 + i-ibeg] = -L1*area;
+                columnMajorA[(j+nrow-ibeg)*nrow2 + i-ibeg] = -L2*area;
+                columnMajorA[(j-ibeg)*nrow2 + i+nrow-ibeg] = -L3*area;
+                columnMajorA[(j+nrow-ibeg)*nrow2 + i+nrow-ibeg] = -L4*area;
+            }
+        }
+
+        for (i = 0; i < nrow; i++) {
+            rhs[i] = r[i+ibeg];
+            rhs[i+nrow] = r[i+ibeg+s_numpars];
+        }
+
+        // Jiahui's implementation of LU decomposition
+        //inc = lu_decomp(matrixA, nrow2, ipiv);
+        //lu_solve(matrixA, nrow2, ipiv, rhs);
+
+        // Apple Accelerate implementation of LAPACK LU decomposition
+        nrhs = 1;
+        dgesv_(&nrow2, &nrhs, columnMajorA, &nrow2, ipiv, rhs, &nrow2, &info);
+
+        // LAPACKE implementation of LAPACK LU decomposition
+        //LAPACKE_dgesv(LAPACK_COL_MAJOR, nrow2, 1, columnMajorA, nrow2, ipiv, rhs, nrow2);
+
+        for (i = 0; i < nrow; i++) {
+            z[i+ibeg] = rhs[i];
+            z[i+ibeg+s_numpars] = rhs[i+nrow];
+        }
+
+        idx += nrow;
     }
 
-    for ( i = 0; i < nrow; i++) {
-      rhs[i] = r[i+ibeg];
-      rhs[i+nrow] = r[i+ibeg+s_numpars];
-    }
-
-    inc = lu_decomp( matrixA, nrow2, ipiv );
-    lu_solve( matrixA, nrow2, ipiv, rhs );
-
-    for ( i = 0; i < nrow; i++) {
-      z[i+ibeg] = rhs[i];
-      z[i+ibeg+s_numpars] = rhs[i+nrow];
-    }
-
-    //printf("%d %d %d %d\n", idx, ibeg, iend, nrow);
-
-    idx += nrow;
-
-  }
-  free_matrix(matrixA);
-  free_vector(rhs);
-  free_vector(ipiv);
+    //free_matrix(matrixA);
+    free_vector(columnMajorA);
+    free_vector(rhs);
+    free_vector(ipiv);
   
-  //for ( i = 0; i < s_numpars; i++) {
-  //  z[i] = r[i]/pre1;
-  //  z[i+s_numpars] = r[i+s_numpars]/pre2;
-  //}
-  
-  return 0;
+    return 0;
 }
 /**********************************************************/
 
