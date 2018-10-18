@@ -22,6 +22,7 @@
 
 #include <Accelerate/Accelerate.h>
 //#include <lapacke.h>
+//#include <mkl_lapacke.h>
 
 #ifdef MPI_ENABLED
     #include <mpi.h>

@@ -29,10 +29,20 @@ file(MAKE_DIRECTORY build/bin)
 #set(CMAKE_PREFIX_PATH /usr/local/opt/openblas)
 #set(LAPACK_INCLUDE_PATH /usr/local/opt/openblas/include)
 #set(BLA_VENDOR OpenBLAS)
+#find_package(LAPACK REQUIRED)
+
 set(BLA_VENDOR Apple)
 find_package(LAPACK REQUIRED)
-message ("BLAS LIBRARIES: " ${LAPACK_LIBRARIES})
-message ("BLAS PATH: " ${LAPACK_INCLUDE_PATH})
+
+#set(LAPACK_LIBRARIES /usr/local/opt/openblas/lib/libopenblas.dylib)
+#set(LAPACK_INCLUDE_PATH /usr/local/opt/openblas/include)
+
+#set(LAPACK_LIBRARIES /opt/intel/mkl/lib/libmkl_rt.dylib)
+#set(LAPACK_INCLUDE_PATH /opt/intel/mkl/include)
+
+
+message ("LAPACK LIBRARIES: " ${LAPACK_LIBRARIES})
+message ("LAPACK PATH: " ${LAPACK_INCLUDE_PATH})
 
 
   if(ENABLE_MPI_BUILD)
@@ -46,13 +56,13 @@ message ("BLAS PATH: " ${LAPACK_INCLUDE_PATH})
   get_filename_component (C_COMPILER_NAME ${CMAKE_C_COMPILER} NAME)
 
   if (C_COMPILER_NAME MATCHES "gcc*")
-    set (CMAKE_C_FLAGS_RELEASE "-c -O3")
+    set (CMAKE_C_FLAGS_RELEASE "-O3")
     set (CMAKE_C_FLAGS_DEBUG   "-Wall")
   elseif (C_COMPILER_NAME MATCHES "icc*")
-    set (CMAKE_C_FLAGS_RELEASE "-c -O3")
+    set (CMAKE_C_FLAGS_RELEASE "-O3")
     set (CMAKE_C_FLAGS_DEBUG   "-Wall")
   else ()
-    set (CMAKE_C_FLAGS_RELEASE "-c -O3")
+    set (CMAKE_C_FLAGS_RELEASE "-O3")
     set (CMAKE_C_FLAGS_DEBUG   "-Wall")
     message ("CMAKE_C_COMPILER full path: " ${CMAKE_C_COMPILER})
     message ("C compiler: " ${C_COMPILER_NAME})
