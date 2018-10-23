@@ -20,9 +20,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <Accelerate/Accelerate.h>
+//#include <Accelerate/Accelerate.h>
 //#include <lapacke.h>
-//#include <mkl_lapacke.h>
+#include <mkl_lapacke.h>
 
 #ifdef MPI_ENABLED
     #include <mpi.h>
@@ -634,11 +634,11 @@ int psolve_precond(double *z, double *r)
         //lu_solve(matrixA, nrow2, ipiv, rhs);
 
         // Apple Accelerate implementation of LAPACK LU decomposition
-        nrhs = 1;
-        dgesv_(&nrow2, &nrhs, columnMajorA, &nrow2, ipiv, rhs, &nrow2, &info);
+        //nrhs = 1;
+        //dgesv_(&nrow2, &nrhs, columnMajorA, &nrow2, ipiv, rhs, &nrow2, &info);
 
         // LAPACKE implementation of LAPACK LU decomposition
-        //LAPACKE_dgesv(LAPACK_COL_MAJOR, nrow2, 1, columnMajorA, nrow2, ipiv, rhs, nrow2);
+        LAPACKE_dgesv(LAPACK_COL_MAJOR, nrow2, 1, columnMajorA, nrow2, ipiv, rhs, nrow2);
 
         for (i = 0; i < nrow; i++) {
             z[i+ibeg] = rhs[i];

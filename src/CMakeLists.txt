@@ -2,6 +2,7 @@ cmake_minimum_required (VERSION 2.8)
 project(tabipb)
 
 set(CMAKE_VERBOSE_MAKEFILE ON)
+set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 
 # Set a default build type if none was specified
 set(default_build_type "Release")
@@ -19,30 +20,24 @@ set(TABIPB_BUILD ${PROJECT_BINARY_DIR})
 set(EXECUTABLE_OUTPUT_PATH ${TABIPB_BUILD}/bin)
 set(EXECUTABLE_INSTALL_PATH bin)
 
-
 ################################################
 ##### Make a directory for the executable
 ################################################
 option(ENABLE_MPI_BUILD "build MPI parallel" OFF)
 file(MAKE_DIRECTORY build/bin)
 
-#set(CMAKE_PREFIX_PATH /usr/local/opt/openblas)
-#set(LAPACK_INCLUDE_PATH /usr/local/opt/openblas/include)
-#set(BLA_VENDOR OpenBLAS)
-#find_package(LAPACK REQUIRED)
-
-set(BLA_VENDOR Apple)
+#find_package(MKL)
+#message("mkls.... " ${MKL_INCLUDE_DIRS})
+#message("and the libs..." ${MKL_LIBRARIES})
+    
+set(BLA_VENDOR Intel10_64lp)
 find_package(LAPACK REQUIRED)
-
-#set(LAPACK_LIBRARIES /usr/local/opt/openblas/lib/libopenblas.dylib)
-#set(LAPACK_INCLUDE_PATH /usr/local/opt/openblas/include)
 
 #set(LAPACK_LIBRARIES /opt/intel/mkl/lib/libmkl_rt.dylib)
 #set(LAPACK_INCLUDE_PATH /opt/intel/mkl/include)
 
-
-message ("LAPACK LIBRARIES: " ${LAPACK_LIBRARIES})
-message ("LAPACK PATH: " ${LAPACK_INCLUDE_PATH})
+#message ("LAPACK LIBRARIES: " ${LAPACK_LIBRARIES})
+#message ("LAPACK PATH: " ${LAPACK_INCLUDE_PATH})
 
 
   if(ENABLE_MPI_BUILD)
