@@ -25,6 +25,7 @@
 
 #include "f2c.h"
 #include <stdio.h>
+#include <mkl_cblas.h>
 
 #ifdef MPI_ENABLED
     #include <mpi.h>
@@ -159,11 +160,10 @@ int gmres_(n, b, x, restrt, work, ldw, h, ldh, iter, resid, matvec, psolve,
     doublereal d__1;
 
     /* Local variables */
-//    extern /* Subroutine */ int drot_();
     static doublereal bnrm2;
     extern doublereal dnrm2_();
     static integer i, k, r, s, v, w, y;
-    extern /* Subroutine */ int dscal_(), basis_(), dcopy_(), drot_(), drotg_();
+    extern /* Subroutine */ int dscal_(), basis_(), dcopy_();
     static integer maxit;
     static doublereal rnorm, aa, bb;
     static integer cs, av, sn;
@@ -313,8 +313,8 @@ L30:
 
     i__1 = i - 1;
     for (k = 1; k <= i__1; ++k) {
-	drot_(&c__1, &h[k + i * h_dim1], ldh, &h[k + 1 + i * h_dim1], ldh, &h[
-		k + cs * h_dim1], &h[k + sn * h_dim1]);
+	cblas_drot(c__1, &h[k + i * h_dim1], *ldh, &h[k + 1 + i * h_dim1], *ldh, h[
+		k + cs * h_dim1], h[k + sn * h_dim1]);
 /* L40: */
     }
 
@@ -324,16 +324,16 @@ L30:
 
     aa = h[i + i * h_dim1];
     bb = h[i + 1 + i * h_dim1];
-    drotg_(&aa, &bb, &h[i + cs * h_dim1], &h[i + sn * h_dim1]);
-    drot_(&c__1, &h[i + i * h_dim1], ldh, &h[i + 1 + i * h_dim1], ldh, &h[i + 
-	    cs * h_dim1], &h[i + sn * h_dim1]);
+    cblas_drotg(&aa, &bb, &h[i + cs * h_dim1], &h[i + sn * h_dim1]);
+    cblas_drot(c__1, &h[i + i * h_dim1], *ldh, &h[i + 1 + i * h_dim1], *ldh, h[i + 
+	    cs * h_dim1], h[i + sn * h_dim1]);
 
 /*           Apply the I-th rotation matrix to [ S(I), S(I+1) ]'. This */
 /*           gives an approximation of the residual norm. If less than */
 /*           tolerance, update the approximation vector X and quit. */
 
-    drot_(&c__1, &work[i + s * work_dim1], ldw, &work[i + 1 + s * work_dim1], 
-	    ldw, &h[i + cs * h_dim1], &h[i + sn * h_dim1]);
+    cblas_drot(c__1, &work[i + s * work_dim1], *ldw, &work[i + 1 + s * work_dim1], 
+	    *ldw, h[i + cs * h_dim1], h[i + sn * h_dim1]);
     *resid = (d__1 = work[i + 1 + s * work_dim1], abs(d__1)) / bnrm2;
 
     if (rank == 0) {
@@ -363,7 +363,7 @@ L50:
 */
 /*        (AV is temporary workspace here.) */
 
-    dcopy_(n, &b[1], &c__1, &work[av * work_dim1 + 1], &c__1);
+    cblas_dcopy(*n, &b[1], c__1, &work[av * work_dim1 + 1], c__1);
     (*matvec)(&c_b7, &x[1], &c_b8, &work[av * work_dim1 + 1]);
 //	(*matvec)(&x[1], &work[av * work_dim1 + 1]);
     (*psolve)(&work[r * work_dim1 + 1], &work[av * work_dim1 + 1]);
@@ -410,7 +410,7 @@ integer *ldv;
     integer h_dim1, h_offset, v_dim1, v_offset;
 
     /* Local variables */
-    extern /* Subroutine */ int dgemv_(), dcopy_(), dtrsv_();
+    extern /* Subroutine */ int dgemv_(), dtrsv_();
 
 /*     This routine updates the GMRES iterated solution approximation. */
 
@@ -431,7 +431,7 @@ integer *ldv;
     --x;
 
     /* Function Body */
-    dcopy_(i, &s[1], &c__1, &y[1], &c__1);
+    cblas_dcopy(*i, &s[1], c__1, &y[1], c__1);
     dtrsv_("UPPER", "NOTRANS", "NONUNIT", i, &h[h_offset], ldh, &y[1], &c__1, 
 	    5L, 7L, 7L);
 
@@ -459,8 +459,6 @@ doublereal *w;
     /* Local variables */
     extern doublereal ddot_(), dnrm2_();
     static integer k;
-    extern /* Subroutine */ int dscal_(), dcopy_(), daxpy_();
-
 
 
 /*     Construct the I-th column of the upper Hessenberg matrix H */
@@ -477,15 +475,15 @@ doublereal *w;
     /* Function Body */
     i__1 = *i;
     for (k = 1; k <= i__1; ++k) {
-	h[k] = ddot_(n, &w[1], &c__1, &v[k * v_dim1 + 1], &c__1);
+	h[k] = cblas_ddot(*n, &w[1], c__1, &v[k * v_dim1 + 1], c__1);
 	d__1 = -h[k];
-	daxpy_(n, &d__1, &v[k * v_dim1 + 1], &c__1, &w[1], &c__1);
+	cblas_daxpy(*n, d__1, &v[k * v_dim1 + 1], c__1, &w[1], c__1);
 /* L10: */
     }
     h[*i + 1] = dnrm2_(n, &w[1], &c__1);
-    dcopy_(n, &w[1], &c__1, &v[(*i + 1) * v_dim1 + 1], &c__1);
+    cblas_dcopy(*n, &w[1], c__1, &v[(*i + 1) * v_dim1 + 1], c__1);
     d__1 = 1. / h[*i + 1];
-    dscal_(n, &d__1, &v[(*i + 1) * v_dim1 + 1], &c__1);
+    cblas_dscal(*n, d__1, &v[(*i + 1) * v_dim1 + 1], c__1);
 
     return 0;
 
