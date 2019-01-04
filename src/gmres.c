@@ -161,9 +161,7 @@ int gmres_(n, b, x, restrt, work, ldw, h, ldh, iter, resid, matvec, psolve,
 
     /* Local variables */
     static doublereal bnrm2;
-    extern doublereal dnrm2_();
     static integer i, k, r, s, v, w, y;
-    extern /* Subroutine */ int dscal_(), basis_(), dcopy_();
     static integer maxit;
     static doublereal rnorm, aa, bb;
     static integer cs, av, sn;
@@ -229,14 +227,14 @@ int gmres_(n, b, x, restrt, work, ldw, h, ldh, iter, resid, matvec, psolve,
 
 	//printf("llf%d\t%f\n",*n,b[1]);
 	//getchar();
-    dcopy_(n, &b[1], &c__1, &work[av * work_dim1 + 1], &c__1);
+    cblas_dcopy(*n, &b[1], c__1, &work[av * work_dim1 + 1], c__1);
 	//for (i=0;i<10;i++) printf("lsf%e\t%e\n",work[av * work_dim1 + 1+i],work[av * work_dim1 + 1+i+work_dim1/2] );
 	//getchar();
 
-    if (dnrm2_(n, &x[1], &c__1) != 0.) {
+    if (cblas_dnrm2(*n, &x[1], c__1) != 0.) {
 /*        AV is temporary workspace here. */
 
-		dcopy_(n, &b[1], &c__1, &work[av * work_dim1 + 1], &c__1);
+		cblas_dcopy(*n, &b[1], c__1, &work[av * work_dim1 + 1], c__1);
 		(*matvec)(&c_b7, &x[1], &c_b8, &work[av * work_dim1 + 1]);
 //		(*matvec)(&x[1],&work[av * work_dim1 + 1]);
 
@@ -244,11 +242,11 @@ int gmres_(n, b, x, restrt, work, ldw, h, ldh, iter, resid, matvec, psolve,
 
     (*psolve)(&work[r * work_dim1 + 1], &work[av * work_dim1 + 1]);
 
-    bnrm2 = dnrm2_(n, &b[1], &c__1);
+    bnrm2 = cblas_dnrm2(*n, &b[1], c__1);
     if (bnrm2 == 0.) {
 	bnrm2 = 1.;
     }
-    if (dnrm2_(n, &work[r * work_dim1 + 1], &c__1) / bnrm2 < tol) {
+    if (cblas_dnrm2(*n, &work[r * work_dim1 + 1], c__1) / bnrm2 < tol) {
 	goto L70;
     }
 
@@ -260,11 +258,10 @@ L10:
 
 /*        Construct the first column of V. */
 
-    dcopy_(n, &work[r * work_dim1 + 1], &c__1, &work[v * work_dim1 + 1], &
-	    c__1);
-    rnorm = dnrm2_(n, &work[v * work_dim1 + 1], &c__1);
+    cblas_dcopy(*n, &work[r * work_dim1 + 1], c__1, &work[v * work_dim1 + 1], c__1);
+    rnorm = cblas_dnrm2(*n, &work[v * work_dim1 + 1], c__1);
     d__1 = 1. / rnorm;
-    dscal_(n, &d__1, &work[v * work_dim1 + 1], &c__1);
+    cblas_dscal(*n, d__1, &work[v * work_dim1 + 1], c__1);
 
 /*        Initialize S to the elementary vector E1 scaled by RNORM. */
 
@@ -367,7 +364,7 @@ L50:
     (*matvec)(&c_b7, &x[1], &c_b8, &work[av * work_dim1 + 1]);
 //	(*matvec)(&x[1], &work[av * work_dim1 + 1]);
     (*psolve)(&work[r * work_dim1 + 1], &work[av * work_dim1 + 1]);
-    work[i + 1 + s * work_dim1] = dnrm2_(n, &work[r * work_dim1 + 1], &c__1);
+    work[i + 1 + s * work_dim1] = cblas_dnrm2(*n, &work[r * work_dim1 + 1], c__1);
     *resid = work[i + 1 + s * work_dim1] / bnrm2;
     if (*resid <= tol) {
 	goto L70;
@@ -432,13 +429,17 @@ integer *ldv;
 
     /* Function Body */
     cblas_dcopy(*i, &s[1], c__1, &y[1], c__1);
-    dtrsv_("UPPER", "NOTRANS", "NONUNIT", i, &h[h_offset], ldh, &y[1], &c__1, 
-	    5L, 7L, 7L);
+    //dtrsv_("UPPER", "NOTRANS", "NONUNIT", i, &h[h_offset], ldh, &y[1], &c__1, 
+	//    5L, 7L, 7L);
+    cblas_dtrsv(CblasColMajor, CblasUpper, CblasNoTrans, CblasNonUnit, 
+                *i, &h[h_offset], *ldh, &y[1], c__1);
 
 /*     Compute current solution vector X = X + V*Y. */
 
-    dgemv_("NOTRANS", n, i, &c_b8, &v[v_offset], ldv, &y[1], &c__1, &c_b8, &x[
-	    1], &c__1, 7L);
+    //dgemv_("NOTRANS", n, i, &c_b8, &v[v_offset], ldv, &y[1], &c__1, &c_b8, &x[
+	//    1], &c__1, 7L);
+    cblas_dgemv(CblasColMajor, CblasNoTrans, *n, *i, c_b8, 
+                &v[v_offset], *ldv, &y[1], c__1, c_b8, &x[1], c__1);
 
 		return 0;
 
@@ -457,7 +458,6 @@ doublereal *w;
     doublereal d__1;
 
     /* Local variables */
-    extern doublereal ddot_(), dnrm2_();
     static integer k;
 
 
@@ -480,7 +480,7 @@ doublereal *w;
 	cblas_daxpy(*n, d__1, &v[k * v_dim1 + 1], c__1, &w[1], c__1);
 /* L10: */
     }
-    h[*i + 1] = dnrm2_(n, &w[1], &c__1);
+    h[*i + 1] = cblas_dnrm2(*n, &w[1], c__1);
     cblas_dcopy(*n, &w[1], c__1, &v[(*i + 1) * v_dim1 + 1], c__1);
     d__1 = 1. / h[*i + 1];
     cblas_dscal(*n, d__1, &v[(*i + 1) * v_dim1 + 1], c__1);

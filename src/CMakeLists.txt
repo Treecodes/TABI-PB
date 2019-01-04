@@ -31,10 +31,10 @@ file(MAKE_DIRECTORY build/bin)
 #message("and the libs..." ${MKL_LIBRARIES})
     
 set(BLA_VENDOR Intel10_64lp)
-find_package(LAPACK REQUIRED)
+#find_package(LAPACK REQUIRED)
 
-#set(LAPACK_LIBRARIES /opt/intel/mkl/lib/libmkl_rt.dylib)
-#set(LAPACK_INCLUDE_PATH /opt/intel/mkl/include)
+set(LAPACK_LIBRARIES /opt/intel/mkl/lib/libmkl_rt.dylib)
+set(LAPACK_INCLUDE_PATH /opt/intel/mkl/include)
 
 #message ("LAPACK LIBRARIES: " ${LAPACK_LIBRARIES})
 #message ("LAPACK PATH: " ${LAPACK_INCLUDE_PATH})
@@ -65,8 +65,8 @@ find_package(LAPACK REQUIRED)
 
 # C code for standalone
   add_executable(tabipb
-    main.c tabipb.c gmres.c daxpy.c dcopy.c ddot.c
-    dgemv.c dnrm2.c drot.c drotg.c dscal.c d_sign.c
+    main.c tabipb.c gmres.c
+    dgemv.c
     dtrsv.c partition.c run_gmres.c readin.c treecode.c
     print_output.c utilities.c xmalloc.c)
 
@@ -127,8 +127,8 @@ if(ENABLE_TABIPB_APBS)
   endif ()
 
   set (LIBFILES
-    src/TABIPBWrap.c src/tabipb.c src/gmres.c src/daxpy.c src/dcopy.c src/ddot.c
-    src/dgemv.c src/dnrm2.c src/drot.c src/drotg.c src/dscal.c src/d_sign.c
+    src/TABIPBWrap.c src/tabipb.c src/gmres.c
+    src/dgemv.c
     src/dtrsv.c src/partition.c src/run_gmres.c src/readin.c src/treecode.c
     src/print_output.c src/utilities.c src/xmalloc.c
     )
@@ -180,15 +180,7 @@ if(ENABLE_TABIPB_SPHINX)
   add_library(tabipb_sph MODULE
               tabipb_py.c
               src/array.h
-              src/d_sign.c
-              src/daxpy.c
-              src/dcopy.c
-              src/ddot.c
               src/dgemv.c
-              src/dnrm2.c
-              src/drot.c
-              src/drotg.c
-              src/dscal.c
               src/dtrsv.c
               src/f2c.h
               src/gmres.c
