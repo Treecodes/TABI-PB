@@ -23,8 +23,10 @@
 	-lf2c -lm   (in that order)
  */
 
-#include "f2c.h"
+#define max(a,b) ((a) >= (b) ? (a) : (b))
+
 #include <stdio.h>
+#include <math.h>
 #include <mkl_cblas.h>
 
 #ifdef MPI_ENABLED
@@ -33,10 +35,10 @@
 
 /* Table of constant values */
 
-static integer c__1 = 1;
-static doublereal c_b7 = -1.;
-static doublereal c_b8 = 1.;
-static doublereal c_b20 = 0.;
+static long int c__1 = 1;
+static double c_b7 = -1.;
+static double c_b8 = 1.;
+static double c_b20 = 0.;
 
 /*  -- Iterative template routine --
 *     Univ. of Tennessee and Oak Ridge National Laboratory
@@ -151,23 +153,23 @@ static doublereal c_b20 = 0.;
 //*****************************************************************
 int gmres_(n, b, x, restrt, work, ldw, h, ldh, iter, resid, matvec, psolve, 
            info)
-   integer *n, *restrt, *ldw, *ldh, *iter, *info;
-   doublereal *b, *x, *work, *h, *resid;
+   long int *n, *restrt, *ldw, *ldh, *iter, *info;
+   double *b, *x, *work, *h, *resid;
    int (*matvec) (), (*psolve) ();
 {
     /* System generated locals */
-    integer work_dim1, work_offset, h_dim1, h_offset, i__1;
-    doublereal d__1;
+    long int work_dim1, work_offset, h_dim1, h_offset, i__1;
+    double d__1;
 
     /* Local variables */
-    static doublereal bnrm2;
-    static integer i, k, r, s, v, w, y;
-    static integer maxit;
-    static doublereal rnorm, aa, bb;
-    static integer cs, av, sn;
+    static double bnrm2;
+    static long int i, k, r, s, v, w, y;
+    static long int maxit;
+    static double rnorm, aa, bb;
+    static long int cs, av, sn;
     extern /* Subroutine */ int update_();
     extern /* Subroutine */ int basis_(); 
-    static doublereal tol;
+    static double tol;
     
     int rank = 0, ierr;
     
@@ -331,7 +333,7 @@ L30:
 
     cblas_drot(c__1, &work[i + s * work_dim1], *ldw, &work[i + 1 + s * work_dim1], 
 	    *ldw, h[i + cs * h_dim1], h[i + sn * h_dim1]);
-    *resid = (d__1 = work[i + 1 + s * work_dim1], abs(d__1)) / bnrm2;
+    *resid = (d__1 = work[i + 1 + s * work_dim1], fabs(d__1)) / bnrm2;
 
     if (rank == 0) {
 	    printf("iteration no. = %ld, error = %e\n", *iter, *resid);
@@ -397,17 +399,14 @@ L70:
 
 /*     =============================================================== */
 /* Subroutine */ int update_(i, n, x, h, ldh, y, s, v, ldv)
-integer *i, *n;
-doublereal *x, *h;
-integer *ldh;
-doublereal *y, *s, *v;
-integer *ldv;
+long int *i, *n;
+double *x, *h;
+long int *ldh;
+double *y, *s, *v;
+long int *ldv;
 {
     /* System generated locals */
-    integer h_dim1, h_offset, v_dim1, v_offset;
-
-    /* Local variables */
-    extern /* Subroutine */ int dgemv_(), dtrsv_();
+    long int h_dim1, h_offset, v_dim1, v_offset;
 
 /*     This routine updates the GMRES iterated solution approximation. */
 
@@ -429,15 +428,11 @@ integer *ldv;
 
     /* Function Body */
     cblas_dcopy(*i, &s[1], c__1, &y[1], c__1);
-    //dtrsv_("UPPER", "NOTRANS", "NONUNIT", i, &h[h_offset], ldh, &y[1], &c__1, 
-	//    5L, 7L, 7L);
     cblas_dtrsv(CblasColMajor, CblasUpper, CblasNoTrans, CblasNonUnit, 
                 *i, &h[h_offset], *ldh, &y[1], c__1);
 
 /*     Compute current solution vector X = X + V*Y. */
 
-    //dgemv_("NOTRANS", n, i, &c_b8, &v[v_offset], ldv, &y[1], &c__1, &c_b8, &x[
-	//    1], &c__1, 7L);
     cblas_dgemv(CblasColMajor, CblasNoTrans, *n, *i, c_b8, 
                 &v[v_offset], *ldv, &y[1], c__1, c_b8, &x[1], c__1);
 
@@ -448,17 +443,17 @@ integer *ldv;
 
 /*     ========================================================= */
 /* Subroutine */ int basis_(i, n, h, v, ldv, w)
-integer *i, *n;
-doublereal *h, *v;
-integer *ldv;
-doublereal *w;
+long int *i, *n;
+double *h, *v;
+long int *ldv;
+double *w;
 {
     /* System generated locals */
-    integer v_dim1, v_offset, i__1;
-    doublereal d__1;
+    long int v_dim1, v_offset, i__1;
+    double d__1;
 
     /* Local variables */
-    static integer k;
+    static long int k;
 
 
 /*     Construct the I-th column of the upper Hessenberg matrix H */

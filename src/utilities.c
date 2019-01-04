@@ -13,14 +13,6 @@
 *          Weihua Geng, Southern Methodist University, Dallas, TX         *
 *          Robery Krasny, University of Michigan, Ann Arbor, MI           *
 *                                                                         *
-* DEVELOPMENT HISTORY:                                                    *
-*                                                                         *
-* Date        Author            Description Of Change                     *
-* ----        ------            ---------------------                     *
-* 01/15/2018  Leighton Wilson   Moved TriangleArea from readin.c, moved   *
-*                               Partition to its own file                 *
-* 01/12/2018  Leighton Wilson   Localized all global variables            *
-*                                                                         *
 **************************************************************************/
 
 #include <math.h>

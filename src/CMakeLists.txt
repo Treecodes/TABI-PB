@@ -66,8 +66,7 @@ set(LAPACK_INCLUDE_PATH /opt/intel/mkl/include)
 # C code for standalone
   add_executable(tabipb
     main.c tabipb.c gmres.c
-    dgemv.c
-    dtrsv.c partition.c run_gmres.c readin.c treecode.c
+    partition.c run_gmres.c readin.c treecode.c
     print_output.c utilities.c xmalloc.c)
 
 
@@ -128,8 +127,7 @@ if(ENABLE_TABIPB_APBS)
 
   set (LIBFILES
     src/TABIPBWrap.c src/tabipb.c src/gmres.c
-    src/dgemv.c
-    src/dtrsv.c src/partition.c src/run_gmres.c src/readin.c src/treecode.c
+    src/partition.c src/run_gmres.c src/readin.c src/treecode.c
     src/print_output.c src/utilities.c src/xmalloc.c
     )
 
@@ -180,9 +178,6 @@ if(ENABLE_TABIPB_SPHINX)
   add_library(tabipb_sph MODULE
               tabipb_py.c
               src/array.h
-              src/dgemv.c
-              src/dtrsv.c
-              src/f2c.h
               src/gmres.c
               src/TABIPBstruct.h
               src/TABIPBWrap.c
