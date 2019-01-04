@@ -1,3 +1,8 @@
+/*
+ * Modified from original CLAPACK version to support MKL.
+ * Original file description below.
+ */
+
 /*                                                                                           
  * This file is part of CLAPACK, the f2c'ed version of LAPACK                                
  * hosted at netlib.org.                                                                     
@@ -153,23 +158,19 @@ static double c_b20 = 0.;
 //*****************************************************************
 int gmres_(n, b, x, restrt, work, ldw, h, ldh, iter, resid, matvec, psolve, 
            info)
-   long int *n, *restrt, *ldw, *ldh, *iter, *info;
+   long int n, *restrt, ldw, ldh, *iter, *info;
    double *b, *x, *work, *h, *resid;
    int (*matvec) (), (*psolve) ();
 {
     /* System generated locals */
-    long int work_dim1, work_offset, h_dim1, h_offset, i__1;
+    long int work_offset, h_offset, i__1;
     double d__1;
 
     /* Local variables */
-    static double bnrm2;
-    static long int i, k, r, s, v, w, y;
-    static long int maxit;
-    static double rnorm, aa, bb;
-    static long int cs, av, sn;
+    static double bnrm2, rnorm, aa, bb, tol;
+    static long int i, k, r, s, v, w, y, maxit, cs, av, sn;
     extern /* Subroutine */ int update_();
     extern /* Subroutine */ int basis_(); 
-    static double tol;
     
     int rank = 0, ierr;
     
@@ -181,11 +182,9 @@ int gmres_(n, b, x, restrt, work, ldw, h, ldh, iter, resid, matvec, psolve,
 		   
     //printf("%d\t%f\t%f\t%d\t%d\t%d\t%d\t%f\n",*n,b[0],x[0],*restrt,*ldw,*ldh,*iter,*resid);
 
-    h_dim1 = *ldh;
-    h_offset = h_dim1 + 1;
+    h_offset = ldh + 1;
     h -= h_offset;
-    work_dim1 = *ldw;
-    work_offset = work_dim1 + 1;
+    work_offset = ldw + 1;
     work -= work_offset;
     --x;
     --b;
@@ -195,13 +194,13 @@ int gmres_(n, b, x, restrt, work, ldw, h, ldh, iter, resid, matvec, psolve,
 
 /*     Test the input parameters. */
 
-    if (*n < 0) {
+    if (n < 0) {
 	*info = -1;
-    } else if (*ldw < max(1,*n)) {
+    } else if (ldw < max(1,n)) {
 	*info = -2;
     } else if (*iter <= 0) {
 	*info = -3;
-    } else if (*ldh < *restrt + 1) {
+    } else if (ldh < *restrt + 1) {
 	*info = -4;
     }
     if (*info != 0) {
@@ -229,26 +228,26 @@ int gmres_(n, b, x, restrt, work, ldw, h, ldh, iter, resid, matvec, psolve,
 
 	//printf("llf%d\t%f\n",*n,b[1]);
 	//getchar();
-    cblas_dcopy(*n, &b[1], c__1, &work[av * work_dim1 + 1], c__1);
-	//for (i=0;i<10;i++) printf("lsf%e\t%e\n",work[av * work_dim1 + 1+i],work[av * work_dim1 + 1+i+work_dim1/2] );
+    cblas_dcopy(n, &b[1], c__1, &work[av * ldw + 1], c__1);
+	//for (i=0;i<10;i++) printf("lsf%e\t%e\n",work[av * ldw + 1+i],work[av * ldw + 1+i+work_dim1/2] );
 	//getchar();
 
-    if (cblas_dnrm2(*n, &x[1], c__1) != 0.) {
+    if (cblas_dnrm2(n, &x[1], c__1) != 0.) {
 /*        AV is temporary workspace here. */
 
-		cblas_dcopy(*n, &b[1], c__1, &work[av * work_dim1 + 1], c__1);
-		(*matvec)(&c_b7, &x[1], &c_b8, &work[av * work_dim1 + 1]);
-//		(*matvec)(&x[1],&work[av * work_dim1 + 1]);
+		cblas_dcopy(n, &b[1], c__1, &work[av * ldw + 1], c__1);
+		(*matvec)(&c_b7, &x[1], &c_b8, &work[av * ldw + 1]);
+//		(*matvec)(&x[1],&work[av * ldw + 1]);
 
 	}
 
-    (*psolve)(&work[r * work_dim1 + 1], &work[av * work_dim1 + 1]);
+    (*psolve)(&work[r * ldw + 1], &work[av * ldw + 1]);
 
-    bnrm2 = cblas_dnrm2(*n, &b[1], c__1);
+    bnrm2 = cblas_dnrm2(n, &b[1], c__1);
     if (bnrm2 == 0.) {
 	bnrm2 = 1.;
     }
-    if (cblas_dnrm2(*n, &work[r * work_dim1 + 1], c__1) / bnrm2 < tol) {
+    if (cblas_dnrm2(n, &work[r * ldw + 1], c__1) / bnrm2 < tol) {
 	goto L70;
     }
 
@@ -260,17 +259,17 @@ L10:
 
 /*        Construct the first column of V. */
 
-    cblas_dcopy(*n, &work[r * work_dim1 + 1], c__1, &work[v * work_dim1 + 1], c__1);
-    rnorm = cblas_dnrm2(*n, &work[v * work_dim1 + 1], c__1);
+    cblas_dcopy(n, &work[r * ldw + 1], c__1, &work[v * ldw + 1], c__1);
+    rnorm = cblas_dnrm2(n, &work[v * ldw + 1], c__1);
     d__1 = 1. / rnorm;
-    cblas_dscal(*n, d__1, &work[v * work_dim1 + 1], c__1);
+    cblas_dscal(n, d__1, &work[v * ldw + 1], c__1);
 
 /*        Initialize S to the elementary vector E1 scaled by RNORM. */
 
-    work[s * work_dim1 + 1] = rnorm;
-    i__1 = *n;
+    work[s * ldw + 1] = rnorm;
+    i__1 = n;
     for (k = 2; k <= i__1; ++k) {
-	work[k + s * work_dim1] = 0.;
+	work[k + s * ldw] = 0.;
 /* L20: */
     }
 
@@ -279,31 +278,31 @@ L30:
     ++i;
     ++(*iter);
 //int ii;
-//	for (ii=39000;ii<39010;ii++) printf("ggss %e\t%e\n",work[(v + i - 1) * work_dim1 + 1+ii],work[av * work_dim1 + 1+ii] );
+//	for (ii=39000;ii<39010;ii++) printf("ggss %e\t%e\n",work[(v + i - 1) * ldw + 1+ii],work[av * ldw + 1+ii] );
 
 //for(ii=0;ii<10;ii++) printf("work=%f, for i=%d\n",
-//    work[(v + i - 1) * work_dim1+1+ii],(v + i - 1) * work_dim1+1+ii);
+//    work[(v + i - 1) * ldw+1+ii],(v + i - 1) * ldw+1+ii);
 
 
 //printf("call iteration at 253, index start at %d, last of work is %f\n",
-//       (v + i - 1) * work_dim1 + 1, work[(v + i - 1) * work_dim1 + 2*30000]);
-//work[(v + i - 1) * work_dim1 + 1]=10;
-       (*matvec)(&c_b8, &work[(v + i - 1) * work_dim1 + 1], &c_b20, &work[av * 
-	    work_dim1 + 1]);
+//       (v + i - 1) * ldw + 1, work[(v + i - 1) * ldw + 2*30000]);
+//work[(v + i - 1) * ldw + 1]=10;
+       (*matvec)(&c_b8, &work[(v + i - 1) * ldw + 1], &c_b20, &work[av * 
+	    ldw + 1]);
 
-	//(*matvec)(&work[(v + i - 1) * work_dim1 + 1], &work[av *work_dim1 + 1]);
+	//(*matvec)(&work[(v + i - 1) * ldw + 1], &work[av *ldw + 1]);
 //int ii;
-//	for (ii=39000;ii<39010;ii++) printf("llff %e\t%e\n",work[(v + i - 1) * work_dim1 + 1+ii],work[av * work_dim1 + 1+ii] );
+//	for (ii=39000;ii<39010;ii++) printf("llff %e\t%e\n",work[(v + i - 1) * ldw + 1+ii],work[av * ldw + 1+ii] );
 	//getchar();
     
     
-	(*psolve)(&work[w * work_dim1 + 1], &work[av * work_dim1 + 1]);
+	(*psolve)(&work[w * ldw + 1], &work[av * ldw + 1]);
 
 /*           Construct I-th column of H orthnormal to the previous */
 /*           I-1 columns. */
 
-    basis_(&i, n, &h[i * h_dim1 + 1], &work[v * work_dim1 + 1], ldw, &work[w *
-	     work_dim1 + 1]);
+    basis_(&i, n, &h[i * ldh + 1], &work[v * ldw + 1], ldw, &work[w *
+	     ldw + 1]);
 
 /*           Apply Givens rotations to the I-th column of H. This */
 /*           "updating" of the QR factorization effectively reduces */
@@ -312,8 +311,8 @@ L30:
 
     i__1 = i - 1;
     for (k = 1; k <= i__1; ++k) {
-	cblas_drot(c__1, &h[k + i * h_dim1], *ldh, &h[k + 1 + i * h_dim1], *ldh, h[
-		k + cs * h_dim1], h[k + sn * h_dim1]);
+	cblas_drot(c__1, &h[k + i * ldh], ldh, &h[k + 1 + i * ldh], ldh, h[
+		k + cs * ldh], h[k + sn * ldh]);
 /* L40: */
     }
 
@@ -321,27 +320,27 @@ L30:
  */
 /*           H(I+1,I) = 0. */
 
-    aa = h[i + i * h_dim1];
-    bb = h[i + 1 + i * h_dim1];
-    cblas_drotg(&aa, &bb, &h[i + cs * h_dim1], &h[i + sn * h_dim1]);
-    cblas_drot(c__1, &h[i + i * h_dim1], *ldh, &h[i + 1 + i * h_dim1], *ldh, h[i + 
-	    cs * h_dim1], h[i + sn * h_dim1]);
+    aa = h[i + i * ldh];
+    bb = h[i + 1 + i * ldh];
+    cblas_drotg(&aa, &bb, &h[i + cs * ldh], &h[i + sn * ldh]);
+    cblas_drot(c__1, &h[i + i * ldh], ldh, &h[i + 1 + i * ldh], ldh, h[i + 
+	    cs * ldh], h[i + sn * ldh]);
 
 /*           Apply the I-th rotation matrix to [ S(I), S(I+1) ]'. This */
 /*           gives an approximation of the residual norm. If less than */
 /*           tolerance, update the approximation vector X and quit. */
 
-    cblas_drot(c__1, &work[i + s * work_dim1], *ldw, &work[i + 1 + s * work_dim1], 
-	    *ldw, h[i + cs * h_dim1], h[i + sn * h_dim1]);
-    *resid = (d__1 = work[i + 1 + s * work_dim1], fabs(d__1)) / bnrm2;
+    cblas_drot(c__1, &work[i + s * ldw], ldw, &work[i + 1 + s * ldw], 
+	    ldw, h[i + cs * ldh], h[i + sn * ldh]);
+    *resid = (d__1 = work[i + 1 + s * ldw], fabs(d__1)) / bnrm2;
 
     if (rank == 0) {
 	    printf("iteration no. = %ld, error = %e\n", *iter, *resid);
     }
 
     if (*resid <= tol) {
-	update_(&i, n, &x[1], &h[h_offset], ldh, &work[y * work_dim1 + 1], &
-		work[s * work_dim1 + 1], &work[v * work_dim1 + 1], ldw);
+	update_(&i, n, &x[1], &h[h_offset], ldh, &work[y * ldw + 1], &
+		work[s * ldw + 1], &work[v * ldw + 1], ldw);
 	goto L70;
     }
     if (*iter == maxit) {
@@ -355,19 +354,19 @@ L50:
 
 /*        Compute current solution vector X. */
 
-    update_(restrt, n, &x[1], &h[h_offset], ldh, &work[y * work_dim1 + 1], &
-	    work[s * work_dim1 + 1], &work[v * work_dim1 + 1], ldw);
+    update_(restrt, n, &x[1], &h[h_offset], ldh, &work[y * ldw + 1], &
+	    work[s * ldw + 1], &work[v * ldw + 1], ldw);
 
 /*        Compute residual vector R, find norm, then check for tolerance. 
 */
 /*        (AV is temporary workspace here.) */
 
-    cblas_dcopy(*n, &b[1], c__1, &work[av * work_dim1 + 1], c__1);
-    (*matvec)(&c_b7, &x[1], &c_b8, &work[av * work_dim1 + 1]);
-//	(*matvec)(&x[1], &work[av * work_dim1 + 1]);
-    (*psolve)(&work[r * work_dim1 + 1], &work[av * work_dim1 + 1]);
-    work[i + 1 + s * work_dim1] = cblas_dnrm2(*n, &work[r * work_dim1 + 1], c__1);
-    *resid = work[i + 1 + s * work_dim1] / bnrm2;
+    cblas_dcopy(n, &b[1], c__1, &work[av * ldw + 1], c__1);
+    (*matvec)(&c_b7, &x[1], &c_b8, &work[av * ldw + 1]);
+//	(*matvec)(&x[1], &work[av * ldw + 1]);
+    (*psolve)(&work[r * ldw + 1], &work[av * ldw + 1]);
+    work[i + 1 + s * ldw] = cblas_dnrm2(n, &work[r * ldw + 1], c__1);
+    *resid = work[i + 1 + s * ldw] / bnrm2;
     if (*resid <= tol) {
 	goto L70;
     }
@@ -399,14 +398,11 @@ L70:
 
 /*     =============================================================== */
 /* Subroutine */ int update_(i, n, x, h, ldh, y, s, v, ldv)
-long int *i, *n;
-double *x, *h;
-long int *ldh;
-double *y, *s, *v;
-long int *ldv;
+long int *i, n, ldh, ldv;
+double *x, *h, *y, *s, *v;
 {
     /* System generated locals */
-    long int h_dim1, h_offset, v_dim1, v_offset;
+    long int h_offset, v_offset;
 
 /*     This routine updates the GMRES iterated solution approximation. */
 
@@ -416,25 +412,23 @@ long int *ldv;
 /*     Solve H*Y = S for upper triangualar H. */
 
     /* Parameter adjustments */
-    v_dim1 = *ldv;
-    v_offset = v_dim1 + 1;
+    v_offset = ldv + 1;
     v -= v_offset;
     --s;
     --y;
-    h_dim1 = *ldh;
-    h_offset = h_dim1 + 1;
+    h_offset = ldh + 1;
     h -= h_offset;
     --x;
 
     /* Function Body */
     cblas_dcopy(*i, &s[1], c__1, &y[1], c__1);
     cblas_dtrsv(CblasColMajor, CblasUpper, CblasNoTrans, CblasNonUnit, 
-                *i, &h[h_offset], *ldh, &y[1], c__1);
+                *i, &h[h_offset], ldh, &y[1], c__1);
 
 /*     Compute current solution vector X = X + V*Y. */
 
-    cblas_dgemv(CblasColMajor, CblasNoTrans, *n, *i, c_b8, 
-                &v[v_offset], *ldv, &y[1], c__1, c_b8, &x[1], c__1);
+    cblas_dgemv(CblasColMajor, CblasNoTrans, n, *i, c_b8, 
+                &v[v_offset], ldv, &y[1], c__1, c_b8, &x[1], c__1);
 
 		return 0;
 
@@ -443,13 +437,11 @@ long int *ldv;
 
 /*     ========================================================= */
 /* Subroutine */ int basis_(i, n, h, v, ldv, w)
-long int *i, *n;
-double *h, *v;
-long int *ldv;
-double *w;
+long int *i, n, ldv;
+double *h, *v, *w;
 {
     /* System generated locals */
-    long int v_dim1, v_offset, i__1;
+    long int v_offset, i__1;
     double d__1;
 
     /* Local variables */
@@ -462,23 +454,22 @@ double *w;
 
     /* Parameter adjustments */
     --w;
-    v_dim1 = *ldv;
-    v_offset = v_dim1 + 1;
+    v_offset = ldv + 1;
     v -= v_offset;
     --h;
 
     /* Function Body */
     i__1 = *i;
     for (k = 1; k <= i__1; ++k) {
-	h[k] = cblas_ddot(*n, &w[1], c__1, &v[k * v_dim1 + 1], c__1);
+	h[k] = cblas_ddot(n, &w[1], c__1, &v[k * ldv + 1], c__1);
 	d__1 = -h[k];
-	cblas_daxpy(*n, d__1, &v[k * v_dim1 + 1], c__1, &w[1], c__1);
+	cblas_daxpy(n, d__1, &v[k * ldv + 1], c__1, &w[1], c__1);
 /* L10: */
     }
-    h[*i + 1] = cblas_dnrm2(*n, &w[1], c__1);
-    cblas_dcopy(*n, &w[1], c__1, &v[(*i + 1) * v_dim1 + 1], c__1);
+    h[*i + 1] = cblas_dnrm2(n, &w[1], c__1);
+    cblas_dcopy(n, &w[1], c__1, &v[(*i + 1) * ldv + 1], c__1);
     d__1 = 1. / h[*i + 1];
-    cblas_dscal(*n, d__1, &v[(*i + 1) * v_dim1 + 1], c__1);
+    cblas_dscal(n, d__1, &v[(*i + 1) * ldv + 1], c__1);
 
     return 0;
 
