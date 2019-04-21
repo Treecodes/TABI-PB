@@ -57,6 +57,8 @@ static int s_max_level;
 
 /* global variables for taylor expansions */
 static int s_torder_flat;
+static int s_torder_lim;
+static int s_torder3;
 
 static double *s_cf1 = NULL;
 static double *s_cf2 = NULL;
@@ -67,6 +69,9 @@ static double ***s_b = NULL;
 
 static double ****s_der_coeff = NULL;
 static int s_kk[16][3];
+
+/* variable used by kernel independent moment computation */
+double *tt, *ww;
 
 /* these point to arrays located in TreeParticles */
 static double **s_particle_position = NULL;
@@ -101,8 +106,8 @@ static int s_ComputeMoments(TreeNode *p);
 static int s_RunTreecode(TreeNode *p, double *tpoten_old,
                          double tempq[2][16], double peng[2]);
 static int s_ComputeTreePB(TreeNode *p, double tempq[2][16], double peng[2]);
-static int s_ComputeCoeffs(TreeNode *p);
-static int s_ComputeCoeffsCoulomb(TreeNode *p);
+static int s_ComputeCoeffs(TreeNode *p, double dx, double dy, double dz);
+static int s_ComputeCoeffsCoulomb(TreeNode *p, double dx, double dy, double dz);
 static int s_ComputeDirectPB(int ibeg, int iend, double *tpoten_old,
                              double peng[2]);
 static int s_RemoveMoments(TreeNode *p);
@@ -155,6 +160,8 @@ int TreecodeInitialization(TABIPBparm *parm, TreeParticles *particles)
     s_eps = parm->eps;
     
     s_torder_flat = (s_order+1) * (s_order+2) * (s_order+3) / 6;
+    s_torder_lim = s_order+1;
+    s_torder3 = s_torder_lim * s_torder_lim * s_torder_lim;
     
     s_min_level = 50000;
     s_max_level = 0;
@@ -671,7 +678,7 @@ static int s_Setup(double xyz_limits[6])
  positions and charges are copied so that they can be restored upon exit.*/
  
     int i, j, k, ierr;
-    double t1;
+    double t1, xx;
 
     int rank = 0, num_procs = 1;
     
@@ -707,6 +714,21 @@ static int s_Setup(double xyz_limits[6])
         s_cf1[i] = t1;
         s_cf2[i] = 1.0 - 0.5*t1;
         s_cf3[i] = 1.0 - t1;
+    }
+    
+    make_vector(tt, s_torder_lim);
+    make_vector(ww, s_torder_lim);
+    
+    /* initializing array for Chev points */
+    for (i = 0; i < s_torder_lim; i++)
+        tt[i] = cos(i * M_PI / s_order);
+    
+    ww[0] = 0.25 * (s_order*s_order/3.0 + 1.0/6.0);
+    ww[s_order] = -ww[0];
+    
+    for (i = 1; i < s_order; i++) {
+        xx = i * M_PI / s_order;
+        ww[i] = -cos(xx) / (2 * sin(xx) * sin(xx));
     }
 
 /* find bounds of Cartesion box enclosing the particles */
@@ -1002,7 +1024,10 @@ static int s_ComputeAllMoments(TreeNode *p, int ifirst)
     int i;
     
     if (p->exist_ms == 0 && ifirst == 0) {
-        make_matrix(p->ms, 16, s_torder_flat);
+        make_matrix(p->ms, 16, 8*s_torder3);
+        make_vector(p->tx, s_torder_lim);
+        make_vector(p->ty, s_torder_lim);
+        make_vector(p->tz, s_torder_lim);
         s_ComputeMoments(p);
         p->exist_ms = 1;
     }
@@ -1024,80 +1049,149 @@ static int s_ComputeMoments(TreeNode *p)
 /* COMP_MS computes the moments for node P needed in the Taylor
  * approximation */
 
-    int ii, i, j, k1, k2, k3, n;
-    double dx, dy, dz, tx, ty, tz, txyz;
+    int i, j, k1, k2, k3, kk;
+    double dx, dy, dz;
+    double x0, x1, y0, y1, z0, z1;
+    double sumA1, sumA2, sumA3;
+    double temp11, temp12, temp21, temp22;
+    double mom1, mom2, mom3, mom4, mom5, mom6, mom7, mom8;
+    double xx, yy, zz;
+    double *xibeg, *yibeg, *zibeg, *qq;
     
-    for (n = 0; n < 16; n++) {
-        for (i = 0; i < s_torder_flat; i++) {
-            p->ms[n][i] = 0.0;
+    double Dd, dj[s_torder_lim];
+    double a1i[s_torder_lim], a2j[s_torder_lim], a3k[s_torder_lim];
+    double b1i[s_torder_lim], b2j[s_torder_lim], b3k[s_torder_lim];
+    double wx[s_torder_lim], wy[s_torder_lim], wz[s_torder_lim];
+    double summ[16][8*s_torder3];
+    
+    
+    for (i = 0; i < 16; i++) {
+        for (j = 0; j < 8*s_torder3; j++) {
+            p->ms[i][j] = 0.0;
         }
     }
-
-    for (i = p->ibeg; i < p->iend+1; i++) {
-        dx = s_particle_position[0][i]-p->x_mid;
-        dy = s_particle_position[1][i]-p->y_mid;
-        dz = s_particle_position[2][i]-p->z_mid;
-        for (j = 0; j < 7; j++) {
+    
+    xibeg = &(s_particle_position[0][p->ibeg]);
+    yibeg = &(s_particle_position[1][p->ibeg]);
+    zibeg = &(s_particle_position[2][p->ibeg]);
+    
+    x0 = p->x_min;
+    x1 = p->x_max;
+    y0 = p->y_min;
+    y1 = p->y_max;
+    z0 = p->z_min;
+    z1 = p->z_max;
+    
+    for (i = 0; i < 16; i++) {
+        for (j = 0; j < 8*s_torder3; j++) {
+            summ[i][j] = 0.0;
+        }
+    }
+    
+    for (i = 0; i < s_torder_lim; i++) {
+        p->tx[i] = x0 + (tt[i] + 1.0)/2.0 * (x1 - x0);
+        p->ty[i] = y0 + (tt[i] + 1.0)/2.0 * (y1 - y0);
+        p->tz[i] = z0 + (tt[i] + 1.0)/2.0 * (z1 - z0);
         
-            ii = 0;
+        wx[i] = -4.0 * ww[i] / (x1 - x0);
+        wy[i] = -4.0 * ww[i] / (y1 - y0);
+        wz[i] = -4.0 * ww[i] / (z1 - z0);
+        
+        dj[i] = 1.0;
+    }
+    
+    dj[0] = 0.25;
+    dj[s_order] = 0.25;
+    
+
+    for (i = 0; i < p->numpar; i++) {
+    
+        sumA1 = 0.0;
+        sumA2 = 0.0;
+        sumA3 = 0.0;
+    
+        xx = xibeg[i];
+        yy = yibeg[i];
+        zz = zibeg[i];
+        qq = s_source_charge[i][0];
+        
+        for (j = 0; j < s_torder_lim; j++) {
+            dx = xx - p->tx[j];
+            dy = yy - p->ty[j];
+            dz = zz - p->tz[j];
             
-            tx = 1.0;
-            for (k1 = 0; k1 < s_order+1; k1++) {
-                ty=1.0;
-                for (k2 = 0; k2 < s_order+1-k1; k2++) {
-                    tz=1.0;
-                    for (k3 = 0; k3 < s_order+1-k1-k2; k3++) {
-
-                        txyz = tx*ty*tz;
-                        p->ms[j][ii] += s_source_charge[i][0][j] * txyz;
-                        ii++;
-                        
-                        tz = tz*dz;
-                    }
-                    ty = ty*dy;
-                }
-                tx = tx*dx;
-            }
+            a1i[j] = wx[j]/dx + dj[j]/(dx*dx);
+            a2j[j] = wy[j]/dy + dj[j]/(dy*dy);
+            a3k[j] = wz[j]/dz + dj[j]/(dz*dz);
+            
+            b1i[j] = dj[j]/dx;
+            b2j[j] = dj[j]/dy;
+            b3k[j] = dj[j]/dz;
+            
+            sumA1 += a1i[j];
+            sumA2 += a2j[j];
+            sumA3 += a3k[j];
         }
-
-        ii = 0;
-
-        tx = 1.0;
-        for (k1 = 0; k1 < s_order+1; k1++) {
-            ty = 1.0;
-            for (k2 = 0; k2 < s_order+1-k1; k2++) {
-                tz = 1.0;
-                for (k3 = 0; k3 < s_order+1-k1-k2; k3++) {
-
-                    txyz = tx*ty*tz;
-                    p->ms[7][ii] += s_source_charge[i][0][7] * txyz;
-                    p->ms[10][ii] += s_source_charge[i][0][10] * txyz;
-                    p->ms[13][ii] += s_source_charge[i][0][13] * txyz;
-                    ii++;
-
-                    tz *= dz;
+        
+        Dd = 1.0 / (sumA1 * sumA2 * sumA3);
+        
+        kk = -1;
+        for (k3 = 0; k3 < s_torder_lim; k3++) {
+            for (k2 = 0; k2 < s_torder_lim; k2++) {
+                for (k1 = 0; k1 < s_torder_lim; k1++) {
+                    kk++;
+                
+                    temp11 = a1i[k1] * a2j[k2] * Dd;
+                    temp21 = b1i[k1] * a2j[k2] * Dd;
+                    temp12 = a1i[k1] * b2j[k2] * Dd;
+                    temp22 = b1i[k1] * b2j[k2] * Dd;
+                    
+                    mom1 = temp11 * a3k[k3];
+                    mom2 = temp21 * a3k[k3];
+                    mom3 = temp12 * a3k[k3];
+                    mom4 = temp11 * b3k[k3];
+                    mom5 = temp22 * a3k[k3];
+                    mom6 = temp12 * b3k[k3];
+                    mom7 = temp21 * b3k[k3];
+                    mom8 = temp22 * b3k[k3];
+                    
+                    for (j = 0; j < 7; j++) {
+                        summ[j][s_torder3*0 + kk] = mom1 * qq[j];
+                        summ[j][s_torder3*1 + kk] = mom2 * qq[j];
+                        summ[j][s_torder3*2 + kk] = mom3 * qq[j];
+                        summ[j][s_torder3*3 + kk] = mom4 * qq[j];
+                        summ[j][s_torder3*4 + kk] = mom5 * qq[j];
+                        summ[j][s_torder3*5 + kk] = mom6 * qq[j];
+                        summ[j][s_torder3*6 + kk] = mom7 * qq[j];
+                        summ[j][s_torder3*7 + kk] = mom8 * qq[j];
+                    }
+                    
+                    for (j = 7; j < 14; j+=3) {
+                        summ[j][s_torder3*0 + kk] = mom1 * qq[j];
+                        summ[j][s_torder3*1 + kk] = mom2 * qq[j];
+                        summ[j][s_torder3*2 + kk] = mom3 * qq[j];
+                        summ[j][s_torder3*3 + kk] = mom4 * qq[j];
+                        summ[j][s_torder3*4 + kk] = mom5 * qq[j];
+                        summ[j][s_torder3*5 + kk] = mom6 * qq[j];
+                        summ[j][s_torder3*6 + kk] = mom7 * qq[j];
+                        summ[j][s_torder3*7 + kk] = mom8 * qq[j];
+                    }
                 }
-                ty *= dy;
             }
-            tx *= dx;
         }
     }
     
-    ii = 0;
-
-    for (k1 = 0; k1 < s_order+1; k1++) {
-        for (k2 = 0; k2 < s_order+1-k1; k2++) {
-            for (k3 = 0; k3 < s_order+1-k1-k2; k3++) {
-                p->ms[8][ii] = p->ms[7][ii];
-                p->ms[9][ii] = p->ms[7][ii];
-                p->ms[11][ii] = p->ms[10][ii];
-                p->ms[12][ii] = p->ms[10][ii];
-                p->ms[14][ii] = p->ms[13][ii];
-                p->ms[15][ii] = p->ms[13][ii];
-                ii++;
-            }
-        }
-    }
+    for (j = 0; j < 7; j++)
+        memcpy(p->ms[j], summ[j], 8*s_torder3*sizeof(double));
+    
+    for (j = 7; j < 10; j++)
+        memcpy(p->ms[j], summ[7], 8*s_torder3*sizeof(double));
+    
+    for (j = 10; j < 13; j++)
+        memcpy(p->ms[j], summ[10], 8*s_torder3*sizeof(double));
+    
+    for (j = 13; j < 16; j++)
+        memcpy(p->ms[j], summ[13], 8*s_torder3*sizeof(double));
 
     return 0;
 }
@@ -1156,18 +1250,29 @@ static int s_ComputeTreePB(TreeNode *p, double tempq[2][16], double peng[2])
 {
     int ii, i, j, k, indx;
     double sl[4], pt_comp[2][16];
+    double dx, dy, dz;
     
-    s_ComputeCoeffsCoulomb(p);
+    
+    dx = s_target_position[0] - //FIX;
+    dy = s_target_position[1] - //FIX;
+    dz = s_target_position[2] - //FIX;
+    
+    
+    
+    s_ComputeCoeffsCoulomb(p,dx,dy,dz);
+    
+    
+    
     for (indx = 0; indx < 16; indx++) {
         peng[0] = 0.0;
         ii = 0;
-        for (i = 0; i < s_order+1; i++) {
-            for (j = 0; j < s_order+1-i; j++) {
-                for (k = 0; k < s_order+1-i-j; k++) {
+        for (i = 0; i < s_torder_lim; i++) {
+            for (j = 0; j < s_torder_lim; j++) {
+                for (k = 0; k < s_torder_lim; k++) {
                     peng[0] += s_der_coeff[i][j][k][indx]
-                             * s_a[i+2+s_kk[indx][0]]
-                                  [j+2+s_kk[indx][1]]
-                                  [k+2+s_kk[indx][2]]
+                             * s_a[i+s_kk[indx][0]]
+                                  [j+s_kk[indx][1]]
+                                  [k+s_kk[indx][2]]
                              * p->ms[indx][ii];
                     ii++;
                 }
@@ -1176,7 +1281,12 @@ static int s_ComputeTreePB(TreeNode *p, double tempq[2][16], double peng[2])
         pt_comp[0][indx] = tempq[0][indx] * peng[0];
     }
 
-    s_ComputeCoeffs(p);
+
+
+    s_ComputeCoeffs(p,dx,dy,dz);
+    
+    
+    
     for (indx = 0; indx < 16; indx++) {
         peng[1] = 0.0;
         ii = 0;
@@ -1184,9 +1294,9 @@ static int s_ComputeTreePB(TreeNode *p, double tempq[2][16], double peng[2])
             for (j = 0; j < s_order+1-i; j++) {
                 for (k = 0; k < s_order+1-i-j; k++) {
                     peng[1] += s_der_coeff[i][j][k][indx]
-                             * s_a[i+2+s_kk[indx][0]]
-                                  [j+2+s_kk[indx][1]]
-                                  [k+2+s_kk[indx][2]]
+                             * s_a[i+s_kk[indx][0]]
+                                  [j+s_kk[indx][1]]
+                                  [k+s_kk[indx][2]]
                              * p->ms[indx][ii];
                     ii++;
                 }
@@ -1215,21 +1325,21 @@ static int s_ComputeTreePB(TreeNode *p, double tempq[2][16], double peng[2])
 
 
 /********************************************************/
-static int s_ComputeCoeffs(TreeNode *p)
+static int s_ComputeCoeffs(TreeNode *p, double dx, double dy, double dz)
 {
 /* COMP_TCOEFF computes the Taylor coefficients of the potential
  * using a recurrence formula. The center of the expansion is the
  * midpoint of the node P. s_target_position and s_order are globally defined. */
  
-    double dx, dy, dz, ddx, ddy, ddz, dist, fac;
+    double ddx, ddy, ddz, dist, fac;
     double kappax, kappay, kappaz;
     int i, j, k;
 
   /* setup variables */
 
-    dx = s_target_position[0] - p->x_mid;
-    dy = s_target_position[1] - p->y_mid;
-    dz = s_target_position[2] - p->z_mid;
+//    dx = s_target_position[0] - p->x_mid;
+//    dy = s_target_position[1] - p->y_mid;
+//    dz = s_target_position[2] - p->z_mid;
 
     ddx = 2.0 * dx;
     ddy = 2.0 * dy;
@@ -1244,205 +1354,153 @@ static int s_ComputeCoeffs(TreeNode *p)
     dist = sqrt(dist);
 
   /* 0th coeff or function val */
-    s_b[2][2][2] = exp(-s_kappa * dist);
-    s_a[2][2][2] = s_b[2][2][2] / dist;
+    s_b[0][0][0] = exp(-s_kappa * dist);
+    s_a[0][0][0] = s_b[0][0][0] / dist;
 
   /* 2 indices are 0 */
 
-    s_b[3][2][2] = kappax * s_a[2][2][2];
-    s_b[2][3][2] = kappay * s_a[2][2][2];
-    s_b[2][2][3] = kappaz * s_a[2][2][2];
+    s_b[1][0][0] = kappax * s_a[0][0][0];
+    s_b[0][1][0] = kappay * s_a[0][0][0];
+    s_b[0][0][1] = kappaz * s_a[0][0][0];
 
-    s_a[3][2][2] = fac * dx * (s_a[2][2][2] + s_kappa * s_b[2][2][2]);
-    s_a[2][3][2] = fac * dy * (s_a[2][2][2] + s_kappa * s_b[2][2][2]);
-    s_a[2][2][3] = fac * dz * (s_a[2][2][2] + s_kappa * s_b[2][2][2]);
+    s_a[1][0][0] = fac * dx * (s_a[0][0][0] + s_kappa * s_b[0][0][0]);
+    s_a[0][1][0] = fac * dy * (s_a[0][0][0] + s_kappa * s_b[0][0][0]);
+    s_a[0][0][1] = fac * dz * (s_a[0][0][0] + s_kappa * s_b[0][0][0]);
 
-    for (i = 2; i < s_order+3; i++) {
-        s_b[i+2][2][2] = s_cf1[i-1] * s_kappa * (dx * s_a[i+1][2][2] - s_a[i][2][2]);
-        s_b[2][i+2][2] = s_cf1[i-1] * s_kappa * (dy * s_a[2][i+1][2] - s_a[2][i][2]);
-        s_b[2][2][i+2] = s_cf1[i-1] * s_kappa * (dz * s_a[2][2][i+1] - s_a[2][2][i]);
+    for (i = 2; i < 4; i++) {
+        s_b[i][0][0] = s_cf1[i-1] * s_kappa * (dx * s_a[i-1][0][0] - s_a[i-2][0][0]);
+        s_b[0][i][0] = s_cf1[i-1] * s_kappa * (dy * s_a[0][i-1][0] - s_a[0][i-2][0]);
+        s_b[0][0][i] = s_cf1[i-1] * s_kappa * (dz * s_a[0][0][i-1] - s_a[0][0][i-2]);
 
-        s_a[i+2][2][2] = fac * (ddx * s_cf2[i-1] * s_a[i+1][2][2]
-                                  - s_cf3[i-1] * s_a[i][2][2]
-                     + s_cf1[i-1] * s_kappa * (dx * s_b[i+1][2][2]
-                                              - s_b[i][2][2]));
+        s_a[i][0][0] = fac * (ddx * s_cf2[i-1] * s_a[i-1][0][0]
+                                  - s_cf3[i-1] * s_a[i-2][0][0]
+                  + s_cf1[i-1] * s_kappa * (dx * s_b[i-1][0][0]
+                                               - s_b[i-2][0][0]));
 
-        s_a[2][i+2][2] = fac * (ddy * s_cf2[i-1] * s_a[2][i+1][2]
-                                  - s_cf3[i-1] * s_a[2][i][2]
-                     + s_cf1[i-1] * s_kappa * (dy * s_b[2][i+1][2]
-                                              - s_b[2][i][2]));
+        s_a[0][i][0] = fac * (ddy * s_cf2[i-1] * s_a[0][i-1][0]
+                                  - s_cf3[i-1] * s_a[0][i-2][0]
+                  + s_cf1[i-1] * s_kappa * (dy * s_b[0][i-1][0]
+                                               - s_b[0][i-2][0]));
         
-        s_a[2][2][i+2] = fac * (ddz * s_cf2[i-1] * s_a[2][2][i+1]
-                                  - s_cf3[i-1] * s_a[2][2][i]
-                     + s_cf1[i-1] * s_kappa * (dz * s_b[2][2][i+1]
-                                              - s_b[2][2][i]));
+        s_a[0][0][i] = fac * (ddz * s_cf2[i-1] * s_a[0][0][i-1]
+                                  - s_cf3[i-1] * s_a[0][0][i-2]
+                  + s_cf1[i-1] * s_kappa * (dz * s_b[0][0][i-1]
+                                               - s_b[0][0][i-2]));
     }
 
   /* 1 index 0, 1 index 1, other >=1 */
-    s_b[3][3][2] = kappax * s_a[2][3][2];
-    s_b[3][2][3] = kappax * s_a[2][2][3];
-    s_b[2][3][3] = kappay * s_a[2][2][3];
+    s_b[1][1][0] = kappax * s_a[0][1][0];
+    s_b[1][0][1] = kappax * s_a[0][0][1];
+    s_b[0][1][1] = kappay * s_a[0][0][1];
 
-    s_a[3][3][2] = fac * (dx * s_a[2][3][2] + ddy * s_a[3][2][2] + kappax * s_b[2][3][2]);
-    s_a[3][2][3] = fac * (dx * s_a[2][2][3] + ddz * s_a[3][2][2] + kappax * s_b[2][2][3]);
-    s_a[2][3][3] = fac * (dy * s_a[2][2][3] + ddz * s_a[2][3][2] + kappay * s_b[2][2][3]);
+    s_a[1][1][0] = fac * (dx * s_a[0][1][0] + ddy * s_a[1][0][0] + kappax * s_b[0][1][0]);
+    s_a[1][0][1] = fac * (dx * s_a[0][0][1] + ddz * s_a[1][0][0] + kappax * s_b[0][0][1]);
+    s_a[0][1][1] = fac * (dy * s_a[0][0][1] + ddz * s_a[0][1][0] + kappay * s_b[0][0][1]);
 
-    for (i = 2; i < s_order+2; i++) {
-        s_b[3][2][i+2] = kappax * s_a[2][2][i+2];
-        s_b[2][3][i+2] = kappay * s_a[2][2][i+2];
-        s_b[2][i+2][3] = kappaz * s_a[2][i+2][2];
-        s_b[3][i+2][2] = kappax * s_a[2][i+2][2];
-        s_b[i+2][3][2] = kappay * s_a[i+2][2][2];
-        s_b[i+2][2][3] = kappaz * s_a[i+2][2][2];
+    for (i = 2; i < 4; i++) {
+        s_b[1][0][i] = kappax * s_a[0][0][i];
+        s_b[0][1][i] = kappay * s_a[0][0][i];
+        s_b[0][i][1] = kappaz * s_a[0][i][0];
+        s_b[1][i][0] = kappax * s_a[0][i][0];
+        s_b[i][1][0] = kappay * s_a[i][0][0];
+        s_b[i][0][1] = kappaz * s_a[i][0][0];
 
-        s_a[3][2][i+2]=fac * (dx * s_a[2][2][i+2] + ddz * s_a[3][2][i+1] - s_a[3][2][i]
-                      + kappax * s_b[2][2][i+2]);
-        s_a[2][3][i+2]=fac * (dy * s_a[2][2][i+2] + ddz * s_a[2][3][i+1] - s_a[2][3][i]
-                      + kappay * s_b[2][2][i+2]);
-        s_a[2][i+2][3]=fac * (dz * s_a[2][i+2][2] + ddy * s_a[2][i+1][3] - s_a[2][i][3]
-                      + kappaz * s_b[2][i+2][2]);
-        s_a[3][i+2][2]=fac * (dx * s_a[2][i+2][2] + ddy * s_a[3][i+1][2] - s_a[3][i][2]
-                      + kappax * s_b[2][i+2][2]);
-        s_a[i+2][3][2]=fac * (dy * s_a[i+2][2][2] + ddx * s_a[i+1][3][2] - s_a[i][3][2]
-                      + kappay * s_b[i+2][2][2]);
-        s_a[i+2][2][3]=fac * (dz * s_a[i+2][2][2] + ddx * s_a[i+1][2][3] - s_a[i][2][3]
-                      + kappaz * s_b[i+2][2][2]);
+        s_a[1][0][i]=fac * (dx * s_a[0][0][i] + ddz * s_a[1][0][i-1] - s_a[1][0][i-2]
+                      + kappax * s_b[0][0][i]);
+        s_a[0][1][i]=fac * (dy * s_a[0][0][i] + ddz * s_a[0][1][i-1] - s_a[0][1][i-2]
+                      + kappay * s_b[0][0][i]);
+        s_a[0][i][1]=fac * (dz * s_a[0][i][0] + ddy * s_a[0][i-1][1] - s_a[0][i-2][1]
+                      + kappaz * s_b[0][i][0]);
+        s_a[1][i][0]=fac * (dx * s_a[0][i][0] + ddy * s_a[1][i-1][0] - s_a[1][i-2][0]
+                      + kappax * s_b[0][i][0]);
+        s_a[i][1][0]=fac * (dy * s_a[i][0][0] + ddx * s_a[i-1][1][0] - s_a[i-2][1][0]
+                      + kappay * s_b[i][0][0]);
+        s_a[i][0][1]=fac * (dz * s_a[i][0][0] + ddx * s_a[i-1][0][1] - s_a[i-2][0][1]
+                      + kappaz * s_b[i][0][0]);
     }
 
     /* 1 index 0, others >=2 */
-    for (i = 2; i < s_order+1; i++) {
-        for (j = 2; j < s_order+3-i; j++) {
-            s_b[i+2][j+2][2] = s_cf1[i-1] * s_kappa * (dx * s_a[i+1][j+2][2] - s_a[i][j+2][2]);
-            s_b[i+2][2][j+2] = s_cf1[i-1] * s_kappa * (dx * s_a[i+1][2][j+2] - s_a[i][2][j+2]);
-            s_b[2][i+2][j+2] = s_cf1[i-1] * s_kappa * (dy * s_a[2][i+1][j+2] - s_a[2][i][j+2]);
+            s_b[2][2][0] = s_cf1[1] * s_kappa * (dx * s_a[1][2][0] - s_a[0][2][0]);
+            s_b[2][0][2] = s_cf1[1] * s_kappa * (dx * s_a[1][0][2] - s_a[0][0][2]);
+            s_b[0][2][2] = s_cf1[1] * s_kappa * (dy * s_a[0][1][2] - s_a[0][0][2]);
 
-            s_a[i+2][j+2][2] = fac * (ddx * s_cf2[i-1] * s_a[i+1][j+2][2]
-                                             + ddy * s_a[i+2][j+1][2]
-                                        - s_cf3[i-1] * s_a[i][j+2][2]
-                                                   - s_a[i+2][j][2]
-                           + s_cf1[i-1] * s_kappa * (dx * s_b[i+1][j+2][2]
-                                                    - s_b[i][j+2][2]));
+            s_a[2][2][0] = fac * (ddx * s_cf2[1] * s_a[1][2][0]
+                                           + ddy * s_a[2][1][0]
+                                      - s_cf3[1] * s_a[0][2][0]
+                                                 - s_a[2][0][0]
+                      + s_cf1[1] * s_kappa * (dx * s_b[1][2][0]
+                                                 - s_b[0][2][0]));
 
-            s_a[i+2][2][j+2] = fac * (ddx * s_cf2[i-1] * s_a[i+1][2][j+2]
-                                             + ddz * s_a[i+2][2][j+1]
-                                        - s_cf3[i-1] * s_a[i][2][j+2]
-                                                   - s_a[i+2][2][j]
-                           + s_cf1[i-1] * s_kappa * (dx * s_b[i+1][2][j+2]
-                                                    - s_b[i][2][j+2]));
+            s_a[2][0][2] = fac * (ddx * s_cf2[1] * s_a[1][0][2]
+                                           + ddz * s_a[2][0][1]
+                                      - s_cf3[1] * s_a[0][0][2]
+                                                 - s_a[2][0][0]
+                      + s_cf1[1] * s_kappa * (dx * s_b[1][0][2]
+                                                 - s_b[0][0][2]));
 
-            s_a[2][i+2][j+2] = fac * (ddy * s_cf2[i-1] * s_a[2][i+1][j+2]
-                                             + ddz * s_a[2][i+2][j+1]
-                                        - s_cf3[i-1] * s_a[2][i][j+2]
-                                                   - s_a[2][i+2][j]
-                           + s_cf1[i-1] * s_kappa * (dy * s_b[2][i+1][j+2]
-                                                    - s_b[2][i][j+2]));
-        }
-    }
+            s_a[0][2][2] = fac * (ddy * s_cf2[1] * s_a[0][1][2]
+                                           + ddz * s_a[0][2][1]
+                                      - s_cf3[1] * s_a[0][0][2]
+                                                 - s_a[0][2][0]
+                      + s_cf1[1] * s_kappa * (dy * s_b[0][1][2]
+                                                 - s_b[0][0][2]));
 
   /* 2 indices 1,other >= 1 */
-    s_b[3][3][3] = kappax * s_a[2][3][3];
-    s_a[3][3][3] = fac * (dx * s_a[2][3][3]
-                     + ddy * s_a[3][2][3]
-                     + ddz * s_a[3][3][2]
-                  + kappax * s_b[2][3][3]);
+    s_b[1][1][1] = kappax * s_a[0][1][1];
+    s_a[1][1][1] = fac * (dx * s_a[0][1][1]
+                       + ddy * s_a[1][0][1]
+                       + ddz * s_a[1][1][0]
+                    + kappax * s_b[0][1][1]);
 
-    for (i = 2; i < s_order+1; i++) {
-        s_b[3][3][i+2] = kappax * s_a[2][3][i+2];
-        s_b[3][i+2][3] = kappax * s_a[2][i+2][3];
-        s_b[i+2][3][3] = kappay * s_a[i+2][2][3];
+    for (i = 2; i < 4; i++) {
+        s_b[1][1][i] = kappax * s_a[0][1][i];
+        s_b[1][i][1] = kappax * s_a[0][i][1];
+        s_b[i][1][1] = kappay * s_a[i][0][1];
 
-        s_a[3][3][i+2] = fac * (dx * s_a[2][3][i+2]
-                           + ddy * s_a[3][2][i+2]
-                           + ddz * s_a[3][3][i+1]
-                                  -s_a[3][3][i]
-                        + kappax * s_b[2][3][i+2]);
+        s_a[1][1][i] = fac * (dx * s_a[0][1][i]
+                           + ddy * s_a[1][0][i]
+                           + ddz * s_a[1][1][i-1]
+                                  -s_a[1][1][i-2]
+                        + kappax * s_b[0][1][i]);
 
-        s_a[3][i+2][3] = fac * (dx * s_a[2][i+2][3]
-                           + ddy * s_a[3][i+1][3]
-                           + ddz * s_a[3][i+2][2]
-                                 - s_a[3][i][3]
-                        + kappax * s_b[2][i+2][3]);
+        s_a[1][i][1] = fac * (dx * s_a[0][i][1]
+                           + ddy * s_a[1][i-1][1]
+                           + ddz * s_a[1][i][0]
+                                 - s_a[1][i-2][1]
+                        + kappax * s_b[0][i][1]);
 
-        s_a[i+2][3][3] = fac * (dy * s_a[i+2][2][3]
-                           + ddx * s_a[i+1][3][3]
-                           + ddz * s_a[i+2][3][2]
-                                 - s_a[i][3][3]
-                        + kappay * s_b[i+2][2][3]);
+        s_a[i][1][1] = fac * (dy * s_a[i][0][1]
+                           + ddx * s_a[i-1][1][1]
+                           + ddz * s_a[i][1][0]
+                                 - s_a[i-2][1][1]
+                        + kappay * s_b[i][0][1]);
     }
 
   /* 1 index 1, others >=2 */
-    for (i = 2; i < s_order; i++) {
-        for (j = 2; j < s_order+2-i; j++) {
-            s_b[3][i+2][j+2] = kappax * s_a[2][i+2][j+2];
-            s_b[i+2][3][j+2] = kappay * s_a[i+2][2][j+2];
-            s_b[i+2][j+2][3] = kappaz * s_a[i+2][j+2][2];
+            s_b[1][2][2] = kappax * s_a[0][2][2];
+            s_b[2][1][2] = kappay * s_a[2][0][2];
+            s_b[2][2][1] = kappaz * s_a[2][2][0];
 
-            s_a[3][i+2][j+2] = fac * (dx * s_a[2][i+2][j+2]
-                                 + ddy * s_a[3][i+1][j+2]
-                                 + ddz * s_a[3][i+2][j+1]
-                                       - s_a[3][i][j+2]
-                                       - s_a[3][i+2][j]
-                              + kappax * s_b[2][i+2][j+2]);
+            s_a[1][2][2] = fac * (dx * s_a[0][2][2]
+                               + ddy * s_a[1][1][2]
+                               + ddz * s_a[1][2][1]
+                                     - s_a[1][0][2]
+                                     - s_a[1][2][0]
+                            + kappax * s_b[0][2][2]);
 
-            s_a[i+2][3][j+2] = fac * (dy * s_a[i+2][2][j+2]
-                                 + ddx * s_a[i+1][3][j+2]
-                                 + ddz * s_a[i+2][3][j+1]
-                                       - s_a[i][3][j+2]
-                                       - s_a[i+2][3][j]
-                              + kappay * s_b[i+2][2][j+2]);
+            s_a[2][1][2] = fac * (dy * s_a[2][0][2]
+                               + ddx * s_a[1][1][2]
+                               + ddz * s_a[2][1][1]
+                                     - s_a[0][1][2]
+                                     - s_a[2][1][0]
+                            + kappay * s_b[2][0][2]);
             
-            s_a[i+2][j+2][3] = fac * (dz * s_a[i+2][j+2][2]
-                                 + ddx * s_a[i+1][j+2][3]
-                                 + ddy * s_a[i+2][j+1][3]
-                                       - s_a[i][j+2][3]
-                                       - s_a[i+2][j][3]
-                              + kappaz * s_b[i+2][j+2][2]);
-        }
-    }
-
-  /* all indices >=2 */
-    for (k = 2; k < s_order-1; k++) {
-        for (j = 2; j < s_order+1-k; j++) {
-            for (i = 2; i < s_order+3-k-j; i++) {
-                /*
-                s_b[i+2][j+2][k+2] = s_cf1[i-1] * s_kappa * (dx * s_a[i+1][j+2][k+2]
-                                                          - s_a[i][j+2][k+2]);
-
-                s_a[i+2][j+2][k+2] = fac * (ddx * s_cf2[i-1] * s_a[i+1][j+2][k+2]
-                                                   + ddy * s_a[i+2][j+1][k+2]
-                                                   + ddz * s_a[i+2][j+2][k+1]
-                                              - s_cf3[i-1] * s_a[i][j+2][k+2]
-                                                         - s_a[i+2][j][k+2]
-                                                         - s_a[i+2][j+2][k]
-                                 + s_cf1[i-1] * s_kappa * (dx * s_b[i+1][j+2][k+2]
-                                                          - s_b[i][j+2][k+2]));
-                */
-
-                s_b[i+2][j+2][k+2] = s_cf1[i+j+k-1] * s_kappa 
-                                                    * (dx * s_a[i+1][j+2][k+2]
-                                                     + dy * s_a[i+2][j+1][k+2] 
-                                                     + dz * s_a[i+2][j+2][k+1] 
-                                                          - s_a[i][j+2][k+2]
-                                                          - s_a[i+2][j][k+2]
-                                                          - s_a[i+2][j+2][k]);
-
-                s_a[i+2][j+2][k+2] = fac
-                                   * (s_cf2[i+j+k-1] * (ddx * s_a[i+1][j+2][k+2]
-                                                      + ddy * s_a[i+2][j+1][k+2]
-                                                      + ddz * s_a[i+2][j+2][k+1])
-                                    - s_cf3[i+j+k-1] * (s_a[i][j+2][k+2]
-                                                      + s_a[i+2][j][k+2]
-                                                      + s_a[i+2][j+2][k])
-                                    + s_cf1[i+j+k-1] * s_kappa 
-                                                     * (dx * s_b[i+1][j+2][k+2]
-                                                     +  dy * s_b[i+2][j+1][k+2]
-                                                     +  dz * s_b[i+2][j+2][k+1]
-                                                           - s_b[i][j+2][k+2]
-                                                           - s_b[i+2][j][k+2]
-                                                           - s_b[i+2][j+2][k]));
-            }
-        }
-    }
+            s_a[2][2][1] = fac * (dz * s_a[2][2][0]
+                               + ddx * s_a[1][2][1]
+                               + ddy * s_a[2][1][1]
+                                     - s_a[0][2][1]
+                                     - s_a[2][0][1]
+                            + kappaz * s_b[2][2][0]);
 
     return 0;
 }
@@ -1450,19 +1508,19 @@ static int s_ComputeCoeffs(TreeNode *p)
 
 
 /********************************************************/
-static int s_ComputeCoeffsCoulomb(TreeNode *p)
+static int s_ComputeCoeffsCoulomb(TreeNode *p, double dx, double dy, double dz)
 {
 /* COMP_TCOEFF computes the Taylor coefficients of the potential
  * using a recurrence formula. The center of the expansion is the
  * midpoint of the node P. s_target_position and s_order are globally defined. */
-    double dx, dy, dz, ddx, ddy, ddz, dist, fac;
+    double ddx, ddy, ddz, dist, fac;
     int i, j, k;
 
   /* setup variables */
 
-    dx = s_target_position[0] - p->x_mid;
-    dy = s_target_position[1] - p->y_mid;
-    dz = s_target_position[2] - p->z_mid;
+//    dx = s_target_position[0] - p->x_mid;
+//    dy = s_target_position[1] - p->y_mid;
+//    dz = s_target_position[2] - p->z_mid;
 
     ddx = 2.0 * dx;
     ddy = 2.0 * dy;
@@ -1473,136 +1531,99 @@ static int s_ComputeCoeffsCoulomb(TreeNode *p)
     dist = sqrt(dist);
 
   /* 0th coeff or function val */
-    s_a[2][2][2] = 1.0 / dist;
+    s_a[0][0][0] = 1.0 / dist;
 
   /* 2 indices are 0 */
 
-    s_a[3][2][2] = fac * dx * s_a[2][2][2];
-    s_a[2][3][2] = fac * dy * s_a[2][2][2];
-    s_a[2][2][3] = fac * dz * s_a[2][2][2];
+    s_a[1][0][0] = fac * dx * s_a[0][0][0];
+    s_a[0][1][0] = fac * dy * s_a[0][0][0];
+    s_a[0][0][1] = fac * dz * s_a[0][0][0];
 
-    for (i = 2; i < s_order+3; i++) {
+    for (i = 2; i < 4; i++) {
 
-        s_a[i+2][2][2] = fac * (ddx * s_cf2[i-1] * s_a[i+1][2][2]
-                                    - s_cf3[i-1] * s_a[i][2][2]);
+        s_a[i][0][0] = fac * (ddx * s_cf2[i-1] * s_a[i-1][0][0]
+                                  - s_cf3[i-1] * s_a[i-2][0][0]);
 
-        s_a[2][i+2][2] = fac * (ddy * s_cf2[i-1] * s_a[2][i+1][2]
-                                    - s_cf3[i-1] * s_a[2][i][2]);
+        s_a[0][i][0] = fac * (ddy * s_cf2[i-1] * s_a[0][i-1][0]
+                                  - s_cf3[i-1] * s_a[0][i-2][0]);
         
-        s_a[2][2][i+2] = fac * (ddz * s_cf2[i-1] * s_a[2][2][i+1]
-                                    - s_cf3[i-1] * s_a[2][2][i]);
+        s_a[0][0][i] = fac * (ddz * s_cf2[i-1] * s_a[0][0][i-1]
+                                  - s_cf3[i-1] * s_a[0][0][i-2]);
     }
 
   /* 1 index 0, 1 index 1, other >=1 */
-    s_a[3][3][2] = fac * (dx * s_a[2][3][2] + ddy * s_a[3][2][2]);
-    s_a[3][2][3] = fac * (dx * s_a[2][2][3] + ddz * s_a[3][2][2]);
-    s_a[2][3][3] = fac * (dy * s_a[2][2][3] + ddz * s_a[2][3][2]);
+    s_a[1][1][0] = fac * (dx * s_a[0][1][0] + ddy * s_a[1][0][0]);
+    s_a[1][0][1] = fac * (dx * s_a[0][0][1] + ddz * s_a[1][0][0]);
+    s_a[0][1][1] = fac * (dy * s_a[0][0][1] + ddz * s_a[0][1][0]);
 
-    for (i = 2; i < s_order+2; i++) {
+    for (i = 2; i < 4; i++) {
 
-        s_a[3][2][i+2]=fac * (dx * s_a[2][2][i+2] + ddz * s_a[3][2][i+1] - s_a[3][2][i]);
-        s_a[2][3][i+2]=fac * (dy * s_a[2][2][i+2] + ddz * s_a[2][3][i+1] - s_a[2][3][i]);
-        s_a[2][i+2][3]=fac * (dz * s_a[2][i+2][2] + ddy * s_a[2][i+1][3] - s_a[2][i][3]);
-        s_a[3][i+2][2]=fac * (dx * s_a[2][i+2][2] + ddy * s_a[3][i+1][2] - s_a[3][i][2]);
-        s_a[i+2][3][2]=fac * (dy * s_a[i+2][2][2] + ddx * s_a[i+1][3][2] - s_a[i][3][2]);
-        s_a[i+2][2][3]=fac * (dz * s_a[i+2][2][2] + ddx * s_a[i+1][2][3] - s_a[i][2][3]);
+        s_a[1][0][i]=fac * (dx * s_a[0][0][i] + ddz * s_a[1][0][i-1] - s_a[1][0][i-2]);
+        s_a[0][1][i]=fac * (dy * s_a[0][0][i] + ddz * s_a[0][1][i-1] - s_a[0][1][i-2]);
+        s_a[0][i][1]=fac * (dz * s_a[0][i][0] + ddy * s_a[0][i-1][1] - s_a[0][i-2][1]);
+        s_a[1][i][0]=fac * (dx * s_a[0][i][0] + ddy * s_a[1][i-1][0] - s_a[1][i-2][0]);
+        s_a[i][1][0]=fac * (dy * s_a[i][0][0] + ddx * s_a[i-1][1][0] - s_a[i-2][1][0]);
+        s_a[i][0][1]=fac * (dz * s_a[i][0][0] + ddx * s_a[i-1][0][1] - s_a[i-2][0][1]);
     }
 
     /* 1 index 0, others >=2 */
-    for (i = 2; i < s_order+1; i++) {
-        for (j = 2; j < s_order+3-i; j++) {
 
-            s_a[i+2][j+2][2] = fac * (ddx * s_cf2[i-1] * s_a[i+1][j+2][2]
-                                                 + ddy * s_a[i+2][j+1][2]
-                                          - s_cf3[i-1] * s_a[i][j+2][2]
-                                                       - s_a[i+2][j][2]);
+            s_a[2][2][0] = fac * (ddx * s_cf2[1] * s_a[1][2][0]
+                                           + ddy * s_a[2][1][0]
+                                      - s_cf3[1] * s_a[0][2][0]
+                                                 - s_a[2][0][0]);
 
-            s_a[i+2][2][j+2] = fac * (ddx * s_cf2[i-1] * s_a[i+1][2][j+2]
-                                                 + ddz * s_a[i+2][2][j+1]
-                                          - s_cf3[i-1] * s_a[i][2][j+2]
-                                                       - s_a[i+2][2][j]);
+            s_a[2][0][2] = fac * (ddx * s_cf2[1] * s_a[1][0][2]
+                                           + ddz * s_a[2][0][1]
+                                      - s_cf3[1] * s_a[0][0][2]
+                                                 - s_a[2][0][0]);
 
-            s_a[2][i+2][j+2] = fac * (ddy * s_cf2[i-1] * s_a[2][i+1][j+2]
-                                                 + ddz * s_a[2][i+2][j+1]
-                                          - s_cf3[i-1] * s_a[2][i][j+2]
-                                                       - s_a[2][i+2][j]);
-        }
-    }
+            s_a[0][2][2] = fac * (ddy * s_cf2[1] * s_a[0][1][2]
+                                           + ddz * s_a[0][2][1]
+                                      - s_cf3[1] * s_a[0][0][2]
+                                                 - s_a[0][2][0]);
 
   /* 2 indices 1,other >= 1 */
-    s_a[3][3][3] = fac * (dx * s_a[2][3][3]
-                       + ddy * s_a[3][2][3]
-                       + ddz * s_a[3][3][2]);
+    s_a[1][1][1] = fac * (dx * s_a[0][1][1]
+                       + ddy * s_a[1][0][1]
+                       + ddz * s_a[1][1][0]);
 
-    for (i = 2; i < s_order+1; i++) {
+    for (i = 2; i < 4; i++) {
 
-        s_a[3][3][i+2] = fac * (dx * s_a[2][3][i+2]
-                           + ddy * s_a[3][2][i+2]
-                           + ddz * s_a[3][3][i+1]
-                                  -s_a[3][3][i]);
+        s_a[1][1][i] = fac * (dx * s_a[0][1][i]
+                           + ddy * s_a[1][0][i]
+                           + ddz * s_a[1][1][i-1]
+                                  -s_a[1][1][i-2]);
 
-        s_a[3][i+2][3] = fac * (dx * s_a[2][i+2][3]
-                             + ddy * s_a[3][i+1][3]
-                             + ddz * s_a[3][i+2][2]
-                                   - s_a[3][i][3]);
+        s_a[1][i][1] = fac * (dx * s_a[0][i][1]
+                             + ddy * s_a[1][i-1][1]
+                             + ddz * s_a[1][i][0]
+                                   - s_a[1][i-2][1]);
 
-        s_a[i+2][3][3] = fac * (dy * s_a[i+2][2][3]
-                             + ddx * s_a[i+1][3][3]
-                             + ddz * s_a[i+2][3][2]
-                                   - s_a[i][3][3]);
+        s_a[i][1][1] = fac * (dy * s_a[i][0][1]
+                             + ddx * s_a[i-1][1][1]
+                             + ddz * s_a[i][1][0]
+                                   - s_a[i-2][1][1]);
     }
 
   /* 1 index 1, others >=2 */
-    for (i = 2; i < s_order; i++) {
-        for (j = 2; j < s_order+2-i; j++) {
+            s_a[1][2][2] = fac * (dx * s_a[0][2][2]
+                               + ddy * s_a[1][1][2]
+                               + ddz * s_a[1][2][1]
+                                     - s_a[1][0][2]
+                                     - s_a[1][2][0]);
 
-            s_a[3][i+2][j+2] = fac * (dx * s_a[2][i+2][j+2]
-                                   + ddy * s_a[3][i+1][j+2]
-                                   + ddz * s_a[3][i+2][j+1]
-                                         - s_a[3][i][j+2]
-                                         - s_a[3][i+2][j]);
-
-            s_a[i+2][3][j+2] = fac * (dy * s_a[i+2][2][j+2]
-                                   + ddx * s_a[i+1][3][j+2]
-                                   + ddz * s_a[i+2][3][j+1]
-                                         - s_a[i][3][j+2]
-                                         - s_a[i+2][3][j]);
+            s_a[2][1][2] = fac * (dy * s_a[2][0][2]
+                               + ddx * s_a[1][1][2]
+                               + ddz * s_a[2][1][1]
+                                     - s_a[0][1][2]
+                                     - s_a[2][1][0]);
             
-            s_a[i+2][j+2][3] = fac * (dz * s_a[i+2][j+2][2]
-                                   + ddx * s_a[i+1][j+2][3]
-                                   + ddy * s_a[i+2][j+1][3]
-                                         - s_a[i][j+2][3]
-                                         - s_a[i+2][j][3]);
-        }
-    }
-
-  /* all indices >=2 */
-    for (k = 2; k < s_order-1; k++) {
-        for (j = 2; j < s_order+1-k; j++) {
-            for (i = 2; i < s_order+3-k-j; i++) {
-
-
-
-                /* 
-                s_a[i+2][j+2][k+2] = fac
-                                   * (ddx * s_cf2[i-1] * s_a[i+1][j+2][k+2]
-                                                 + ddy * s_a[i+2][j+1][k+2]
-                                                 + ddz * s_a[i+2][j+2][k+1]
-                                          - s_cf3[i-1] * s_a[i][j+2][k+2]
-                                                       - s_a[i+2][j][k+2]
-                                                       - s_a[i+2][j+2][k]);
-                */
-
-                s_a[i+2][j+2][k+2] = fac
-                                   * (s_cf2[i+j+k-1] * (ddx * s_a[i+1][j+2][k+2]
-                                                      + ddy * s_a[i+2][j+1][k+2]
-                                                      + ddz * s_a[i+2][j+2][k+1])
-                                    - s_cf3[i+j+k-1] * (s_a[i][j+2][k+2]
-                                                      + s_a[i+2][j][k+2]
-                                                      + s_a[i+2][j+2][k]));
-            }
-        }
-    }
+            s_a[2][2][1] = fac * (dz * s_a[2][2][0]
+                               + ddx * s_a[1][2][1]
+                               + ddy * s_a[2][1][1]
+                                     - s_a[0][2][1]
+                                     - s_a[2][0][1]);
 
     return 0;
 }

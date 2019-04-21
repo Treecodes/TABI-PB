@@ -31,6 +31,7 @@ typedef struct sTreeNode {
     double radius, aspect;
     int level, num_children, exist_ms;
     double **ms;
+    double *tx, *ty, *tz;
     struct sTreeNode **child;
 
 } TreeNode;
