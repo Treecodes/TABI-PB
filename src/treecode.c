@@ -1276,8 +1276,26 @@ static int s_ComputeTreePB(TreeNode *p, double tempq[2][16], double peng[2])
                                         [j+s_kk[indx][1]]
                                         [k+s_kk[indx][2]]
                                    * p->ms[indx][ii];
-                    ii++;
+                    
+                    tempsum[indx] += ONE_OVER_4PI * (
+                        p->ms[indx][0*s_torder3 + ii]
+                              * s_a[0+s_kk[indx][0]][0+s_kk[indx][1]][0+s_kk[indx][2]]
+                      + p->ms[indx][1*s_torder3 + ii]
+                              * s_a[1+s_kk[indx][0]][0+s_kk[indx][1]][0+s_kk[indx][2]]
+                      + p->ms[indx][2*s_torder3 + ii]
+                              * s_a[0+s_kk[indx][0]][1+s_kk[indx][1]][0+s_kk[indx][2]]
+                      + p->ms[indx][3*s_torder3 + ii]
+                              * s_a[0+s_kk[indx][0]][0+s_kk[indx][1]][1+s_kk[indx][2]]
+                      + p->ms[indx][4*s_torder3 + ii]
+                              * s_a[1+s_kk[indx][0]][1+s_kk[indx][1]][0+s_kk[indx][2]]
+                      + p->ms[indx][5*s_torder3 + ii]
+                              * s_a[0+s_kk[indx][0]][1+s_kk[indx][1]][1+s_kk[indx][2]]
+                      + p->ms[indx][6*s_torder3 + ii]
+                              * s_a[1+s_kk[indx][0]][0+s_kk[indx][1]][1+s_kk[indx][2]]
+                      + p->ms[indx][7*s_torder3 + ii]
+                              * s_a[1+s_kk[indx][0]][1+s_kk[indx][1]][1+s_kk[indx][2]]);
                 }
+                ii++;
             }
         }
     }
@@ -1318,11 +1336,23 @@ static int s_ComputeTreePB(TreeNode *p, double tempq[2][16], double peng[2])
             for (k = 0; k < s_torder_lim; k++) {
                 s_ComputeCoeffs(p,dx[i],dy[j],dz[k]);
                 for (indx = 0; indx < 16; indx++) {
-                    tempsum[indx] += ONE_OVER_4PI
-                                   * s_a[i+s_kk[indx][0]]
-                                        [j+s_kk[indx][1]]
-                                        [k+s_kk[indx][2]]
-                                   * p->ms[indx][ii];
+                    tempsum[indx] += ONE_OVER_4PI * (
+                        p->ms[indx][0*s_torder3 + ii]
+                              * s_a[0+s_kk[indx][0]][0+s_kk[indx][1]][0+s_kk[indx][2]]
+                      + p->ms[indx][1*s_torder3 + ii]
+                              * s_a[1+s_kk[indx][0]][0+s_kk[indx][1]][0+s_kk[indx][2]]
+                      + p->ms[indx][2*s_torder3 + ii]
+                              * s_a[0+s_kk[indx][0]][1+s_kk[indx][1]][0+s_kk[indx][2]]
+                      + p->ms[indx][3*s_torder3 + ii]
+                              * s_a[0+s_kk[indx][0]][0+s_kk[indx][1]][1+s_kk[indx][2]]
+                      + p->ms[indx][4*s_torder3 + ii]
+                              * s_a[1+s_kk[indx][0]][1+s_kk[indx][1]][0+s_kk[indx][2]]
+                      + p->ms[indx][5*s_torder3 + ii]
+                              * s_a[0+s_kk[indx][0]][1+s_kk[indx][1]][1+s_kk[indx][2]]
+                      + p->ms[indx][6*s_torder3 + ii]
+                              * s_a[1+s_kk[indx][0]][0+s_kk[indx][1]][1+s_kk[indx][2]]
+                      + p->ms[indx][7*s_torder3 + ii]
+                              * s_a[1+s_kk[indx][0]][1+s_kk[indx][1]][1+s_kk[indx][2]]);
                     ii++;
                 }
             }
