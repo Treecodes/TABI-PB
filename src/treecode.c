@@ -1250,60 +1250,110 @@ static int s_ComputeTreePB(TreeNode *p, double tempq[2][16], double peng[2])
 {
     int ii, i, j, k, indx;
     double sl[4], pt_comp[2][16];
-    double dx, dy, dz;
+    double dx[s_torder_lim], dy[s_torder_lim], dz[s_torder_lim];
+    double tempsum[16];
     
     
-    dx = s_target_position[0] - //FIX;
-    dy = s_target_position[1] - //FIX;
-    dz = s_target_position[2] - //FIX;
+    for (i = 0; i < s_torder_lim; i++) {
+        dx[i] = s_target_position[0] - p->tx[i];
+        dy[i] = s_target_position[1] - p->ty[i];
+        dz[i] = s_target_position[2] - p->tz[i];
+    }
     
-    
-    
-    s_ComputeCoeffsCoulomb(p,dx,dy,dz);
-    
-    
-    
+
+    ii = 0;
     for (indx = 0; indx < 16; indx++) {
-        peng[0] = 0.0;
-        ii = 0;
-        for (i = 0; i < s_torder_lim; i++) {
-            for (j = 0; j < s_torder_lim; j++) {
-                for (k = 0; k < s_torder_lim; k++) {
-                    peng[0] += s_der_coeff[i][j][k][indx]
-                             * s_a[i+s_kk[indx][0]]
-                                  [j+s_kk[indx][1]]
-                                  [k+s_kk[indx][2]]
-                             * p->ms[indx][ii];
+        tempsum[indx] = 0.0;
+    }
+    
+    for (i = 0; i < s_torder_lim; i++) {
+        for (j = 0; j < s_torder_lim; j++) {
+            for (k = 0; k < s_torder_lim; k++) {
+                s_ComputeCoeffsCoulomb(p,dx[i],dy[j],dz[k]);
+                for (indx = 0; indx < 16; indx++) {
+                    tempsum[indx] += ONE_OVER_4PI
+                                   * s_a[i+s_kk[indx][0]]
+                                        [j+s_kk[indx][1]]
+                                        [k+s_kk[indx][2]]
+                                   * p->ms[indx][ii];
                     ii++;
                 }
             }
         }
-        pt_comp[0][indx] = tempq[0][indx] * peng[0];
     }
-
-
-
-    s_ComputeCoeffs(p,dx,dy,dz);
-    
-    
     
     for (indx = 0; indx < 16; indx++) {
-        peng[1] = 0.0;
-        ii = 0;
-        for (i = 0; i < s_order+1; i++) {
-            for (j = 0; j < s_order+1-i; j++) {
-                for (k = 0; k < s_order+1-i-j; k++) {
-                    peng[1] += s_der_coeff[i][j][k][indx]
-                             * s_a[i+s_kk[indx][0]]
-                                  [j+s_kk[indx][1]]
-                                  [k+s_kk[indx][2]]
-                             * p->ms[indx][ii];
+        pt_comp[0][indx] = tempq[0][indx] * tempsum[indx];
+    }
+ 
+    
+    
+//    s_ComputeCoeffsCoulomb(p,dx,dy,dz);
+//    for (indx = 0; indx < 16; indx++) {
+//        peng[0] = 0.0;
+//        ii = 0;
+//        for (i = 0; i < s_torder_lim; i++) {
+//            for (j = 0; j < s_torder_lim; j++) {
+//                for (k = 0; k < s_torder_lim; k++) {
+//                    peng[0] += s_der_coeff[i][j][k][indx]
+//                             * s_a[i+s_kk[indx][0]]
+//                                  [j+s_kk[indx][1]]
+//                                  [k+s_kk[indx][2]]
+//                             * p->ms[indx][ii];
+//                    ii++;
+//                }
+//            }
+//        }
+//        pt_comp[0][indx] = tempq[0][indx] * peng[0];
+//    }
+
+
+    ii = 0;
+    for (indx = 0; indx < 16; indx++) {
+        tempsum[indx] = 0.0;
+    }
+    
+    for (i = 0; i < s_torder_lim; i++) {
+        for (j = 0; j < s_torder_lim; j++) {
+            for (k = 0; k < s_torder_lim; k++) {
+                s_ComputeCoeffs(p,dx[i],dy[j],dz[k]);
+                for (indx = 0; indx < 16; indx++) {
+                    tempsum[indx] += ONE_OVER_4PI
+                                   * s_a[i+s_kk[indx][0]]
+                                        [j+s_kk[indx][1]]
+                                        [k+s_kk[indx][2]]
+                                   * p->ms[indx][ii];
                     ii++;
                 }
             }
         }
-        pt_comp[1][indx] = tempq[1][indx] * peng[1];
     }
+    
+    for (indx = 0; indx < 16; indx++) {
+        pt_comp[1][indx] = tempq[1][indx] * tempsum[indx];
+    }
+
+
+//    s_ComputeCoeffs(p,dx,dy,dz);
+//    for (indx = 0; indx < 16; indx++) {
+//        peng[1] = 0.0;
+//        ii = 0;
+//        for (i = 0; i < s_order+1; i++) {
+//            for (j = 0; j < s_order+1-i; j++) {
+//                for (k = 0; k < s_order+1-i-j; k++) {
+//                    peng[1] += s_der_coeff[i][j][k][indx]
+//                             * s_a[i+s_kk[indx][0]]
+//                                  [j+s_kk[indx][1]]
+//                                  [k+s_kk[indx][2]]
+//                             * p->ms[indx][ii];
+//                    ii++;
+//                }
+//            }
+//        }
+//        pt_comp[1][indx] = tempq[1][indx] * peng[1];
+//    }
+    
+    
 
     sl[0] = pt_comp[0][0] - pt_comp[1][0];
     sl[1] = s_eps * (pt_comp[1][1] + pt_comp[1][2] + pt_comp[1][3])
