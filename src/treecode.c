@@ -1024,7 +1024,7 @@ static int s_ComputeAllMoments(TreeNode *p, int ifirst)
     int i;
     
     if (p->exist_ms == 0 && ifirst == 0) {
-        make_matrix(p->ms, 16, 8*s_torder3);
+        make_matrix(p->ms, 16, s_torder3);
         make_vector(p->tx, s_torder_lim);
         make_vector(p->ty, s_torder_lim);
         make_vector(p->tz, s_torder_lim);
@@ -1060,13 +1060,12 @@ static int s_ComputeMoments(TreeNode *p)
     
     double Dd, dj[s_torder_lim];
     double a1i[s_torder_lim], a2j[s_torder_lim], a3k[s_torder_lim];
-    double b1i[s_torder_lim], b2j[s_torder_lim], b3k[s_torder_lim];
-    double wx[s_torder_lim], wy[s_torder_lim], wz[s_torder_lim];
-    double summ[16][8*s_torder3];
+    double w1i[s_torder_lim];
+    double summ[16][s_torder3];
     
     
     for (i = 0; i < 16; i++) {
-        for (j = 0; j < 8*s_torder3; j++) {
+        for (j = 0; j < s_torder3; j++) {
             p->ms[i][j] = 0.0;
         }
     }
@@ -1083,7 +1082,7 @@ static int s_ComputeMoments(TreeNode *p)
     z1 = p->z_max;
     
     for (i = 0; i < 16; i++) {
-        for (j = 0; j < 8*s_torder3; j++) {
+        for (j = 0; j < s_torder3; j++) {
             summ[i][j] = 0.0;
         }
     }
@@ -1092,17 +1091,15 @@ static int s_ComputeMoments(TreeNode *p)
         p->tx[i] = x0 + (tt[i] + 1.0)/2.0 * (x1 - x0);
         p->ty[i] = y0 + (tt[i] + 1.0)/2.0 * (y1 - y0);
         p->tz[i] = z0 + (tt[i] + 1.0)/2.0 * (z1 - z0);
-        
-        wx[i] = -4.0 * ww[i] / (x1 - x0);
-        wy[i] = -4.0 * ww[i] / (y1 - y0);
-        wz[i] = -4.0 * ww[i] / (z1 - z0);
-        
-        dj[i] = 1.0;
     }
     
-    dj[0] = 0.25;
-    dj[s_order] = 0.25;
+    dj[0] = 0.5;
+    dj[s_order] = 0.5;
+    for (j = 1; j < s_order; j++)
+        dj[j] = 1.0;
     
+    for (j = 0; j < s_torder_lim; j++)
+        w1i[j] = ((j % 2 == 0)? 1 : -1) * dj[j];
 
     for (i = 0; i < p->numpar; i++) {
     
@@ -1116,18 +1113,10 @@ static int s_ComputeMoments(TreeNode *p)
         qq = s_source_charge[i][0];
         
         for (j = 0; j < s_torder_lim; j++) {
-            dx = xx - p->tx[j];
-            dy = yy - p->ty[j];
-            dz = zz - p->tz[j];
-            
-            a1i[j] = wx[j]/dx + dj[j]/(dx*dx);
-            a2j[j] = wy[j]/dy + dj[j]/(dy*dy);
-            a3k[j] = wz[j]/dz + dj[j]/(dz*dz);
-            
-            b1i[j] = dj[j]/dx;
-            b2j[j] = dj[j]/dy;
-            b3k[j] = dj[j]/dz;
-            
+            a1i[j] = w1i[j] / (xx - p->tx[j]);
+            a2j[j] = w1i[j] / (yy - p->ty[j]);
+            a3k[j] = w1i[j] / (zz - p->tz[j]);
+
             sumA1 += a1i[j];
             sumA2 += a2j[j];
             sumA3 += a3k[j];
@@ -1141,40 +1130,14 @@ static int s_ComputeMoments(TreeNode *p)
                 for (k1 = 0; k1 < s_torder_lim; k1++) {
                     kk++;
                 
-                    temp11 = a1i[k1] * a2j[k2] * Dd;
-                    temp21 = b1i[k1] * a2j[k2] * Dd;
-                    temp12 = a1i[k1] * b2j[k2] * Dd;
-                    temp22 = b1i[k1] * b2j[k2] * Dd;
-                    
-                    mom1 = temp11 * a3k[k3];
-                    mom2 = temp21 * a3k[k3];
-                    mom3 = temp12 * a3k[k3];
-                    mom4 = temp11 * b3k[k3];
-                    mom5 = temp22 * a3k[k3];
-                    mom6 = temp12 * b3k[k3];
-                    mom7 = temp21 * b3k[k3];
-                    mom8 = temp22 * b3k[k3];
+                    mom1 = a1i[k1] * a2j[k2] * a3k[k3] * Dd;
                     
                     for (j = 0; j < 7; j++) {
-                        summ[j][s_torder3*0 + kk] = mom1 * qq[j];
-                        summ[j][s_torder3*1 + kk] = mom2 * qq[j];
-                        summ[j][s_torder3*2 + kk] = mom3 * qq[j];
-                        summ[j][s_torder3*3 + kk] = mom4 * qq[j];
-                        summ[j][s_torder3*4 + kk] = mom5 * qq[j];
-                        summ[j][s_torder3*5 + kk] = mom6 * qq[j];
-                        summ[j][s_torder3*6 + kk] = mom7 * qq[j];
-                        summ[j][s_torder3*7 + kk] = mom8 * qq[j];
+                        summ[j][kk] = mom1 * qq[j];
                     }
                     
                     for (j = 7; j < 14; j+=3) {
-                        summ[j][s_torder3*0 + kk] = mom1 * qq[j];
-                        summ[j][s_torder3*1 + kk] = mom2 * qq[j];
-                        summ[j][s_torder3*2 + kk] = mom3 * qq[j];
-                        summ[j][s_torder3*3 + kk] = mom4 * qq[j];
-                        summ[j][s_torder3*4 + kk] = mom5 * qq[j];
-                        summ[j][s_torder3*5 + kk] = mom6 * qq[j];
-                        summ[j][s_torder3*6 + kk] = mom7 * qq[j];
-                        summ[j][s_torder3*7 + kk] = mom8 * qq[j];
+                        summ[j][kk] = mom1 * qq[j];
                     }
                 }
             }
@@ -1182,16 +1145,16 @@ static int s_ComputeMoments(TreeNode *p)
     }
     
     for (j = 0; j < 7; j++)
-        memcpy(p->ms[j], summ[j], 8*s_torder3*sizeof(double));
+        memcpy(p->ms[j], summ[j], s_torder3*sizeof(double));
     
     for (j = 7; j < 10; j++)
-        memcpy(p->ms[j], summ[7], 8*s_torder3*sizeof(double));
+        memcpy(p->ms[j], summ[7], s_torder3*sizeof(double));
     
     for (j = 10; j < 13; j++)
-        memcpy(p->ms[j], summ[10], 8*s_torder3*sizeof(double));
+        memcpy(p->ms[j], summ[10], s_torder3*sizeof(double));
     
     for (j = 13; j < 16; j++)
-        memcpy(p->ms[j], summ[13], 8*s_torder3*sizeof(double));
+        memcpy(p->ms[j], summ[13], s_torder3*sizeof(double));
 
     return 0;
 }
@@ -1272,28 +1235,8 @@ static int s_ComputeTreePB(TreeNode *p, double tempq[2][16], double peng[2])
                 s_ComputeCoeffsCoulomb(p,dx[i],dy[j],dz[k]);
                 for (indx = 0; indx < 16; indx++) {
                     tempsum[indx] += ONE_OVER_4PI
-                                   * s_a[i+s_kk[indx][0]]
-                                        [j+s_kk[indx][1]]
-                                        [k+s_kk[indx][2]]
-                                   * p->ms[indx][ii];
-                    
-                    tempsum[indx] += ONE_OVER_4PI * (
-                        p->ms[indx][0*s_torder3 + ii]
-                              * s_a[0+s_kk[indx][0]][0+s_kk[indx][1]][0+s_kk[indx][2]]
-                      + p->ms[indx][1*s_torder3 + ii]
-                              * s_a[1+s_kk[indx][0]][0+s_kk[indx][1]][0+s_kk[indx][2]]
-                      + p->ms[indx][2*s_torder3 + ii]
-                              * s_a[0+s_kk[indx][0]][1+s_kk[indx][1]][0+s_kk[indx][2]]
-                      + p->ms[indx][3*s_torder3 + ii]
-                              * s_a[0+s_kk[indx][0]][0+s_kk[indx][1]][1+s_kk[indx][2]]
-                      + p->ms[indx][4*s_torder3 + ii]
-                              * s_a[1+s_kk[indx][0]][1+s_kk[indx][1]][0+s_kk[indx][2]]
-                      + p->ms[indx][5*s_torder3 + ii]
-                              * s_a[0+s_kk[indx][0]][1+s_kk[indx][1]][1+s_kk[indx][2]]
-                      + p->ms[indx][6*s_torder3 + ii]
-                              * s_a[1+s_kk[indx][0]][0+s_kk[indx][1]][1+s_kk[indx][2]]
-                      + p->ms[indx][7*s_torder3 + ii]
-                              * s_a[1+s_kk[indx][0]][1+s_kk[indx][1]][1+s_kk[indx][2]]);
+                                   * (p->ms[indx][ii]
+                                   * s_a[s_kk[indx][0]][s_kk[indx][1]][s_kk[indx][2]]);
                 }
                 ii++;
             }
@@ -1336,25 +1279,11 @@ static int s_ComputeTreePB(TreeNode *p, double tempq[2][16], double peng[2])
             for (k = 0; k < s_torder_lim; k++) {
                 s_ComputeCoeffs(p,dx[i],dy[j],dz[k]);
                 for (indx = 0; indx < 16; indx++) {
-                    tempsum[indx] += ONE_OVER_4PI * (
-                        p->ms[indx][0*s_torder3 + ii]
-                              * s_a[0+s_kk[indx][0]][0+s_kk[indx][1]][0+s_kk[indx][2]]
-                      + p->ms[indx][1*s_torder3 + ii]
-                              * s_a[1+s_kk[indx][0]][0+s_kk[indx][1]][0+s_kk[indx][2]]
-                      + p->ms[indx][2*s_torder3 + ii]
-                              * s_a[0+s_kk[indx][0]][1+s_kk[indx][1]][0+s_kk[indx][2]]
-                      + p->ms[indx][3*s_torder3 + ii]
-                              * s_a[0+s_kk[indx][0]][0+s_kk[indx][1]][1+s_kk[indx][2]]
-                      + p->ms[indx][4*s_torder3 + ii]
-                              * s_a[1+s_kk[indx][0]][1+s_kk[indx][1]][0+s_kk[indx][2]]
-                      + p->ms[indx][5*s_torder3 + ii]
-                              * s_a[0+s_kk[indx][0]][1+s_kk[indx][1]][1+s_kk[indx][2]]
-                      + p->ms[indx][6*s_torder3 + ii]
-                              * s_a[1+s_kk[indx][0]][0+s_kk[indx][1]][1+s_kk[indx][2]]
-                      + p->ms[indx][7*s_torder3 + ii]
-                              * s_a[1+s_kk[indx][0]][1+s_kk[indx][1]][1+s_kk[indx][2]]);
-                    ii++;
+                    tempsum[indx] += ONE_OVER_4PI
+                                   * (p->ms[indx][ii]
+                                   * s_a[s_kk[indx][0]][s_kk[indx][1]][s_kk[indx][2]]);
                 }
+                ii++;
             }
         }
     }
