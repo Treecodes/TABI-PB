@@ -1125,9 +1125,9 @@ static int s_ComputeMoments(TreeNode *p)
         Dd = 1.0 / (sumA1 * sumA2 * sumA3);
         
         kk = -1;
-        for (k3 = 0; k3 < s_torder_lim; k3++) {
+        for (k1 = 0; k1 < s_torder_lim; k1++) {
             for (k2 = 0; k2 < s_torder_lim; k2++) {
-                for (k1 = 0; k1 < s_torder_lim; k1++) {
+                for (k3 = 0; k3 < s_torder_lim; k3++) {
                     kk++;
                 
                     mom1 = a1i[k1] * a2j[k2] * a3k[k3] * Dd;
@@ -1155,6 +1155,7 @@ static int s_ComputeMoments(TreeNode *p)
     
     for (j = 13; j < 16; j++)
         memcpy(p->ms[j], summ[13], s_torder3*sizeof(double));
+
 
     return 0;
 }
