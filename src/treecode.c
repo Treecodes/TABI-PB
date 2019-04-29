@@ -1244,6 +1244,8 @@ static int s_ComputeTreePB(TreeNode *p, double tempq[2][16], double peng[2])
         }
     }
     
+    printf("tempsum0 Coul: %e\n", tempsum[0]);
+    
     for (indx = 0; indx < 16; indx++) {
         pt_comp[0][indx] = tempq[0][indx] * tempsum[indx];
     }
@@ -1288,6 +1290,9 @@ static int s_ComputeTreePB(TreeNode *p, double tempq[2][16], double peng[2])
             }
         }
     }
+    
+    printf("tempsum0 screened Coul: %e\n", tempsum[0]);
+    exit(1);
     
     for (indx = 0; indx < 16; indx++) {
         pt_comp[1][indx] = tempq[1][indx] * tempsum[indx];
