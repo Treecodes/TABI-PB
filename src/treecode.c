@@ -19,6 +19,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
+#include <float.h>
 
 //#include <Accelerate/Accelerate.h>
 //#include <lapacke.h>
@@ -1062,6 +1063,7 @@ static int s_ComputeMoments(TreeNode *p)
     double a1i[s_torder_lim], a2j[s_torder_lim], a3k[s_torder_lim];
     double w1i[s_torder_lim];
     double summ[16][s_torder3];
+    int a1exactind, a2exactind, a3exactind;
     
     
     for (i = 0; i < 16; i++) {
@@ -1106,6 +1108,10 @@ static int s_ComputeMoments(TreeNode *p)
         sumA1 = 0.0;
         sumA2 = 0.0;
         sumA3 = 0.0;
+        
+        a1exactind = -1;
+        a2exactind = -1;
+        a3exactind = -1;
     
         xx = xibeg[i];
         yy = yibeg[i];
@@ -1120,6 +1126,28 @@ static int s_ComputeMoments(TreeNode *p)
             sumA1 += a1i[j];
             sumA2 += a2j[j];
             sumA3 += a3k[j];
+            
+            if (fabs(xx - p->tx[j]) < DBL_MIN) a1exactind = j;
+            if (fabs(yy - p->ty[j]) < DBL_MIN) a2exactind = j;
+            if (fabs(zz - p->tz[j]) < DBL_MIN) a3exactind = j;
+        }
+        
+        if (a1exactind > -1) {
+            sumA1 = 1.0;
+            for (j = 0; j < s_torder_lim; j++) a1i[j] = 0.0;
+            a1i[a1exactind] = 1.0;
+        }
+        
+        if (a2exactind > -1) {
+            sumA2 = 1.0;
+            for (j = 0; j < s_torder_lim; j++) a2j[j] = 0.0;
+            a2j[a2exactind] = 1.0;
+        }
+        
+        if (a3exactind > -1) {
+            sumA3 = 1.0;
+            for (j = 0; j < s_torder_lim; j++) a3k[j] = 0.0;
+            a3k[a3exactind] = 1.0;
         }
         
         Dd = 1.0 / (sumA1 * sumA2 * sumA3);
@@ -1133,11 +1161,11 @@ static int s_ComputeMoments(TreeNode *p)
                     mom1 = a1i[k1] * a2j[k2] * a3k[k3] * Dd;
                     
                     for (j = 0; j < 7; j++) {
-                        summ[j][kk] = mom1 * qq[j];
+                        summ[j][kk] += mom1 * qq[j];
                     }
                     
                     for (j = 7; j < 14; j+=3) {
-                        summ[j][kk] = mom1 * qq[j];
+                        summ[j][kk] += mom1 * qq[j];
                     }
                 }
             }
@@ -1244,8 +1272,6 @@ static int s_ComputeTreePB(TreeNode *p, double tempq[2][16], double peng[2])
         }
     }
     
-    printf("tempsum0 Coul: %e\n", tempsum[0]);
-    
     for (indx = 0; indx < 16; indx++) {
         pt_comp[0][indx] = tempq[0][indx] * tempsum[indx];
     }
@@ -1290,9 +1316,6 @@ static int s_ComputeTreePB(TreeNode *p, double tempq[2][16], double peng[2])
             }
         }
     }
-    
-    printf("tempsum0 screened Coul: %e\n", tempsum[0]);
-    exit(1);
     
     for (indx = 0; indx < 16; indx++) {
         pt_comp[1][indx] = tempq[1][indx] * tempsum[indx];
