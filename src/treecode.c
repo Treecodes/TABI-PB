@@ -19,6 +19,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
+#include <float.h>
 
 //#include <Accelerate/Accelerate.h>
 //#include <lapacke.h>
@@ -1063,7 +1064,8 @@ static int s_ComputeMoments(TreeNode *p)
     double b1i[s_torder_lim], b2j[s_torder_lim], b3k[s_torder_lim];
     double wx[s_torder_lim], wy[s_torder_lim], wz[s_torder_lim];
     double summ[16][8*s_torder3];
-    
+    int a1exactind, a2exactind, a3exactind;
+
     
     for (i = 0; i < 16; i++) {
         for (j = 0; j < 8*s_torder3; j++) {
@@ -1102,18 +1104,21 @@ static int s_ComputeMoments(TreeNode *p)
     
     dj[0] = 0.25;
     dj[s_order] = 0.25;
-    
 
     for (i = 0; i < p->numpar; i++) {
     
         sumA1 = 0.0;
         sumA2 = 0.0;
         sumA3 = 0.0;
+        
+        a1exactind = -1;
+        a2exactind = -1;
+        a3exactind = -1;
     
         xx = xibeg[i];
         yy = yibeg[i];
         zz = zibeg[i];
-        qq = s_source_charge[i][0];
+        qq = s_source_charge[p->ibeg+i][0];
         
         for (j = 0; j < s_torder_lim; j++) {
             dx = xx - p->tx[j];
@@ -1131,14 +1136,45 @@ static int s_ComputeMoments(TreeNode *p)
             sumA1 += a1i[j];
             sumA2 += a2j[j];
             sumA3 += a3k[j];
+            
+            if (fabs(xx - p->tx[j]) < DBL_MIN) a1exactind = j;
+            if (fabs(yy - p->ty[j]) < DBL_MIN) a2exactind = j;
+            if (fabs(zz - p->tz[j]) < DBL_MIN) a3exactind = j;
+        }
+        
+        if (a1exactind > -1) {
+            sumA1 = 1.0;
+            for (j = 0; j < s_torder_lim; j++) {
+                a1i[j] = 0.0;
+                b1i[j] = 0.0;
+            }
+            a1i[a1exactind] = 1.0;
+        }
+        
+        if (a2exactind > -1) {
+            sumA2 = 1.0;
+            for (j = 0; j < s_torder_lim; j++) {
+                a2j[j] = 0.0;
+                b2j[j] = 0.0;
+            }
+            a2j[a2exactind] = 1.0;
+        }
+        
+        if (a3exactind > -1) {
+            sumA3 = 1.0;
+            for (j = 0; j < s_torder_lim; j++) {
+                a3k[j] = 0.0;
+                b3k[j] = 0.0;
+            }
+            a3k[a3exactind] = 1.0;
         }
         
         Dd = 1.0 / (sumA1 * sumA2 * sumA3);
         
         kk = -1;
-        for (k3 = 0; k3 < s_torder_lim; k3++) {
+        for (k1 = 0; k1 < s_torder_lim; k1++) {
             for (k2 = 0; k2 < s_torder_lim; k2++) {
-                for (k1 = 0; k1 < s_torder_lim; k1++) {
+                for (k3 = 0; k3 < s_torder_lim; k3++) {
                     kk++;
                 
                     temp11 = a1i[k1] * a2j[k2] * Dd;
@@ -1156,25 +1192,25 @@ static int s_ComputeMoments(TreeNode *p)
                     mom8 = temp22 * b3k[k3];
                     
                     for (j = 0; j < 7; j++) {
-                        summ[j][s_torder3*0 + kk] = mom1 * qq[j];
-                        summ[j][s_torder3*1 + kk] = mom2 * qq[j];
-                        summ[j][s_torder3*2 + kk] = mom3 * qq[j];
-                        summ[j][s_torder3*3 + kk] = mom4 * qq[j];
-                        summ[j][s_torder3*4 + kk] = mom5 * qq[j];
-                        summ[j][s_torder3*5 + kk] = mom6 * qq[j];
-                        summ[j][s_torder3*6 + kk] = mom7 * qq[j];
-                        summ[j][s_torder3*7 + kk] = mom8 * qq[j];
+                        summ[j][s_torder3*0 + kk] += mom1 * qq[j];
+                        summ[j][s_torder3*1 + kk] += mom2 * qq[j];
+                        summ[j][s_torder3*2 + kk] += mom3 * qq[j];
+                        summ[j][s_torder3*3 + kk] += mom4 * qq[j];
+                        summ[j][s_torder3*4 + kk] += mom5 * qq[j];
+                        summ[j][s_torder3*5 + kk] += mom6 * qq[j];
+                        summ[j][s_torder3*6 + kk] += mom7 * qq[j];
+                        summ[j][s_torder3*7 + kk] += mom8 * qq[j];
                     }
                     
                     for (j = 7; j < 14; j+=3) {
-                        summ[j][s_torder3*0 + kk] = mom1 * qq[j];
-                        summ[j][s_torder3*1 + kk] = mom2 * qq[j];
-                        summ[j][s_torder3*2 + kk] = mom3 * qq[j];
-                        summ[j][s_torder3*3 + kk] = mom4 * qq[j];
-                        summ[j][s_torder3*4 + kk] = mom5 * qq[j];
-                        summ[j][s_torder3*5 + kk] = mom6 * qq[j];
-                        summ[j][s_torder3*6 + kk] = mom7 * qq[j];
-                        summ[j][s_torder3*7 + kk] = mom8 * qq[j];
+                        summ[j][s_torder3*0 + kk] += mom1 * qq[j];
+                        summ[j][s_torder3*1 + kk] += mom2 * qq[j];
+                        summ[j][s_torder3*2 + kk] += mom3 * qq[j];
+                        summ[j][s_torder3*3 + kk] += mom4 * qq[j];
+                        summ[j][s_torder3*4 + kk] += mom5 * qq[j];
+                        summ[j][s_torder3*5 + kk] += mom6 * qq[j];
+                        summ[j][s_torder3*6 + kk] += mom7 * qq[j];
+                        summ[j][s_torder3*7 + kk] += mom8 * qq[j];
                     }
                 }
             }
