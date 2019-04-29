@@ -1110,7 +1110,7 @@ static int s_ComputeMoments(TreeNode *p)
         xx = xibeg[i];
         yy = yibeg[i];
         zz = zibeg[i];
-        qq = s_source_charge[i][0];
+        qq = s_source_charge[p->ibeg+i][0];
         
         for (j = 0; j < s_torder_lim; j++) {
             a1i[j] = w1i[j] / (xx - p->tx[j]);
