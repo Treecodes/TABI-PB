@@ -114,30 +114,35 @@ else()
     set(MKL_LINK_TOOL_COMMAND ${MKL_LINK_TOOL} "-libs")
 
     # possible versions
-    # <11.3|11.2|11.1|11.0|10.3|10.2|10.1|10.0|ParallelStudioXE2016|ParallelStudioXE2015|ComposerXE2013SP1|ComposerXE2013|ComposerXE2011|CompilerPro>
+    # <11.3|11.2|11.1|11.0|10.3|10.2|10.1|10.0|ParallelStudioXE2016|ParallelStudioXE2015|
+    #  ComposerXE2013SP1|ComposerXE2013|ComposerXE2011|CompilerPro>
+
+    # newer versions don't require --mkl, and older ones all have a default. Not all
+    # versions of mkl_link_tool have the same list of options. Better choice is to leave
+    # the option unset.
 
     # not older than MKL 10 (2011)
-    if (MKL_INCLUDE_DIR MATCHES "Composer.*2013")
-        list(APPEND MKL_LINK_TOOL_COMMAND "--mkl=ComposerXE2013")
-    elseif (MKL_INCLUDE_DIR MATCHES "Composer.*2011")
-        list(APPEND MKL_LINK_TOOL_COMMAND "--mkl=ComposerXE2011")
-    elseif (MKL_INCLUDE_DIR MATCHES "10.3")
-        list(APPEND MKL_LINK_TOOL_COMMAND "--mkl=10.3")
-    elseif(MKL_INCLUDE_DIR MATCHES "2013") # version 11 ...
-        list(APPEND MKL_LINK_TOOL_COMMAND "--mkl=11.1")
-    elseif(MKL_INCLUDE_DIR MATCHES "2015")
-        list(APPEND MKL_LINK_TOOL_COMMAND "--mkl=11.2")
-    elseif(MKL_INCLUDE_DIR MATCHES "2016")
-        list(APPEND MKL_LINK_TOOL_COMMAND "--mkl=11.3")
-    elseif(MKL_INCLUDE_DIR MATCHES "2017")
-        list(APPEND MKL_LINK_TOOL_COMMAND "--mkl=11.3")
-    elseif(MKL_INCLUDE_DIR MATCHES "2018")
-        list(APPEND MKL_LINK_TOOL_COMMAND "--mkl=11.3")
-    elseif (MKL_INCLUDE_DIR MATCHES "10")
-        list(APPEND MKL_LINK_TOOL_COMMAND "--mkl=10.2")
-    else()
-        list(APPEND MKL_LINK_TOOL_COMMAND "--mkl=11.3")
-    endif()
+    #if (MKL_INCLUDE_DIR MATCHES "Composer.*2013")
+    #    list(APPEND MKL_LINK_TOOL_COMMAND "--mkl=ComposerXE2013")
+    #elseif (MKL_INCLUDE_DIR MATCHES "Composer.*2011")
+    #    list(APPEND MKL_LINK_TOOL_COMMAND "--mkl=ComposerXE2011")
+    #elseif (MKL_INCLUDE_DIR MATCHES "10.3")
+    #    list(APPEND MKL_LINK_TOOL_COMMAND "--mkl=10.3")
+    #elseif(MKL_INCLUDE_DIR MATCHES "2013") # version 11 ...
+    #    list(APPEND MKL_LINK_TOOL_COMMAND "--mkl=11.1")
+    #elseif(MKL_INCLUDE_DIR MATCHES "2015")
+    #    list(APPEND MKL_LINK_TOOL_COMMAND "--mkl=11.2")
+    #elseif(MKL_INCLUDE_DIR MATCHES "2016")
+    #    list(APPEND MKL_LINK_TOOL_COMMAND "--mkl=11.3")
+    #elseif(MKL_INCLUDE_DIR MATCHES "2017")
+    #    list(APPEND MKL_LINK_TOOL_COMMAND "--mkl=11.3")
+    #elseif(MKL_INCLUDE_DIR MATCHES "2018")
+    #    list(APPEND MKL_LINK_TOOL_COMMAND "--mkl=11.3")
+    #elseif (MKL_INCLUDE_DIR MATCHES "10")
+    #    list(APPEND MKL_LINK_TOOL_COMMAND "--mkl=10.2")
+    #else()
+    #    list(APPEND MKL_LINK_TOOL_COMMAND "--mkl=11.3")
+    #endif()
 
     if (CMAKE_C_COMPILER_ID STREQUAL "AppleClang")
         list(APPEND MKL_LINK_TOOL_COMMAND "--compiler=clang")
@@ -190,13 +195,18 @@ else()
     endif()
 
     if (MKL_USE_parallel)
-        if (UNIX AND NOT APPLE)
-            list(APPEND MKL_LINK_TOOL_COMMAND "--openmp=gomp")
-        else()
-            list(APPEND MKL_LINK_TOOL_COMMAND "--threading-library=iomp5")
-            list(APPEND MKL_LINK_TOOL_COMMAND "--openmp=iomp5")
-        endif()
+        list(APPEND MKL_LINK_TOOL_COMMAND "--threading-library=iomp5")
+        list(APPEND MKL_LINK_TOOL_COMMAND "--openmp=iomp5")
     endif()
+
+    #if (MKL_USE_parallel)
+    #   if (UNIX AND NOT APPLE)
+    #       list(APPEND MKL_LINK_TOOL_COMMAND "--openmp=gomp")
+    #   else()
+    #       list(APPEND MKL_LINK_TOOL_COMMAND "--threading-library=iomp5")
+    #       list(APPEND MKL_LINK_TOOL_COMMAND "--openmp=iomp5")
+    #   endif()
+    #endif()
 
     execute_process(COMMAND ${MKL_LINK_TOOL_COMMAND}
                     OUTPUT_VARIABLE MKL_LIBS
