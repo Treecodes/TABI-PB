@@ -26,29 +26,17 @@ set(EXECUTABLE_INSTALL_PATH bin)
 option(ENABLE_MPI_BUILD "build MPI parallel" OFF)
 file(MAKE_DIRECTORY build/bin)
 
-#find_package(MKL)
-#message("mkls.... " ${MKL_INCLUDE_DIRS})
-#message("and the libs..." ${MKL_LIBRARIES})
-    
-#set(BLA_VENDOR Intel10_64lp)
-#find_package(LAPACK REQUIRED)
-
-
 set(BLA_DEFINITIONS)
 set(BLA_STATIC ON)
 
-message("Bla vendor: ${BLA_VENDOR}")
-
 # user defined options for MKL
-option(MKL_USE_parallel "Use MKL parallel" True)
-option(MKL_USE_sdl "Single Dynamic Library or static/dynamic" False)
-set(MKL_USE_interface "lp64" CACHE STRING "for Intel(R)64 compatible arch: ilp64/lp64 or for ia32 arch: cdecl/stdcall")
-
-if (BLA_VENDOR MATCHES "_seq")
-  set(MKL_USE_parallel OFF)
-else()
-  set(MKL_USE_parallel ON)
-endif()
+option(MKL_Threading "Use MKL parallel" True)
+set(MKL_Library_Type "Single Dynamic Library" CACHE STRING "Choose the type of MKL library.")
+set_property(CACHE MKL_Library_Type PROPERTY STRINGS
+    "Single Dynamic Library" "Static" "Dynamic")
+set(MKL_Interface "lp64" CACHE STRING "for Intel(R)64 compatible arch: ilp64/lp64 or for ia32 arch: cdecl/stdcall")
+set_property(CACHE MKL_Interface PROPERTY STRINGS
+    "lp64" "ilp64" "cdecl" "stdcall")
 
 find_package(MKL REQUIRED)
 
@@ -59,12 +47,6 @@ if (MKL_FOUND)
 endif()
 
 message("BLAS Libraries: ${BLAS_LIBRARIES}")
-#set(LAPACK_LIBRARIES /opt/intel/mkl/lib/libmkl_rt.dylib)
-#set(LAPACK_INCLUDE_PATH /opt/intel/mkl/include)
-
-#message ("LAPACK LIBRARIES: " ${LAPACK_LIBRARIES})
-#message ("LAPACK PATH: " ${LAPACK_INCLUDE_PATH})
-
 
 if(ENABLE_MPI_BUILD)
   find_package(MPI REQUIRED)

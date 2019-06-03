@@ -75,6 +75,9 @@
 # Joan MASSICH (joan.massich-vall.AT.inria.fr).
 # Alexandre GRAMFORT (Alexandre.Gramfort.AT.inria.fr)
 # Théodore PAPADOPOULO (papadop.AT.inria.fr)
+#
+# MODIFIED FOR TABI-PB BY
+# Leighton Wilson (lwwilson@umich.edu)
 
 
 set(CMAKE_FIND_DEBUG_MODE 1)
@@ -171,17 +174,17 @@ else()
         set(MKL_LIB_DIR "ia32")
     endif()
 
-    if (MKL_USE_sdl)
+    if (MKL_Library_Type STREQUAL "Single Dynamic Library")
         list(APPEND MKL_LINK_TOOL_COMMAND "--linking=sdl")
+    elseif(MKL_Library_Type STREQUAL "Static")
+        list(APPEND MKL_LINK_TOOL_COMMAND "--linking=static")
+    elseif(MKL_Library_Type STREQUAL "Dynamic")
+        list(APPEND MKL_LINK_TOOL_COMMAND "--linking=dynamic")
     else()
-        if (BLA_STATIC)
-            list(APPEND MKL_LINK_TOOL_COMMAND "--linking=static")
-        else()
-            list(APPEND MKL_LINK_TOOL_COMMAND "--linking=dynamic")
-        endif()
+        list(APPEND MKL_LINK_TOOL_COMMAND "--linking=dynamic")
     endif()
 
-    if (MKL_USE_parallel)
+    if (MKL_Threading)
         list(APPEND MKL_LINK_TOOL_COMMAND "--parallel=yes")
     else()
         list(APPEND MKL_LINK_TOOL_COMMAND "--parallel=no")
@@ -189,17 +192,18 @@ else()
 
     if (FORCE_BUILD_32BITS)
         list(APPEND MKL_LINK_TOOL_COMMAND "--interface=cdecl")
-        set(MKL_USE_interface "cdecl" CACHE STRING "disabled by FORCE_BUILD_32BITS" FORCE)
+        set(MKL_Interface "cdecl" CACHE STRING "disabled by FORCE_BUILD_32BITS" FORCE)
     else()
-        list(APPEND MKL_LINK_TOOL_COMMAND "--interface=${MKL_USE_interface}")
+        list(APPEND MKL_LINK_TOOL_COMMAND "--interface=${MKL_Interface}")
     endif()
 
-    if (MKL_USE_parallel)
+    if (MKL_Threading)
         list(APPEND MKL_LINK_TOOL_COMMAND "--threading-library=iomp5")
         list(APPEND MKL_LINK_TOOL_COMMAND "--openmp=iomp5")
     endif()
 
-    #if (MKL_USE_parallel)
+    # it seems more robust to just use mkl's own threading libraries
+    #if (MKL_Threading)
     #   if (UNIX AND NOT APPLE)
     #       list(APPEND MKL_LINK_TOOL_COMMAND "--openmp=gomp")
     #   else()
