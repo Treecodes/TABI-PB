@@ -11,14 +11,6 @@
 *          Weihua Geng, Southern Methodist University, Dallas, TX         *
 *          Robery Krasny, University of Michigan, Ann Arbor, MI           *
 *                                                                         *
-* DEVELOPMENT HISTORY:                                                    *
-*                                                                         *
-* Date        Author            Description Of Change                     *
-* ----        ------            ---------------------                     *
-* 01/12/2018  Leighton Wilson   Created                                   *
-* 08/05/2016  Leighton Wilson   Adding Windows support for msms and       *
-*                               NanoShaper                                *
-*                                                                         *
 **************************************************************************/
 
 #include <time.h>

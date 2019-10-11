@@ -32,8 +32,8 @@ int RunGMRES(int nface, double *source_term, int precond,
     double resid;
     double *work, *h;
 
-    extern int gmres_(long int *n, double *b, double *x, long int *restrt,
-                      double *work, long int *ldw, double *h, long int *ldh,
+    extern int gmres_(long int n, double *b, double *x, long int *restrt,
+                      double *work, long int ldw, double *h, long int ldh,
                       long int *iter, double *resid, int (*matvec)(),
                       int (*psolve)(), long int *info);
 
@@ -51,11 +51,11 @@ int RunGMRES(int nface, double *source_term, int precond,
     for (i = 0; i < N; i++) xvct[i] = 0.0;
     
     if (precond == 0) {
-        gmres_(&N, source_term, xvct, &RESTRT, work, &ldw,
-               h, &ldh, iter, &resid, &matvec, psolve, &info);
+        gmres_(N, source_term, xvct, &RESTRT, work, ldw,
+               h, ldh, iter, &resid, &matvec, psolve, &info);
     } else if (precond == 1) {
-        gmres_(&N, source_term, xvct, &RESTRT, work, &ldw,
-               h, &ldh, iter, &resid, &matvec, psolve_precond, &info);
+        gmres_(N, source_term, xvct, &RESTRT, work, ldw,
+               h, ldh, iter, &resid, &matvec, psolve_precond, &info);
     }
 
     free_vector(work);
