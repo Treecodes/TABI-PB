@@ -57,19 +57,8 @@ static int s_min_level;
 static int s_max_level;
 
 /* global variables for taylor expansions */
-static int s_torder_flat;
 static int s_torder_lim;
 static int s_torder3;
-
-static double *s_cf1 = NULL;
-static double *s_cf2 = NULL;
-static double *s_cf3 = NULL;
-
-static double ***s_a = NULL;
-static double ***s_b = NULL;
-
-static double ****s_der_coeff = NULL;
-static int s_kk[16][3];
 
 /* variable used by kernel independent moment computation */
 double *tt, *ww;
@@ -107,8 +96,6 @@ static int s_ComputeMoments(TreeNode *p);
 static int s_RunTreecode(TreeNode *p, double *tpoten_old,
                          double tempq[2][16], double peng[2]);
 static int s_ComputeTreePB(TreeNode *p, double tempq[2][16], double peng[2]);
-static int s_ComputeCoeffs(TreeNode *p, double dx, double dy, double dz);
-static int s_ComputeCoeffsCoulomb(TreeNode *p, double dx, double dy, double dz);
 static int s_ComputeDirectPB(int ibeg, int iend, double *tpoten_old,
                              double peng[2]);
 static int s_RemoveMoments(TreeNode *p);
@@ -160,7 +147,6 @@ int TreecodeInitialization(TABIPBparm *parm, TreeParticles *particles)
     s_kappa2 = parm->kappa2;
     s_eps = parm->eps;
     
-    s_torder_flat = (s_order+1) * (s_order+2) * (s_order+3) / 6;
     s_torder_lim = s_order+1;
     s_torder3 = s_torder_lim * s_torder_lim * s_torder_lim;
     
@@ -169,71 +155,6 @@ int TreecodeInitialization(TABIPBparm *parm, TreeParticles *particles)
 
     level = 0;
 
-    /* allocate s_der_coeff */
-    
-    make_4array(s_der_coeff, s_order+1, s_order+1, s_order+1, 16);
-
-    /* initialize s_kk */
-    s_kk[0][0]=0; s_kk[0][1]=0; s_kk[0][2]=0; /* Original Kernel */
-
-    s_kk[1][0]=1; s_kk[1][1]=0; s_kk[1][2]=0; /* 1st Order */
-    s_kk[2][0]=0; s_kk[2][1]=1; s_kk[2][2]=0;
-    s_kk[3][0]=0; s_kk[3][1]=0; s_kk[3][2]=1;
-
-    s_kk[4][0]=1; s_kk[4][1]=0; s_kk[4][2]=0;
-    s_kk[5][0]=0; s_kk[5][1]=1; s_kk[5][2]=0;
-    s_kk[6][0]=0; s_kk[6][1]=0; s_kk[6][2]=1;
-
-    s_kk[7][0]=2; s_kk[7][1]=0; s_kk[7][2]=0;
-    s_kk[8][0]=1; s_kk[8][1]=1; s_kk[8][2]=0;
-    s_kk[9][0]=1; s_kk[9][1]=0; s_kk[9][2]=1;
-    s_kk[10][0]=1; s_kk[10][1]=1; s_kk[10][2]=0;
-    s_kk[11][0]=0; s_kk[11][1]=2; s_kk[11][2]=0;
-    s_kk[12][0]=0; s_kk[12][1]=1; s_kk[12][2]=1;
-    s_kk[13][0]=1; s_kk[13][1]=0; s_kk[13][2]=1;
-    s_kk[14][0]=0; s_kk[14][1]=1; s_kk[14][2]=1;
-    s_kk[15][0]=0; s_kk[15][1]=0; s_kk[15][2]=2;
-
-    /* the adjustment of s_der_coeff for the recurrence relation */
-
-    for (i = 0; i < s_order+1; i++) {
-        for (j = 0; j < s_order+1; j++) {
-            for (k = 0; k < s_order+1; k++) {
-                for (idx = 0; idx < 16; idx++) {
-                    s_der_coeff[i][j][k][idx] = 1.0;
-                }
-            }
-        }
-    }
-
-    for (i = 0; i < s_order+1; i++) {
-        ijk[0] = i;
-        for (j = 0; j < s_order+1; j++) {
-            ijk[1] = j;
-            for (k = 0; k < s_order+1; k++) {
-                ijk[2] = k;
-                for (idx = 0; idx < 16; idx++) {
-                    for (mm = 0; mm < 3; mm++) {
-                        if (s_kk[idx][mm] != 0) {
-                            for (nn = 0; nn < s_kk[idx][mm]; nn++)
-                                s_der_coeff[i][j][k][idx] *= (ijk[mm] + (nn+1));
-                        }
-                    }
-                }
-            }   
-        }
-    }
-
-
-    for (i = 0; i < s_order+1; i++) {
-        for (j = 0; j < s_order+1; j++) {
-            for (k = 0; k < s_order+1; k++) {
-                for (idx = 0; idx < 16; idx++) {
-                    s_der_coeff[i][j][k][idx] *= ONE_OVER_4PI;
-                }
-            }
-        }
-    }
     
     s_particle_position = particles->position;
     s_particle_normal = particles->normal;
@@ -341,7 +262,6 @@ int TreecodeFinalization(TreeParticles *particles)
     free_vector(temp_xvct);
 
 /***********treecode_initialization*******/
-    free_4array(s_der_coeff);
 
     free_3array(s_target_charge);
     free_3array(s_source_charge);
@@ -352,14 +272,9 @@ int TreecodeFinalization(TreeParticles *particles)
     free(s_tree_root);
 
 /***********variables in setup************/
-    free_vector(s_cf1);
-    free_vector(s_cf2);
-    free_vector(s_cf3);
-    
-    free_vector(s_a);
-    free_vector(s_b);
 
     free_vector(s_order_arr);
+
 /*****************************************/
 
     if (rank == 0) {
@@ -678,9 +593,7 @@ static int s_Setup(double xyz_limits[6])
  the smallest box containing the particles is determined. The particle
  positions and charges are copied so that they can be restored upon exit.*/
  
-    int i, j, k, ierr;
-    double t1, xx;
-
+    int ierr;
     int rank = 0, num_procs = 1;
     
 #ifdef MPI_ENABLED
@@ -692,43 +605,18 @@ static int s_Setup(double xyz_limits[6])
         printf("Setting up arrays for Taylor expansion...\n");
     }
     
-/* allocate global Taylor expansion variables */
-  
-    make_vector(s_cf1, s_order+2);
-    make_vector(s_cf2, s_order+2);
-    make_vector(s_cf3, s_order+2);
-    
-    make_3array(s_a, s_order+5, s_order+5, s_order+5);
-    make_3array(s_b, s_order+5, s_order+5, s_order+5);
-
-    for (i = 0; i < s_order+5; i++) {
-        for (j = 0; j < s_order+5; j++) {
-            for (k = 0; k < s_order+5; k++) {
-                s_a[i][j][k] = 0.0;
-                s_b[i][j][k] = 0.0;
-            }
-        }
-    }
-
-    for (i = 0; i < s_order+2; i++) {
-        t1 = 1.0 / (i+1.0);
-        s_cf1[i] = t1;
-        s_cf2[i] = 1.0 - 0.5*t1;
-        s_cf3[i] = 1.0 - t1;
-    }
-    
     make_vector(tt, s_torder_lim);
     make_vector(ww, s_torder_lim);
     
     /* initializing array for Chev points */
-    for (i = 0; i < s_torder_lim; i++)
+    for (int i = 0; i < s_torder_lim; i++)
         tt[i] = cos(i * M_PI / s_order);
     
     ww[0] = 0.25 * (s_order*s_order/3.0 + 1.0/6.0);
     ww[s_order] = -ww[0];
     
-    for (i = 1; i < s_order; i++) {
-        xx = i * M_PI / s_order;
+    for (int i = 1; i < s_order; i++) {
+        double xx = i * M_PI / s_order;
         ww[i] = -cos(xx) / (2 * sin(xx) * sin(xx));
     }
 
@@ -747,7 +635,7 @@ static int s_Setup(double xyz_limits[6])
 
     make_vector(s_order_arr, s_numpars);
 
-    for (i = 0; i < s_numpars; i++) {
+    for (int i = 0; i < s_numpars; i++) {
         s_order_arr[i] = i;
     }
 
@@ -1240,107 +1128,83 @@ static int s_RunTreecode(TreeNode *p, double *tpoten_old, double tempq[2][16],
 /********************************************************/
 static int s_ComputeTreePB(TreeNode *p, double tempq[2][16], double peng[2])
 {
-    int ii, i, j, k, indx;
     double sl[4], pt_comp[2][16];
-    double dx[s_torder_lim], dy[s_torder_lim], dz[s_torder_lim];
-    double tempsum[16];
     
-    
-    for (i = 0; i < s_torder_lim; i++) {
-        dx[i] = s_target_position[0] - p->tx[i];
-        dy[i] = s_target_position[1] - p->ty[i];
-        dz[i] = s_target_position[2] - p->tz[i];
+    for (int indx = 0; indx < 16; indx++) {
+        pt_comp[0][indx] = 0;
+        pt_comp[1][indx] = 0;
     }
-    
 
-    ii = 0;
-    for (indx = 0; indx < 16; indx++) {
-        tempsum[indx] = 0.0;
-    }
-    
-    for (i = 0; i < s_torder_lim; i++) {
-        for (j = 0; j < s_torder_lim; j++) {
-            for (k = 0; k < s_torder_lim; k++) {
-                s_ComputeCoeffsCoulomb(p,dx[i],dy[j],dz[k]);
-                for (indx = 0; indx < 16; indx++) {
-                    tempsum[indx] += ONE_OVER_4PI
-                                   * (p->ms[indx][ii]
-                                   * s_a[s_kk[indx][0]][s_kk[indx][1]][s_kk[indx][2]]);
-                }
+    int ii = 0;
+    for (int i = 0; i < s_torder_lim; i++) {
+        for (int j = 0; j < s_torder_lim; j++) {
+            for (int k = 0; k < s_torder_lim; k++) {
+
+                double dx = s_target_position[0] - p->tx[i];
+                double dy = s_target_position[1] - p->ty[j];
+                double dz = s_target_position[2] - p->tz[k];
+
+                double r2    = dx*dx + dy*dy + dz*dz;
+                double r     = sqrt(r2);
+                double rinv  = 1.0 / r;
+                double r3inv = rinv  * rinv * rinv;
+                double r5inv = r3inv * rinv * rinv;
+
+                double expkr  =  exp(-s_kappa * r);
+                double d1term =  expkr * r3inv * (1. + (s_kappa * r)); 
+                double d2term =  expkr * r5inv * (3. + (3. * s_kappa * r) + (s_kappa * s_kappa * r2));
+                double d3term = -expkr * r3inv * (1. + s_kappa * r);
+
+                // Coulomb Kernel //
+                pt_comp[0][0]  += ONE_OVER_4PI * tempq[0][0] * p->ms[0][ii]  / r;
+
+                pt_comp[0][1]  += ONE_OVER_4PI * tempq[0][1] * p->ms[1][ii]  * r3inv * dx;
+                pt_comp[0][2]  += ONE_OVER_4PI * tempq[0][2] * p->ms[2][ii]  * r3inv * dy;
+                pt_comp[0][3]  += ONE_OVER_4PI * tempq[0][3] * p->ms[3][ii]  * r3inv * dz;
+
+                pt_comp[0][4]  += ONE_OVER_4PI * tempq[0][4] * p->ms[4][ii]  * r3inv * dx;
+                pt_comp[0][5]  += ONE_OVER_4PI * tempq[0][5] * p->ms[5][ii]  * r3inv * dy;
+                pt_comp[0][6]  += ONE_OVER_4PI * tempq[0][6] * p->ms[6][ii]  * r3inv * dz;
+
+                pt_comp[0][7]  += ONE_OVER_4PI * tempq[0][7] * p->ms[7][ii]  * (3. * dx * dx - r2) * r5inv;
+                pt_comp[0][8]  += ONE_OVER_4PI * tempq[0][8] * p->ms[8][ii]  * r5inv * dx * dy * 3.;
+                pt_comp[0][9]  += ONE_OVER_4PI * tempq[0][9] * p->ms[9][ii]  * r5inv * dx * dz * 3.;
+
+                pt_comp[0][10] += ONE_OVER_4PI * tempq[0][10] * p->ms[10][ii] * r5inv * dx * dy * 3.;
+                pt_comp[0][11] += ONE_OVER_4PI * tempq[0][11] * p->ms[11][ii] * (3. * dy * dy - r2) * r5inv;
+                pt_comp[0][12] += ONE_OVER_4PI * tempq[0][12] * p->ms[12][ii] * r5inv * dy * dz * 3.;
+
+                pt_comp[0][13] += ONE_OVER_4PI * tempq[0][13] * p->ms[13][ii] * r5inv * dx * dz * 3.;
+                pt_comp[0][14] += ONE_OVER_4PI * tempq[0][14] * p->ms[14][ii] * r5inv * dy * dz * 3.;
+                pt_comp[0][15] += ONE_OVER_4PI * tempq[0][15] * p->ms[15][ii] * (3. * dz * dz - r2) * r5inv;
+
+                // Screened Coulomb Kernel //
+                pt_comp[1][0]  += ONE_OVER_4PI * tempq[1][0]  * p->ms[0][ii]  * expkr  * rinv;
+
+                pt_comp[1][1]  += ONE_OVER_4PI * tempq[1][1]  * p->ms[1][ii]  * d1term * dx;
+                pt_comp[1][2]  += ONE_OVER_4PI * tempq[1][2]  * p->ms[2][ii]  * d1term * dy;
+                pt_comp[1][3]  += ONE_OVER_4PI * tempq[1][3]  * p->ms[3][ii]  * d1term * dz;
+
+                pt_comp[1][4]  += ONE_OVER_4PI * tempq[1][4]  * p->ms[4][ii]  * d1term * dx;
+                pt_comp[1][5]  += ONE_OVER_4PI * tempq[1][5]  * p->ms[5][ii]  * d1term * dy;
+                pt_comp[1][6]  += ONE_OVER_4PI * tempq[1][6]  * p->ms[6][ii]  * d1term * dz;
+
+                pt_comp[1][7]  += ONE_OVER_4PI * tempq[1][7]  * p->ms[7][ii]  * (d2term * dx * dx + d3term);
+                pt_comp[1][8]  += ONE_OVER_4PI * tempq[1][8]  * p->ms[8][ii]  *  d2term * dx * dy;
+                pt_comp[1][9]  += ONE_OVER_4PI * tempq[1][9]  * p->ms[9][ii]  *  d2term * dx * dz;
+
+                pt_comp[1][10] += ONE_OVER_4PI * tempq[1][10] * p->ms[10][ii] *  d2term * dx * dy;
+                pt_comp[1][11] += ONE_OVER_4PI * tempq[1][11] * p->ms[11][ii] * (d2term * dy * dy + d3term);
+                pt_comp[1][12] += ONE_OVER_4PI * tempq[1][12] * p->ms[12][ii] *  d2term * dy * dz;
+
+                pt_comp[1][13] += ONE_OVER_4PI * tempq[1][13] * p->ms[13][ii] *  d2term * dx * dz;
+                pt_comp[1][14] += ONE_OVER_4PI * tempq[1][14] * p->ms[14][ii] *  d2term * dy * dz;
+                pt_comp[1][15] += ONE_OVER_4PI * tempq[1][15] * p->ms[15][ii] * (d2term * dz * dz + d3term);
+
                 ii++;
             }
         }
     }
-    
-    for (indx = 0; indx < 16; indx++) {
-        pt_comp[0][indx] = tempq[0][indx] * tempsum[indx];
-    }
- 
-    
-    
-//    s_ComputeCoeffsCoulomb(p,dx,dy,dz);
-//    for (indx = 0; indx < 16; indx++) {
-//        peng[0] = 0.0;
-//        ii = 0;
-//        for (i = 0; i < s_torder_lim; i++) {
-//            for (j = 0; j < s_torder_lim; j++) {
-//                for (k = 0; k < s_torder_lim; k++) {
-//                    peng[0] += s_der_coeff[i][j][k][indx]
-//                             * s_a[i+s_kk[indx][0]]
-//                                  [j+s_kk[indx][1]]
-//                                  [k+s_kk[indx][2]]
-//                             * p->ms[indx][ii];
-//                    ii++;
-//                }
-//            }
-//        }
-//        pt_comp[0][indx] = tempq[0][indx] * peng[0];
-//    }
-
-
-    ii = 0;
-    for (indx = 0; indx < 16; indx++) {
-        tempsum[indx] = 0.0;
-    }
-    
-    for (i = 0; i < s_torder_lim; i++) {
-        for (j = 0; j < s_torder_lim; j++) {
-            for (k = 0; k < s_torder_lim; k++) {
-                s_ComputeCoeffs(p,dx[i],dy[j],dz[k]);
-                for (indx = 0; indx < 16; indx++) {
-                    tempsum[indx] += ONE_OVER_4PI
-                                   * (p->ms[indx][ii]
-                                   * s_a[s_kk[indx][0]][s_kk[indx][1]][s_kk[indx][2]]);
-                }
-                ii++;
-            }
-        }
-    }
-    
-    for (indx = 0; indx < 16; indx++) {
-        pt_comp[1][indx] = tempq[1][indx] * tempsum[indx];
-    }
-
-
-//    s_ComputeCoeffs(p,dx,dy,dz);
-//    for (indx = 0; indx < 16; indx++) {
-//        peng[1] = 0.0;
-//        ii = 0;
-//        for (i = 0; i < s_order+1; i++) {
-//            for (j = 0; j < s_order+1-i; j++) {
-//                for (k = 0; k < s_order+1-i-j; k++) {
-//                    peng[1] += s_der_coeff[i][j][k][indx]
-//                             * s_a[i+s_kk[indx][0]]
-//                                  [j+s_kk[indx][1]]
-//                                  [k+s_kk[indx][2]]
-//                             * p->ms[indx][ii];
-//                    ii++;
-//                }
-//            }
-//        }
-//        pt_comp[1][indx] = tempq[1][indx] * peng[1];
-//    }
-    
     
 
     sl[0] = pt_comp[0][0] - pt_comp[1][0];
@@ -1350,7 +1214,7 @@ static int s_ComputeTreePB(TreeNode *p, double tempq[2][16], double peng[2])
             + (pt_comp[1][4] + pt_comp[1][5] + pt_comp[1][6]) / s_eps;
     sl[3] = 0.0;
 
-    for (i = 7; i < 16; i++) {
+    for (int i = 7; i < 16; i++) {
         sl[3] += pt_comp[1][i] - pt_comp[0][i];
     }
 
@@ -1361,311 +1225,6 @@ static int s_ComputeTreePB(TreeNode *p, double tempq[2][16], double peng[2])
 }
 /********************************************************/
 
-
-/********************************************************/
-static int s_ComputeCoeffs(TreeNode *p, double dx, double dy, double dz)
-{
-/* COMP_TCOEFF computes the Taylor coefficients of the potential
- * using a recurrence formula. The center of the expansion is the
- * midpoint of the node P. s_target_position and s_order are globally defined. */
- 
-    double ddx, ddy, ddz, dist, fac;
-    double kappax, kappay, kappaz;
-    int i, j, k;
-
-  /* setup variables */
-
-//    dx = s_target_position[0] - p->x_mid;
-//    dy = s_target_position[1] - p->y_mid;
-//    dz = s_target_position[2] - p->z_mid;
-
-    ddx = 2.0 * dx;
-    ddy = 2.0 * dy;
-    ddz = 2.0 * dz;
-
-    kappax = s_kappa * dx;
-    kappay = s_kappa * dy;
-    kappaz = s_kappa * dz;
-
-    dist = dx*dx + dy*dy + dz*dz;
-    fac = 1.0/dist;
-    dist = sqrt(dist);
-
-  /* 0th coeff or function val */
-    s_b[0][0][0] = exp(-s_kappa * dist);
-    s_a[0][0][0] = s_b[0][0][0] / dist;
-
-  /* 2 indices are 0 */
-
-    s_b[1][0][0] = kappax * s_a[0][0][0];
-    s_b[0][1][0] = kappay * s_a[0][0][0];
-    s_b[0][0][1] = kappaz * s_a[0][0][0];
-
-    s_a[1][0][0] = fac * dx * (s_a[0][0][0] + s_kappa * s_b[0][0][0]);
-    s_a[0][1][0] = fac * dy * (s_a[0][0][0] + s_kappa * s_b[0][0][0]);
-    s_a[0][0][1] = fac * dz * (s_a[0][0][0] + s_kappa * s_b[0][0][0]);
-
-    for (i = 2; i < 4; i++) {
-        s_b[i][0][0] = s_cf1[i-1] * s_kappa * (dx * s_a[i-1][0][0] - s_a[i-2][0][0]);
-        s_b[0][i][0] = s_cf1[i-1] * s_kappa * (dy * s_a[0][i-1][0] - s_a[0][i-2][0]);
-        s_b[0][0][i] = s_cf1[i-1] * s_kappa * (dz * s_a[0][0][i-1] - s_a[0][0][i-2]);
-
-        s_a[i][0][0] = fac * (ddx * s_cf2[i-1] * s_a[i-1][0][0]
-                                  - s_cf3[i-1] * s_a[i-2][0][0]
-                  + s_cf1[i-1] * s_kappa * (dx * s_b[i-1][0][0]
-                                               - s_b[i-2][0][0]));
-
-        s_a[0][i][0] = fac * (ddy * s_cf2[i-1] * s_a[0][i-1][0]
-                                  - s_cf3[i-1] * s_a[0][i-2][0]
-                  + s_cf1[i-1] * s_kappa * (dy * s_b[0][i-1][0]
-                                               - s_b[0][i-2][0]));
-        
-        s_a[0][0][i] = fac * (ddz * s_cf2[i-1] * s_a[0][0][i-1]
-                                  - s_cf3[i-1] * s_a[0][0][i-2]
-                  + s_cf1[i-1] * s_kappa * (dz * s_b[0][0][i-1]
-                                               - s_b[0][0][i-2]));
-    }
-
-  /* 1 index 0, 1 index 1, other >=1 */
-    s_b[1][1][0] = kappax * s_a[0][1][0];
-    s_b[1][0][1] = kappax * s_a[0][0][1];
-    s_b[0][1][1] = kappay * s_a[0][0][1];
-
-    s_a[1][1][0] = fac * (dx * s_a[0][1][0] + ddy * s_a[1][0][0] + kappax * s_b[0][1][0]);
-    s_a[1][0][1] = fac * (dx * s_a[0][0][1] + ddz * s_a[1][0][0] + kappax * s_b[0][0][1]);
-    s_a[0][1][1] = fac * (dy * s_a[0][0][1] + ddz * s_a[0][1][0] + kappay * s_b[0][0][1]);
-
-    for (i = 2; i < 4; i++) {
-        s_b[1][0][i] = kappax * s_a[0][0][i];
-        s_b[0][1][i] = kappay * s_a[0][0][i];
-        s_b[0][i][1] = kappaz * s_a[0][i][0];
-        s_b[1][i][0] = kappax * s_a[0][i][0];
-        s_b[i][1][0] = kappay * s_a[i][0][0];
-        s_b[i][0][1] = kappaz * s_a[i][0][0];
-
-        s_a[1][0][i]=fac * (dx * s_a[0][0][i] + ddz * s_a[1][0][i-1] - s_a[1][0][i-2]
-                      + kappax * s_b[0][0][i]);
-        s_a[0][1][i]=fac * (dy * s_a[0][0][i] + ddz * s_a[0][1][i-1] - s_a[0][1][i-2]
-                      + kappay * s_b[0][0][i]);
-        s_a[0][i][1]=fac * (dz * s_a[0][i][0] + ddy * s_a[0][i-1][1] - s_a[0][i-2][1]
-                      + kappaz * s_b[0][i][0]);
-        s_a[1][i][0]=fac * (dx * s_a[0][i][0] + ddy * s_a[1][i-1][0] - s_a[1][i-2][0]
-                      + kappax * s_b[0][i][0]);
-        s_a[i][1][0]=fac * (dy * s_a[i][0][0] + ddx * s_a[i-1][1][0] - s_a[i-2][1][0]
-                      + kappay * s_b[i][0][0]);
-        s_a[i][0][1]=fac * (dz * s_a[i][0][0] + ddx * s_a[i-1][0][1] - s_a[i-2][0][1]
-                      + kappaz * s_b[i][0][0]);
-    }
-
-    /* 1 index 0, others >=2 */
-            s_b[2][2][0] = s_cf1[1] * s_kappa * (dx * s_a[1][2][0] - s_a[0][2][0]);
-            s_b[2][0][2] = s_cf1[1] * s_kappa * (dx * s_a[1][0][2] - s_a[0][0][2]);
-            s_b[0][2][2] = s_cf1[1] * s_kappa * (dy * s_a[0][1][2] - s_a[0][0][2]);
-
-            s_a[2][2][0] = fac * (ddx * s_cf2[1] * s_a[1][2][0]
-                                           + ddy * s_a[2][1][0]
-                                      - s_cf3[1] * s_a[0][2][0]
-                                                 - s_a[2][0][0]
-                      + s_cf1[1] * s_kappa * (dx * s_b[1][2][0]
-                                                 - s_b[0][2][0]));
-
-            s_a[2][0][2] = fac * (ddx * s_cf2[1] * s_a[1][0][2]
-                                           + ddz * s_a[2][0][1]
-                                      - s_cf3[1] * s_a[0][0][2]
-                                                 - s_a[2][0][0]
-                      + s_cf1[1] * s_kappa * (dx * s_b[1][0][2]
-                                                 - s_b[0][0][2]));
-
-            s_a[0][2][2] = fac * (ddy * s_cf2[1] * s_a[0][1][2]
-                                           + ddz * s_a[0][2][1]
-                                      - s_cf3[1] * s_a[0][0][2]
-                                                 - s_a[0][2][0]
-                      + s_cf1[1] * s_kappa * (dy * s_b[0][1][2]
-                                                 - s_b[0][0][2]));
-
-  /* 2 indices 1,other >= 1 */
-    s_b[1][1][1] = kappax * s_a[0][1][1];
-    s_a[1][1][1] = fac * (dx * s_a[0][1][1]
-                       + ddy * s_a[1][0][1]
-                       + ddz * s_a[1][1][0]
-                    + kappax * s_b[0][1][1]);
-
-    for (i = 2; i < 4; i++) {
-        s_b[1][1][i] = kappax * s_a[0][1][i];
-        s_b[1][i][1] = kappax * s_a[0][i][1];
-        s_b[i][1][1] = kappay * s_a[i][0][1];
-
-        s_a[1][1][i] = fac * (dx * s_a[0][1][i]
-                           + ddy * s_a[1][0][i]
-                           + ddz * s_a[1][1][i-1]
-                                  -s_a[1][1][i-2]
-                        + kappax * s_b[0][1][i]);
-
-        s_a[1][i][1] = fac * (dx * s_a[0][i][1]
-                           + ddy * s_a[1][i-1][1]
-                           + ddz * s_a[1][i][0]
-                                 - s_a[1][i-2][1]
-                        + kappax * s_b[0][i][1]);
-
-        s_a[i][1][1] = fac * (dy * s_a[i][0][1]
-                           + ddx * s_a[i-1][1][1]
-                           + ddz * s_a[i][1][0]
-                                 - s_a[i-2][1][1]
-                        + kappay * s_b[i][0][1]);
-    }
-
-  /* 1 index 1, others >=2 */
-            s_b[1][2][2] = kappax * s_a[0][2][2];
-            s_b[2][1][2] = kappay * s_a[2][0][2];
-            s_b[2][2][1] = kappaz * s_a[2][2][0];
-
-            s_a[1][2][2] = fac * (dx * s_a[0][2][2]
-                               + ddy * s_a[1][1][2]
-                               + ddz * s_a[1][2][1]
-                                     - s_a[1][0][2]
-                                     - s_a[1][2][0]
-                            + kappax * s_b[0][2][2]);
-
-            s_a[2][1][2] = fac * (dy * s_a[2][0][2]
-                               + ddx * s_a[1][1][2]
-                               + ddz * s_a[2][1][1]
-                                     - s_a[0][1][2]
-                                     - s_a[2][1][0]
-                            + kappay * s_b[2][0][2]);
-            
-            s_a[2][2][1] = fac * (dz * s_a[2][2][0]
-                               + ddx * s_a[1][2][1]
-                               + ddy * s_a[2][1][1]
-                                     - s_a[0][2][1]
-                                     - s_a[2][0][1]
-                            + kappaz * s_b[2][2][0]);
-
-    return 0;
-}
-/********************************************************/
-
-
-/********************************************************/
-static int s_ComputeCoeffsCoulomb(TreeNode *p, double dx, double dy, double dz)
-{
-/* COMP_TCOEFF computes the Taylor coefficients of the potential
- * using a recurrence formula. The center of the expansion is the
- * midpoint of the node P. s_target_position and s_order are globally defined. */
-    double ddx, ddy, ddz, dist, fac;
-    int i, j, k;
-
-  /* setup variables */
-
-//    dx = s_target_position[0] - p->x_mid;
-//    dy = s_target_position[1] - p->y_mid;
-//    dz = s_target_position[2] - p->z_mid;
-
-    ddx = 2.0 * dx;
-    ddy = 2.0 * dy;
-    ddz = 2.0 * dz;
-
-    dist = dx*dx + dy*dy + dz*dz;
-    fac = 1.0 / dist;
-    dist = sqrt(dist);
-
-  /* 0th coeff or function val */
-    s_a[0][0][0] = 1.0 / dist;
-
-  /* 2 indices are 0 */
-
-    s_a[1][0][0] = fac * dx * s_a[0][0][0];
-    s_a[0][1][0] = fac * dy * s_a[0][0][0];
-    s_a[0][0][1] = fac * dz * s_a[0][0][0];
-
-    for (i = 2; i < 4; i++) {
-
-        s_a[i][0][0] = fac * (ddx * s_cf2[i-1] * s_a[i-1][0][0]
-                                  - s_cf3[i-1] * s_a[i-2][0][0]);
-
-        s_a[0][i][0] = fac * (ddy * s_cf2[i-1] * s_a[0][i-1][0]
-                                  - s_cf3[i-1] * s_a[0][i-2][0]);
-        
-        s_a[0][0][i] = fac * (ddz * s_cf2[i-1] * s_a[0][0][i-1]
-                                  - s_cf3[i-1] * s_a[0][0][i-2]);
-    }
-
-  /* 1 index 0, 1 index 1, other >=1 */
-    s_a[1][1][0] = fac * (dx * s_a[0][1][0] + ddy * s_a[1][0][0]);
-    s_a[1][0][1] = fac * (dx * s_a[0][0][1] + ddz * s_a[1][0][0]);
-    s_a[0][1][1] = fac * (dy * s_a[0][0][1] + ddz * s_a[0][1][0]);
-
-    for (i = 2; i < 4; i++) {
-
-        s_a[1][0][i]=fac * (dx * s_a[0][0][i] + ddz * s_a[1][0][i-1] - s_a[1][0][i-2]);
-        s_a[0][1][i]=fac * (dy * s_a[0][0][i] + ddz * s_a[0][1][i-1] - s_a[0][1][i-2]);
-        s_a[0][i][1]=fac * (dz * s_a[0][i][0] + ddy * s_a[0][i-1][1] - s_a[0][i-2][1]);
-        s_a[1][i][0]=fac * (dx * s_a[0][i][0] + ddy * s_a[1][i-1][0] - s_a[1][i-2][0]);
-        s_a[i][1][0]=fac * (dy * s_a[i][0][0] + ddx * s_a[i-1][1][0] - s_a[i-2][1][0]);
-        s_a[i][0][1]=fac * (dz * s_a[i][0][0] + ddx * s_a[i-1][0][1] - s_a[i-2][0][1]);
-    }
-
-    /* 1 index 0, others >=2 */
-
-            s_a[2][2][0] = fac * (ddx * s_cf2[1] * s_a[1][2][0]
-                                           + ddy * s_a[2][1][0]
-                                      - s_cf3[1] * s_a[0][2][0]
-                                                 - s_a[2][0][0]);
-
-            s_a[2][0][2] = fac * (ddx * s_cf2[1] * s_a[1][0][2]
-                                           + ddz * s_a[2][0][1]
-                                      - s_cf3[1] * s_a[0][0][2]
-                                                 - s_a[2][0][0]);
-
-            s_a[0][2][2] = fac * (ddy * s_cf2[1] * s_a[0][1][2]
-                                           + ddz * s_a[0][2][1]
-                                      - s_cf3[1] * s_a[0][0][2]
-                                                 - s_a[0][2][0]);
-
-  /* 2 indices 1,other >= 1 */
-    s_a[1][1][1] = fac * (dx * s_a[0][1][1]
-                       + ddy * s_a[1][0][1]
-                       + ddz * s_a[1][1][0]);
-
-    for (i = 2; i < 4; i++) {
-
-        s_a[1][1][i] = fac * (dx * s_a[0][1][i]
-                           + ddy * s_a[1][0][i]
-                           + ddz * s_a[1][1][i-1]
-                                  -s_a[1][1][i-2]);
-
-        s_a[1][i][1] = fac * (dx * s_a[0][i][1]
-                             + ddy * s_a[1][i-1][1]
-                             + ddz * s_a[1][i][0]
-                                   - s_a[1][i-2][1]);
-
-        s_a[i][1][1] = fac * (dy * s_a[i][0][1]
-                             + ddx * s_a[i-1][1][1]
-                             + ddz * s_a[i][1][0]
-                                   - s_a[i-2][1][1]);
-    }
-
-  /* 1 index 1, others >=2 */
-            s_a[1][2][2] = fac * (dx * s_a[0][2][2]
-                               + ddy * s_a[1][1][2]
-                               + ddz * s_a[1][2][1]
-                                     - s_a[1][0][2]
-                                     - s_a[1][2][0]);
-
-            s_a[2][1][2] = fac * (dy * s_a[2][0][2]
-                               + ddx * s_a[1][1][2]
-                               + ddz * s_a[2][1][1]
-                                     - s_a[0][1][2]
-                                     - s_a[2][1][0]);
-            
-            s_a[2][2][1] = fac * (dz * s_a[2][2][0]
-                               + ddx * s_a[1][2][1]
-                               + ddy * s_a[2][1][1]
-                                     - s_a[0][2][1]
-                                     - s_a[2][0][1]);
-
-    return 0;
-}
-/********************************************************/
 
 
 /********************************************************/
