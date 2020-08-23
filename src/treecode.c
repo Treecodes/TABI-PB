@@ -73,8 +73,8 @@ static double *s_source_term = NULL;
 static double s_target_position[3];
 static double s_target_normal[3];
 
-static double ***s_target_charge = NULL;
-static double ***s_source_charge = NULL;
+static double **s_target_charge = NULL;
+static double **s_source_charge = NULL;
 
 /* global variables for reordering arrays */
 static int *s_order_arr = NULL;
@@ -94,8 +94,8 @@ static int s_ComputePBKernel(double *phi);
 static int s_ComputeAllMoments(TreeNode *p, int ifirst);
 static int s_ComputeMoments(TreeNode *p);
 static int s_RunTreecode(TreeNode *p, double *tpoten_old,
-                         double tempq[2][16], double peng[2]);
-static int s_ComputeTreePB(TreeNode *p, double tempq[2][16], double peng[2]);
+                         double tempq[16], double peng[2]);
+static int s_ComputeTreePB(TreeNode *p, double tempq[16], double peng[2]);
 static int s_ComputeDirectPB(int ibeg, int iend, double *tpoten_old,
                              double peng[2]);
 static int s_RemoveMoments(TreeNode *p);
@@ -198,8 +198,8 @@ int TreecodeInitialization(TABIPBparm *parm, TreeParticles *particles)
     free_vector(temp_area);
     free_vector(temp_source);
 
-    make_3array(s_target_charge, s_numpars, 2, 16);
-    make_3array(s_source_charge, s_numpars, 2, 16);
+    make_matrix(s_target_charge, s_numpars, 16);
+    make_matrix(s_source_charge, s_numpars, 16);
 
     return 0;
 }
@@ -263,8 +263,8 @@ int TreecodeFinalization(TreeParticles *particles)
 
 /***********treecode_initialization*******/
 
-    free_3array(s_target_charge);
-    free_3array(s_source_charge);
+    free_matrix(s_target_charge);
+    free_matrix(s_source_charge);
     
 /***********clean tree structure**********/
 
@@ -299,7 +299,7 @@ int matvec(double *alpha, double *tpoten_old, double *beta, double *tpoten)
   /* local variables */
     int i, j, k, ii, ierr;
     double temp_x, temp_area;
-    double temp_charge[2][16];
+    double temp_charge[16];
     double pre1, pre2;
     double peng[2], peng_old[2];
     double *tpoten_temp;
@@ -341,10 +341,8 @@ int matvec(double *alpha, double *tpoten_old, double *beta, double *tpoten)
             s_target_normal[1] = s_particle_normal[1][i];
             s_target_normal[2] = s_particle_normal[2][i];
         
-            for (j = 0; j < 2; j++) {
-                for (k = 0; k < 16; k++) {
-                    temp_charge[j][k] = s_target_charge[i][j][k];
-                }
+            for (k = 0; k < 16; k++) {
+                temp_charge[k] = s_target_charge[i][k];
             }
 
       /* remove the singularity */
@@ -862,39 +860,33 @@ static int s_PartitionEight(double xyzmms[6][8], double xl, double yl,
 static int s_ComputePBKernel(double *phi)
 {
 
-    int i, ikp, iknl, ixyz, jxyz, indx;
+    int i, iknl, ixyz, jxyz, indx;
 
     for (i = 0; i < s_numpars; i++) {
         indx = 0;
-        for (ikp = 0; ikp < 2; ikp++) {
-            s_target_charge[i][ikp][indx] = 1.0;
-            s_source_charge[i][ikp][indx] = s_particle_area[i]
-                                          * phi[s_numpars+i];
-        }
+        s_target_charge[i][indx] = 1.0;
+        s_source_charge[i][indx] = s_particle_area[i]
+                                 * phi[s_numpars+i];
 
         for (iknl = 0; iknl < 2; iknl++) {
             for (ixyz = 0; ixyz < 3; ixyz++) {
                 indx += 1;
-                for (ikp = 0; ikp < 2; ikp++) {
-                    s_target_charge[i][ikp][indx] = 1.0 * (1-iknl)
-                                                  + s_particle_normal[ixyz][i]
-                                                  * iknl;
-                    s_source_charge[i][ikp][indx] = (s_particle_normal[ixyz][i]
-                                                  * (1-iknl) + 1.0 * iknl)
-                                                  * s_particle_area[i]
-                                                  * phi[iknl*s_numpars+i];
-                }
+                s_target_charge[i][indx] = 1.0 * (1-iknl)
+                                         + s_particle_normal[ixyz][i]
+                                         * iknl;
+                s_source_charge[i][indx] = (s_particle_normal[ixyz][i]
+                                         * (1-iknl) + 1.0 * iknl)
+                                         * s_particle_area[i]
+                                         * phi[iknl*s_numpars+i];
             }
         }
 
         for (ixyz = 0; ixyz < 3; ixyz++) {
             for (jxyz = 0; jxyz < 3; jxyz++) {
                 indx += 1;
-                for (ikp = 0; ikp < 2; ikp++) {
-                    s_target_charge[i][ikp][indx] =  s_particle_normal[jxyz][i];
-                    s_source_charge[i][ikp][indx] = -s_particle_normal[ixyz][i]
-                                                  * s_particle_area[i] * phi[i];
-                }
+                s_target_charge[i][indx] =  s_particle_normal[jxyz][i];
+                s_source_charge[i][indx] = -s_particle_normal[ixyz][i]
+                                         * s_particle_area[i] * phi[i];
             }
         }
     }
@@ -1004,7 +996,7 @@ static int s_ComputeMoments(TreeNode *p)
         xx = xibeg[i];
         yy = yibeg[i];
         zz = zibeg[i];
-        qq = s_source_charge[p->ibeg+i][0];
+        qq = s_source_charge[p->ibeg+i];
         
         for (j = 0; j < s_torder_lim; j++) {
             a1i[j] = w1i[j] / (xx - p->tx[j]);
@@ -1079,7 +1071,7 @@ static int s_ComputeMoments(TreeNode *p)
 
 
 /********************************************************/
-static int s_RunTreecode(TreeNode *p, double *tpoten_old, double tempq[2][16],
+static int s_RunTreecode(TreeNode *p, double *tpoten_old, double tempq[16],
                          double peng[2])
 {
   /* RunTreecode() is self recurrence function */
@@ -1126,13 +1118,12 @@ static int s_RunTreecode(TreeNode *p, double *tpoten_old, double tempq[2][16],
 
 
 /********************************************************/
-static int s_ComputeTreePB(TreeNode *p, double tempq[2][16], double peng[2])
+static int s_ComputeTreePB(TreeNode *p, double tempq[16], double peng[2])
 {
-    double sl[4], pt_comp[2][16];
+    double sl[4], pt_comp[16];
     
     for (int indx = 0; indx < 16; indx++) {
-        pt_comp[0][indx] = 0;
-        pt_comp[1][indx] = 0;
+        pt_comp[indx] = 0;
     }
 
     int ii = 0;
@@ -1150,56 +1141,35 @@ static int s_ComputeTreePB(TreeNode *p, double tempq[2][16], double peng[2])
                 double r3inv = rinv  * rinv * rinv;
                 double r5inv = r3inv * rinv * rinv;
 
-                double expkr  =  exp(-s_kappa * r);
-                double d1term =  expkr * r3inv * (1. + (s_kappa * r)); 
-                double d2term =  expkr * r5inv * (3. + (3. * s_kappa * r) + (s_kappa * s_kappa * r2));
-                double d3term = -expkr * r3inv * (1. + s_kappa * r);
+                double expkr   =  exp(-s_kappa * r);
+                double d1term  =  r3inv * expkr * (1. + (s_kappa * r)); 
+                double d1term1 = -r3inv + d1term * s_eps;
+                double d1term2 = -r3inv + d1term / s_eps;
+                double d2term  =  r5inv * (-3. + expkr * (3. + (3. * s_kappa * r) + (s_kappa * s_kappa * r2)));
+                double d3term  =  r3inv * ( 1. - expkr * (1. + s_kappa * r));
 
-                // Coulomb Kernel //
-                pt_comp[0][0]  += ONE_OVER_4PI * tempq[0][0] * p->ms[0][ii]  / r;
 
-                pt_comp[0][1]  += ONE_OVER_4PI * tempq[0][1] * p->ms[1][ii]  * r3inv * dx;
-                pt_comp[0][2]  += ONE_OVER_4PI * tempq[0][2] * p->ms[2][ii]  * r3inv * dy;
-                pt_comp[0][3]  += ONE_OVER_4PI * tempq[0][3] * p->ms[3][ii]  * r3inv * dz;
+                pt_comp[0]  += (ONE_OVER_4PI * tempq[0]  * p->ms[0][ii]  *  rinv * (1. - expkr));
 
-                pt_comp[0][4]  += ONE_OVER_4PI * tempq[0][4] * p->ms[4][ii]  * r3inv * dx;
-                pt_comp[0][5]  += ONE_OVER_4PI * tempq[0][5] * p->ms[5][ii]  * r3inv * dy;
-                pt_comp[0][6]  += ONE_OVER_4PI * tempq[0][6] * p->ms[6][ii]  * r3inv * dz;
+                pt_comp[1]  += (ONE_OVER_4PI * tempq[1]  * p->ms[1][ii]  *  dx * d1term1);
+                pt_comp[2]  += (ONE_OVER_4PI * tempq[2]  * p->ms[2][ii]  *  dy * d1term1);
+                pt_comp[3]  += (ONE_OVER_4PI * tempq[3]  * p->ms[3][ii]  *  dz * d1term1);
 
-                pt_comp[0][7]  += ONE_OVER_4PI * tempq[0][7] * p->ms[7][ii]  * (3. * dx * dx - r2) * r5inv;
-                pt_comp[0][8]  += ONE_OVER_4PI * tempq[0][8] * p->ms[8][ii]  * r5inv * dx * dy * 3.;
-                pt_comp[0][9]  += ONE_OVER_4PI * tempq[0][9] * p->ms[9][ii]  * r5inv * dx * dz * 3.;
+                pt_comp[4]  += (ONE_OVER_4PI * tempq[4]  * p->ms[4][ii]  *  dx * d1term2);
+                pt_comp[5]  += (ONE_OVER_4PI * tempq[5]  * p->ms[5][ii]  *  dy * d1term2);
+                pt_comp[6]  += (ONE_OVER_4PI * tempq[6]  * p->ms[6][ii]  *  dz * d1term2);
 
-                pt_comp[0][10] += ONE_OVER_4PI * tempq[0][10] * p->ms[10][ii] * r5inv * dx * dy * 3.;
-                pt_comp[0][11] += ONE_OVER_4PI * tempq[0][11] * p->ms[11][ii] * (3. * dy * dy - r2) * r5inv;
-                pt_comp[0][12] += ONE_OVER_4PI * tempq[0][12] * p->ms[12][ii] * r5inv * dy * dz * 3.;
+                pt_comp[7]  += (ONE_OVER_4PI * tempq[7]  * p->ms[7][ii]  * (dx * dx * d2term + d3term));
+                pt_comp[8]  += (ONE_OVER_4PI * tempq[8]  * p->ms[8][ii]  *  dx * dy * d2term);
+                pt_comp[9]  += (ONE_OVER_4PI * tempq[9]  * p->ms[9][ii]  *  dx * dz * d2term);
 
-                pt_comp[0][13] += ONE_OVER_4PI * tempq[0][13] * p->ms[13][ii] * r5inv * dx * dz * 3.;
-                pt_comp[0][14] += ONE_OVER_4PI * tempq[0][14] * p->ms[14][ii] * r5inv * dy * dz * 3.;
-                pt_comp[0][15] += ONE_OVER_4PI * tempq[0][15] * p->ms[15][ii] * (3. * dz * dz - r2) * r5inv;
+                pt_comp[10] += (ONE_OVER_4PI * tempq[10] * p->ms[10][ii] *  dx * dy * d2term);
+                pt_comp[11] += (ONE_OVER_4PI * tempq[11] * p->ms[11][ii] * (dy * dy * d2term + d3term));
+                pt_comp[12] += (ONE_OVER_4PI * tempq[12] * p->ms[12][ii] *  dy * dz * d2term);
 
-                // Screened Coulomb Kernel //
-                pt_comp[1][0]  += ONE_OVER_4PI * tempq[1][0]  * p->ms[0][ii]  * expkr  * rinv;
-
-                pt_comp[1][1]  += ONE_OVER_4PI * tempq[1][1]  * p->ms[1][ii]  * d1term * dx;
-                pt_comp[1][2]  += ONE_OVER_4PI * tempq[1][2]  * p->ms[2][ii]  * d1term * dy;
-                pt_comp[1][3]  += ONE_OVER_4PI * tempq[1][3]  * p->ms[3][ii]  * d1term * dz;
-
-                pt_comp[1][4]  += ONE_OVER_4PI * tempq[1][4]  * p->ms[4][ii]  * d1term * dx;
-                pt_comp[1][5]  += ONE_OVER_4PI * tempq[1][5]  * p->ms[5][ii]  * d1term * dy;
-                pt_comp[1][6]  += ONE_OVER_4PI * tempq[1][6]  * p->ms[6][ii]  * d1term * dz;
-
-                pt_comp[1][7]  += ONE_OVER_4PI * tempq[1][7]  * p->ms[7][ii]  * (d2term * dx * dx + d3term);
-                pt_comp[1][8]  += ONE_OVER_4PI * tempq[1][8]  * p->ms[8][ii]  *  d2term * dx * dy;
-                pt_comp[1][9]  += ONE_OVER_4PI * tempq[1][9]  * p->ms[9][ii]  *  d2term * dx * dz;
-
-                pt_comp[1][10] += ONE_OVER_4PI * tempq[1][10] * p->ms[10][ii] *  d2term * dx * dy;
-                pt_comp[1][11] += ONE_OVER_4PI * tempq[1][11] * p->ms[11][ii] * (d2term * dy * dy + d3term);
-                pt_comp[1][12] += ONE_OVER_4PI * tempq[1][12] * p->ms[12][ii] *  d2term * dy * dz;
-
-                pt_comp[1][13] += ONE_OVER_4PI * tempq[1][13] * p->ms[13][ii] *  d2term * dx * dz;
-                pt_comp[1][14] += ONE_OVER_4PI * tempq[1][14] * p->ms[14][ii] *  d2term * dy * dz;
-                pt_comp[1][15] += ONE_OVER_4PI * tempq[1][15] * p->ms[15][ii] * (d2term * dz * dz + d3term);
+                pt_comp[13] += (ONE_OVER_4PI * tempq[13] * p->ms[13][ii] *  dx * dz * d2term);
+                pt_comp[14] += (ONE_OVER_4PI * tempq[14] * p->ms[14][ii] *  dy * dz * d2term);
+                pt_comp[15] += (ONE_OVER_4PI * tempq[15] * p->ms[15][ii] * (dz * dz * d2term + d3term));
 
                 ii++;
             }
@@ -1207,15 +1177,13 @@ static int s_ComputeTreePB(TreeNode *p, double tempq[2][16], double peng[2])
     }
     
 
-    sl[0] = pt_comp[0][0] - pt_comp[1][0];
-    sl[1] = s_eps * (pt_comp[1][1] + pt_comp[1][2] + pt_comp[1][3])
-                  - (pt_comp[0][1] + pt_comp[0][2] + pt_comp[0][3]);
-    sl[2] = - (pt_comp[0][4] + pt_comp[0][5] + pt_comp[0][6])
-            + (pt_comp[1][4] + pt_comp[1][5] + pt_comp[1][6]) / s_eps;
-    sl[3] = 0.0;
+    sl[0] = pt_comp[0];
+    sl[1] = pt_comp[1] + pt_comp[2] + pt_comp[3];
+    sl[2] = pt_comp[4] + pt_comp[5] + pt_comp[6];
 
+    sl[3] = 0.0;
     for (int i = 7; i < 16; i++) {
-        sl[3] += pt_comp[1][i] - pt_comp[0][i];
+        sl[3] += pt_comp[i];
     }
 
     peng[0] = sl[0] + sl[1];
@@ -1259,7 +1227,9 @@ static int s_ComputeDirectPB(int ibeg, int iend,
         sq[1] = s_particle_normal[1][j];
         sq[2] = s_particle_normal[2][j];
 
-        r_s[0] = sp[0]-tp[0];  r_s[1] = sp[1]-tp[1];  r_s[2] = sp[2]-tp[2];
+        r_s[0] = sp[0]-tp[0];  
+        r_s[1] = sp[1]-tp[1];  
+        r_s[2] = sp[2]-tp[2];
         sumrs = r_s[0]*r_s[0] + r_s[1]*r_s[1] + r_s[2]*r_s[2];
         rs = sqrt(sumrs);
         irs = 1.0/rs;
