@@ -20,7 +20,7 @@
 #include "treecode_gmres_interface.h"
 
 #include "array.h"
-#include "particle_struct.h"
+#include "struct_particles.h"
 
 /********************************************************/
 int RunGMRES(int nface, double *source_term, int precond,

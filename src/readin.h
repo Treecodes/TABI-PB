@@ -23,7 +23,6 @@
 #define H_READIN_H
 
 #include "TABIPBstruct.h"
-#include "particle_struct.h"
 
 /* function to read in molecule information */
 int Readin(TABIPBparm *parm, TABIPBvars *vars);

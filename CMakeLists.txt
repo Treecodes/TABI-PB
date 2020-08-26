@@ -56,8 +56,8 @@ if (MKL_FOUND)
 endif()
 
 message(STATUS "BLAS Libraries: ${BLAS_LIBRARIES}")
-#set(LAPACK_LIBRARIES /opt/intel/mkl/lib/libmkl_rt.dylib)
-#set(LAPACK_INCLUDE_PATH /opt/intel/mkl/include)
+set(LAPACK_LIBRARIES /opt/intel/mkl/lib/libmkl_rt.dylib)
+set(LAPACK_INCLUDE_PATH /opt/intel/mkl/include)
 
 #message ("LAPACK LIBRARIES: " ${LAPACK_LIBRARIES})
 #message ("LAPACK PATH: " ${LAPACK_INCLUDE_PATH})

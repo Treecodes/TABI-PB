@@ -23,11 +23,11 @@
 #define H_TREECODE_TABIPB_INTERFACE_H
 
 #include "TABIPBstruct.h"
-#include "particle_struct.h"
+#include "struct_particles.h"
 
 /* functions used by tabipb() to interface with treecode */
-int TreecodeInitialization(TABIPBparm *parm, TreeParticles *particles);
+int TreecodeInitialization(TABIPBparm *parm, struct Particles *particles);
 
-int TreecodeFinalization(TreeParticles *particles);
+int TreecodeFinalization(struct Particles *particles);
 
 #endif /* H_TREECODE_TABIPB_INTERFACE_H */
