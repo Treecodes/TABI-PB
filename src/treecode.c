@@ -913,13 +913,13 @@ static int s_ComputeTreePB(struct TreeLinkedListNode *p, double tempq[16], doubl
 
                 pt_comp[0]  += (p->ms[0][ii]  *  rinv * (1. - expkr));
 
-                pt_comp[1]  += (p->ms[1][ii]  *  dx * d1term1);
-                pt_comp[2]  += (p->ms[2][ii]  *  dy * d1term1);
-                pt_comp[3]  += (p->ms[3][ii]  *  dz * d1term1);
+                pt_comp[1]  += (p->ms[1][ii]  *  d1term1 * dx);
+                pt_comp[2]  += (p->ms[2][ii]  *  d1term1 * dy);
+                pt_comp[3]  += (p->ms[3][ii]  *  d1term1 * dz);
 
-                pt_comp[4]  += (p->ms[0][ii]  *  dx * d1term2);
-                pt_comp[5]  += (p->ms[0][ii]  *  dy * d1term2);
-                pt_comp[6]  += (p->ms[0][ii]  *  dz * d1term2);
+                pt_comp[4]  += (p->ms[0][ii]  *  d1term2 * dx);
+                pt_comp[5]  += (p->ms[0][ii]  *  d1term2 * dy);
+                pt_comp[6]  += (p->ms[0][ii]  *  d1term2 * dz);
 
                 pt_comp[7]  += (p->ms[1][ii]  * (dx * dx * d2term + d3term));
                 pt_comp[8]  += (p->ms[1][ii]  *  dx * dy * d2term);
