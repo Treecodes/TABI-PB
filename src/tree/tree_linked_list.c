@@ -80,16 +80,6 @@ void TreeLinkedList_Construct(struct TreeLinkedListNode **p, struct TreeLinkedLi
 
     
     if ((*p)->numpar > maxparnode) {
-    
-        int max_num_children;
-    
-        if ((*p)->numpar < 2 * maxparnode) {
-            max_num_children = 2;
-        } else if ((*p)->numpar < 4 * maxparnode) {
-            max_num_children = 4;
-        } else {
-            max_num_children = 8;
-        }
     /*
      * IND array holds indices of the eight new subregions.
      */
@@ -109,8 +99,7 @@ void TreeLinkedList_Construct(struct TreeLinkedListNode **p, struct TreeLinkedLi
         int numposchild;
 
         pc_partition_8(sources->x, sources->y, sources->z, sources->order,
-                       xyzmms, xl, yl, zl, &numposchild, max_num_children,
-                       x_mid, y_mid, z_mid, ind);
+                       xyzmms, xl, yl, zl, &numposchild, x_mid, y_mid, z_mid, ind);
 
         for (int i = 0; i < numposchild; i++) {
             if (ind[i][0] < ind[i][1]) {

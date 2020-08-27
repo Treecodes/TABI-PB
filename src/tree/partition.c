@@ -87,7 +87,7 @@ void pc_partition(double *a, double *b, double *c, int *indarr,
 
 
 void pc_partition_8(double *x, double *y, double *z, int *orderarr, double xyzmms[6][8],
-                    double xl, double yl, double zl, int *numposchild, int max_num_children,
+                    double xl, double yl, double zl, int *numposchild,
                     double x_mid, double y_mid, double z_mid, int ind[8][2])
 {
     int temp_ind;
@@ -107,37 +107,8 @@ void pc_partition_8(double *x, double *y, double *z, int *orderarr, double xyzmm
     if (xl >= critlen) divide_x = 1;
     if (yl >= critlen) divide_y = 1;
     if (zl >= critlen) divide_z = 1;
-    
-    if (max_num_children == 4) {
-        if (xl < yl && xl < zl) divide_x = 0;
-        if (yl < xl && yl < zl) divide_y = 0;
-        if (zl < xl && zl < yl) divide_z = 0;
-        
-        if (divide_x + divide_y + divide_z == 3) divide_x = 0;
-    }
-    
-    if (max_num_children == 2) {
-        if (xl < yl || xl < zl) divide_x = 0;
-        if (yl < xl || yl < zl) divide_y = 0;
-        if (zl < xl || zl < yl) divide_z = 0;
-        
-        if (divide_x + divide_y + divide_z == 3) {
-            divide_x = 0;
-            divide_y = 0;
-        }
-        
-        if (divide_x + divide_y + divide_z == 2) {
-            if        (divide_x == 0) {
-                divide_y = 0;
-            } else if (divide_y == 0) {
-                divide_z = 0;
-            } else if (divide_z == 0) {
-                divide_x = 0;
-            }
-        }
-    }
 
-    if (xl >= critlen) {
+    if (divide_x) {
 
         pc_partition(x, y, z, orderarr, ind[0][0], ind[0][1],
                      x_mid, &temp_ind);
@@ -155,7 +126,7 @@ void pc_partition_8(double *x, double *y, double *z, int *orderarr, double xyzmm
 
     }
 
-    if (yl >= critlen) {
+    if (divide_y) {
 
         for (int i = 0; i < *numposchild; i++) {
             pc_partition(y, x, z, orderarr, ind[i][0], ind[i][1],
@@ -176,7 +147,7 @@ void pc_partition_8(double *x, double *y, double *z, int *orderarr, double xyzmm
 
     }
 
-    if (zl >= critlen) {
+    if (divide_z) {
 
         for (int i = 0; i < *numposchild; i++) {
             pc_partition(z, x, y, orderarr, ind[i][0], ind[i][1],

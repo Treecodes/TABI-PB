@@ -1,7 +1,7 @@
 # C code for standalone
   add_executable(tabipb
     main.c tabipb.c gmres.c
-    partition.c run_gmres.c readin.c treecode.c
+    run_gmres.c readin.c treecode.c
     print_output.c utilities.c xmalloc.c
     tree/tree_linked_list.c tree/partition.c)
 

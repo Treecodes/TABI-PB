@@ -14,8 +14,7 @@ void pc_partition(double *a, double *b, double *c, int *indarr,
 
 void pc_partition_8(double *x, double *y, double *z, int *indarr,
                     double xyzmms[6][8], double xl, double yl, double zl,
-                    int *numposchild, int max_num_children,
-                    double x_mid, double y_mid, double z_mid,
+                    int *numposchild, double x_mid, double y_mid, double z_mid,
                     int ind[8][2]);
 
 #endif /* H_PARTITION_H */
