@@ -888,14 +888,14 @@ static int s_ComputeTreePB(struct TreeLinkedListNode *p, double tempq[4], double
     double pt_comp_dy = 0.;
     double pt_comp_dz = 0.;
     
-    double *cluster_x = p->tx;
-    double *cluster_y = p->ty;
-    double *cluster_z = p->tz;
-    
-    double *cluster_q_   = p->ms[0];
-    double *cluster_q_dx = p->ms[1];
-    double *cluster_q_dy = p->ms[2];
-    double *cluster_q_dz = p->ms[3];
+    double* restrict cluster_x = p->tx;
+    double* restrict cluster_y = p->ty;
+    double* restrict cluster_z = p->tz;
+
+    double* restrict cluster_q_   = p->ms[0];
+    double* restrict cluster_q_dx = p->ms[1];
+    double* restrict cluster_q_dy = p->ms[2];
+    double* restrict cluster_q_dz = p->ms[3];
     
     double target_x = s_target_position[0];
     double target_y = s_target_position[1];
