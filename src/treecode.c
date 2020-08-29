@@ -97,8 +97,8 @@ static int s_ComputePBKernel(double *phi);
 static int s_ComputeAllMoments(struct TreeLinkedListNode *p, int ifirst);
 static int s_ComputeMoments(struct TreeLinkedListNode *p);
 static int s_RunTreecode(struct TreeLinkedListNode *p, double *tpoten_old,
-                         double tempq[16], double peng[2]);
-static int s_ComputeTreePB(struct TreeLinkedListNode *p, double tempq[16], double peng[2]);
+                         double tempq[4], double peng[2]);
+static int s_ComputeTreePB(struct TreeLinkedListNode *p, double tempq[4], double peng[2]);
 static int s_ComputeDirectPB(int ibeg, int iend, double *tpoten_old,
                              double peng[2]);
                              
@@ -309,7 +309,7 @@ int matvec(double *alpha, double *tpoten_old, double *beta, double *tpoten)
   /* local variables */
     int i, j, k, ii, ierr;
     double temp_x, temp_area;
-    double temp_charge[16];
+    double temp_charge[4];
     double pre1, pre2;
     double peng[2], peng_old[2];
     double *tpoten_temp;
@@ -833,7 +833,7 @@ static int s_ComputeMoments(struct TreeLinkedListNode *p)
 
 
 /********************************************************/
-static int s_RunTreecode(struct TreeLinkedListNode *p, double *tpoten_old, double tempq[16],
+static int s_RunTreecode(struct TreeLinkedListNode *p, double *tpoten_old, double tempq[4],
                          double peng[2])
 {
   /* RunTreecode() is self recurrence function */
@@ -880,22 +880,35 @@ static int s_RunTreecode(struct TreeLinkedListNode *p, double *tpoten_old, doubl
 
 
 /********************************************************/
-static int s_ComputeTreePB(struct TreeLinkedListNode *p, double tempq[16], double peng[2])
+static int s_ComputeTreePB(struct TreeLinkedListNode *p, double tempq[4], double peng[2])
 {
-    double pt_comp[16];
     
-    for (int indx = 0; indx < 16; indx++) {
-        pt_comp[indx] = 0;
-    }
-
+    double pt_comp_ = 0.;
+    double pt_comp_dx = 0.;
+    double pt_comp_dy = 0.;
+    double pt_comp_dz = 0.;
+    
+    double *cluster_x = p->tx;
+    double *cluster_y = p->ty;
+    double *cluster_z = p->tz;
+    
+    double *cluster_q_   = p->ms[0];
+    double *cluster_q_dx = p->ms[1];
+    double *cluster_q_dy = p->ms[2];
+    double *cluster_q_dz = p->ms[3];
+    
+    double target_x = s_target_position[0];
+    double target_y = s_target_position[1];
+    double target_z = s_target_position[2];
+    
     int ii = 0;
     for (int i = 0; i < s_torder_lim; i++) {
         for (int j = 0; j < s_torder_lim; j++) {
             for (int k = 0; k < s_torder_lim; k++) {
 
-                double dx = s_target_position[0] - p->tx[i];
-                double dy = s_target_position[1] - p->ty[j];
-                double dz = s_target_position[2] - p->tz[k];
+                double dx = target_x - cluster_x[i];
+                double dy = target_y - cluster_y[j];
+                double dz = target_z - cluster_z[k];
 
                 double r2    = dx*dx + dy*dy + dz*dz;
                 double r     = sqrt(r2);
@@ -907,44 +920,37 @@ static int s_ComputeTreePB(struct TreeLinkedListNode *p, double tempq[16], doubl
                 double d1term  =  r3inv * expkr * (1. + (s_kappa * r)); 
                 double d1term1 = -r3inv + d1term * s_eps;
                 double d1term2 = -r3inv + d1term / s_eps;
-                double d2term  =  r5inv * (-3. + expkr * (3. + (3. * s_kappa * r) + (s_kappa * s_kappa * r2)));
+                double d2term  =  r5inv * (-3. + expkr * (3. + (3. * s_kappa * r)
+                                                       + (s_kappa * s_kappa * r2)));
                 double d3term  =  r3inv * ( 1. - expkr * (1. + s_kappa * r));
 
-
-                pt_comp[0]  += (p->ms[0][ii]  *  rinv * (1. - expkr));
-
-                pt_comp[1]  += (p->ms[1][ii]  *  d1term1 * dx);
-                pt_comp[2]  += (p->ms[2][ii]  *  d1term1 * dy);
-                pt_comp[3]  += (p->ms[3][ii]  *  d1term1 * dz);
-
-                pt_comp[4]  += (p->ms[0][ii]  *  d1term2 * dx);
-                pt_comp[5]  += (p->ms[0][ii]  *  d1term2 * dy);
-                pt_comp[6]  += (p->ms[0][ii]  *  d1term2 * dz);
-
-                pt_comp[7]  += (p->ms[1][ii]  * (dx * dx * d2term + d3term));
-                pt_comp[8]  += (p->ms[1][ii]  *  dx * dy * d2term);
-                pt_comp[9]  += (p->ms[1][ii]  *  dx * dz * d2term);
-
-                pt_comp[10] += (p->ms[2][ii]  *  dx * dy * d2term);
-                pt_comp[11] += (p->ms[2][ii]  * (dy * dy * d2term + d3term));
-                pt_comp[12] += (p->ms[2][ii]  *  dy * dz * d2term);
-
-                pt_comp[13] += (p->ms[3][ii]  *  dx * dz * d2term);
-                pt_comp[14] += (p->ms[3][ii]  *  dy * dz * d2term);
-                pt_comp[15] += (p->ms[3][ii]  * (dz * dz * d2term + d3term));
+                pt_comp_    += (rinv * (1. - expkr) * (cluster_q_  [ii])
+                                          + d1term1 * (cluster_q_dx[ii] * dx
+                                                     + cluster_q_dy[ii] * dy
+                                                     + cluster_q_dz[ii] * dz));
+                                        
+                pt_comp_dx  += (cluster_q_  [ii]  * (d1term2 * dx)
+                             - (cluster_q_dx[ii]  * (dx * dx * d2term + d3term)
+                             +  cluster_q_dy[ii]  * (dx * dy * d2term)
+                             +  cluster_q_dz[ii]  * (dx * dz * d2term)));
+                             
+                pt_comp_dy  += (cluster_q_  [ii]  *  d1term2 * dy
+                             - (cluster_q_dx[ii]  * (dx * dy * d2term)
+                             +  cluster_q_dy[ii]  * (dy * dy * d2term + d3term)
+                             +  cluster_q_dz[ii]  * (dy * dz * d2term)));
+                             
+                pt_comp_dz  += (cluster_q_  [ii]  *  d1term2 * dz
+                             - (cluster_q_dx[ii]  * (dx * dz * d2term)
+                             +  cluster_q_dy[ii]  * (dy * dz * d2term)
+                             +  cluster_q_dz[ii]  * (dz * dz * d2term + d3term)));
 
                 ii++;
             }
         }
     }
-
-    peng[0] = tempq[0] * pt_comp[0]
-            + tempq[0] * pt_comp[1]  +  tempq[0] * pt_comp[2]  +  tempq[0] * pt_comp[3];
-    
-    peng[1] = tempq[1] * pt_comp[4]  +  tempq[2] * pt_comp[5]  +  tempq[3] * pt_comp[6]
-            -(tempq[1] * pt_comp[7]  +  tempq[2] * pt_comp[8]  +  tempq[3] * pt_comp[9]
-            + tempq[1] * pt_comp[10] +  tempq[2] * pt_comp[11] +  tempq[3] * pt_comp[12]
-            + tempq[1] * pt_comp[13] +  tempq[2] * pt_comp[14] +  tempq[3] * pt_comp[15]);
+            
+    peng[0] = tempq[0] * pt_comp_;
+    peng[1] = tempq[1] * pt_comp_dx  +  tempq[2] * pt_comp_dy  +  tempq[3] * pt_comp_dz;
 
     return 0;
 }
