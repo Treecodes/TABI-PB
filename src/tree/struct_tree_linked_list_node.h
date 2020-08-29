@@ -20,7 +20,7 @@ struct TreeLinkedListNode
     int level;
     
     double *tx, *ty, *tz;
-    double **ms;
+    double *ms[4];
 };
 
 #endif /* H_STRUCT_TREE_LINKED_LIST_NODE_H */

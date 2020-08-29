@@ -40,7 +40,7 @@ void TreeLinkedList_Construct(struct TreeLinkedListNode **p, struct TreeLinkedLi
     }
                         
 
-    (*p) = malloc(sizeof(struct TreeLinkedListNode));
+    (*p) = (struct TreeLinkedListNode *)malloc(sizeof(struct TreeLinkedListNode));
     (*numnodes)++;
     (*p)->parent = parent;
     (*p)->numpar = iend - ibeg + 1;

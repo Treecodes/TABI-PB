@@ -156,11 +156,12 @@ static double c_b20 = 0.;
 
 
 //*****************************************************************
-int gmres_(n, b, x, restrt, work, ldw, h, ldh, iter, resid, matvec, psolve, 
-           info)
-   long int n, *restrt, ldw, ldh, *iter, *info;
-   double *b, *x, *work, *h, *resid;
-   int (*matvec) (), (*psolve) ();
+int gmres_(long int n, double *b, double *x, long int *restrt, double *work, 
+           long int ldw, double *h, long int ldh, long int *iter, double *resid, 
+           int (*matvec) (), int (*psolve) (), long int *info)
+   //long int n, *restrt, ldw, ldh, *iter, *info;
+   //double *b, *x, *work, *h, *resid;
+   //int (*matvec) (), (*psolve) ();
 {
     /* System generated locals */
     long int work_offset, h_offset, i__1;
@@ -172,9 +173,10 @@ int gmres_(n, b, x, restrt, work, ldw, h, ldh, iter, resid, matvec, psolve,
     extern /* Subroutine */ int update_();
     extern /* Subroutine */ int basis_(); 
     
-    int rank = 0, ierr;
+    int rank = 0;
     
 #ifdef MPI_ENABLED
+    int ierr;
     ierr = MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 #endif
 

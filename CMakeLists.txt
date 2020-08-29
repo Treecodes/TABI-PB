@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.1...3.14)
-project(TABI-PB VERSION 2.0 LANGUAGES C)
+project(TABI-PB VERSION 2.0 LANGUAGES C CXX)
 
 #set(CMAKE_VERBOSE_MAKEFILE ON)
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
@@ -75,6 +75,8 @@ endif()
 
 set (CMAKE_C_FLAGS_RELEASE "-O3")
 set (CMAKE_C_FLAGS_DEBUG   "-Wall")
+set (CMAKE_CXX_FLAGS_RELEASE "-O3")
+set (CMAKE_CXX_FLAGS_DEBUG   "-Wall")
 message ("CMAKE_C_COMPILER full path: " ${CMAKE_C_COMPILER})
 message ("C compiler: " ${C_COMPILER_NAME})
 

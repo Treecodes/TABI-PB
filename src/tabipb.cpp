@@ -48,12 +48,13 @@ int TABIPB(TABIPBparm *parm, TABIPBvars *vars) {
 
     double energy_solvation;
     double energy_coulomb;
-    struct Particles *particles = malloc(sizeof *particles);
+    struct Particles *particles = (struct Particles*)malloc(sizeof *particles);
     
-    int rank = 0, num_procs = 1, ierr;
+    int rank = 0, num_procs = 1;
     long int iter;
     
 #ifdef MPI_ENABLED
+    int ierr;
     ierr = MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     ierr = MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
 #endif
@@ -93,17 +94,17 @@ int TABIPB(TABIPBparm *parm, TABIPBvars *vars) {
     s_OutputPotential(vars, particles);
 
     /* deconstruct particles */
-    free_vector(particles->x);
-    free_vector(particles->y);
-    free_vector(particles->z);
+    free(particles->x);
+    free(particles->y);
+    free(particles->z);
     
-    free_vector(particles->nx);
-    free_vector(particles->ny);
-    free_vector(particles->nz);
+    free(particles->nx);
+    free(particles->ny);
+    free(particles->nz);
     
-    free_vector(particles->area);
-    free_vector(particles->source_term);
-    free_vector(particles->xvct);
+    free(particles->area);
+    free(particles->source_term);
+    free(particles->xvct);
     free(particles);
     
     return 0;
@@ -121,12 +122,13 @@ static int s_ConstructTreeParticles(TABIPBvars *vars, struct Particles *particle
 {
 /* function to construct particles used by tree */
 
-    int i, j, k, ierr, idx[3];
+    int i, j, k, idx[3];
     double r[3][3], sum = 0.0;
     
     int rank = 0, num_procs = 1;
     
 #ifdef MPI_ENABLED
+    int ierr;
     ierr = MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     ierr = MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
 #endif
@@ -135,17 +137,17 @@ static int s_ConstructTreeParticles(TABIPBvars *vars, struct Particles *particle
     //NODE PATCH METHOD
     particles->num = vars->nspt;
     
-    make_vector(particles->x, particles->num);
-    make_vector(particles->y, particles->num);
-    make_vector(particles->z, particles->num);
+    particles->x  = (double *)malloc(particles->num * sizeof(double));
+    particles->y  = (double *)malloc(particles->num * sizeof(double));
+    particles->z  = (double *)malloc(particles->num * sizeof(double));
     
-    make_vector(particles->nx, particles->num);
-    make_vector(particles->ny, particles->num);
-    make_vector(particles->nz, particles->num);
+    particles->nx = (double *)malloc(particles->num * sizeof(double));
+    particles->ny = (double *)malloc(particles->num * sizeof(double));
+    particles->nz = (double *)malloc(particles->num * sizeof(double));
     
-    make_vector(particles->area, particles->num);
-    make_vector(particles->source_term, 2 * particles->num);
-    make_vector(particles->xvct, 2 * particles->num);
+    particles->area        = (double *)malloc(particles->num * sizeof(double));
+    particles->source_term = (double *)malloc(2 * particles->num * sizeof(double));
+    particles->xvct        = (double *)malloc(2 * particles->num * sizeof(double));
 
     for (i = 0; i < vars->nspt; i++) {
         particles->x[i] = vars->vert[0][i];
@@ -200,13 +202,14 @@ static int s_ComputeSourceTerm(TABIPBparm *parm, TABIPBvars *vars,
  * S1=sum(qk*G0)/e1 S2=sim(qk*G0')/e1 */
 
 /* local variables */
-    int i, j, ii, faces_per_process, ierr;
+    int i, j, ii, faces_per_process;
     double sumrs, cos_theta, irs, G0, G1;
     double r_s[3];
 
     int rank = 0, num_procs = 1;
     
 #ifdef MPI_ENABLED
+    int ierr;
     ierr = MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     ierr = MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
 #endif
@@ -263,7 +266,7 @@ static double s_ComputeSolvationEnergy(TABIPBparm *parm, TABIPBvars *vars,
                                        struct Particles *particles)
 {
   /* local variables */
-    int i, j, ii, ierr, atms_per_process;
+    int i, j, ii, atms_per_process;
     double sumrs, irs, rs, G0, Gk, kappa_rs, exp_kappa_rs;
     double cos_theta, G1, G2, L1, L2;
     double r[3], v[3], s[3], r_s[3];
@@ -273,11 +276,12 @@ static double s_ComputeSolvationEnergy(TABIPBparm *parm, TABIPBvars *vars,
     int rank = 0, num_procs = 1;
 
 #ifdef MPI_ENABLED
+    int ierr;
     ierr = MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     ierr = MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
 #endif
 
-    make_vector(chrptl, particles->num);
+    chrptl = (double *)malloc(particles->num * sizeof(double));
     atms_per_process = vars->natm / num_procs;
         
     for (j = 0; j < particles->num; j++) {
@@ -340,7 +344,7 @@ static double s_ComputeSolvationEnergy(TABIPBparm *parm, TABIPBvars *vars,
         energy_solvation += chrptl[i];
     }
     
-    free_vector(chrptl);
+    free(chrptl);
 
     return (energy_solvation);
 }

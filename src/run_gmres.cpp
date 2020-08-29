@@ -18,6 +18,7 @@
 
 #include "run_gmres.h"
 #include "treecode_gmres_interface.h"
+#include "gmres.h"
 
 #include "array.h"
 #include "struct_particles.h"
@@ -32,10 +33,12 @@ int RunGMRES(int nface, double *source_term, int precond,
     double resid;
     double *work, *h;
 
-    extern int gmres_(long int n, double *b, double *x, long int *restrt,
-                      double *work, long int ldw, double *h, long int ldh,
-                      long int *iter, double *resid, int (*matvec)(),
-                      int (*psolve)(), long int *info);
+//    extern "C" {
+//        extern int gmres_(long int n, double *b, double *x, long int *restrt,
+//                          double *work, long int ldw, double *h, long int ldh,
+//                          long int *iter, double *resid, int (*matvec)(),
+//                          int (*psolve)(), long int *info);
+//    }
 
     /* parameters for GMRES */
     RESTRT = 10;
@@ -45,8 +48,8 @@ int RunGMRES(int nface, double *source_term, int precond,
     *iter = 100;
     resid = 1e-4;
 
-    make_vector(work, ldw * (RESTRT + 4));
-    make_vector(h, ldh * (RESTRT + 2));
+    work = (double *)malloc(ldw * (RESTRT + 4) * sizeof(double));
+    h    = (double *)malloc(ldh * (RESTRT + 2) * sizeof(double));
     
     for (i = 0; i < N; i++) xvct[i] = 0.0;
     
@@ -58,8 +61,8 @@ int RunGMRES(int nface, double *source_term, int precond,
                h, ldh, iter, &resid, &matvec, psolve_precond, &info);
     }
 
-    free_vector(work);
-    free_vector(h);
+    free(work);
+    free(h);
 
     return 0;
 }

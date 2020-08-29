@@ -81,8 +81,14 @@ static double *s_source_term = NULL;
 static double s_target_position[3];
 static double s_target_normal[3];
 
-static double **s_target_charge = NULL;
-static double **s_source_charge = NULL;
+static double *s_target_charge_   = NULL;
+static double *s_target_charge_dx = NULL;
+static double *s_target_charge_dy = NULL;
+static double *s_target_charge_dz = NULL;
+static double *s_source_charge_   = NULL;
+static double *s_source_charge_dx = NULL;
+static double *s_source_charge_dy = NULL;
+static double *s_source_charge_dz = NULL;
 
 /* global variables for reordering arrays */
 //static int *s_order_arr = NULL;
@@ -106,9 +112,6 @@ static int s_RemoveMoments(struct TreeLinkedListNode *p);
 
 /* internal preconditioning functions */
 static void leaflength(struct TreeLinkedListNode *p, int idx, int *nrow);
-static int lu_decomp(double **A, int N, int *ipiv);
-static void lu_solve(double **matrixA, int N, int *ipiv, double *rhs);
-
 
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -121,17 +124,18 @@ int TreecodeInitialization(TABIPBparm *parm, struct Particles *particles)
 {
     /* set up variables used in treecode */
     /* local variables*/
-    int level, i, j, k, mm, nn, idx, ijk[3], ierr;
+    int level;
 
     /* variables needed for reorder */
     double *temp_area, *temp_source;
-    double **temp_normal;
+    double *temp_normal[3];
     
     double xyz_limits[6];
     
     int rank = 0, num_procs = 1;
     
 #ifdef MPI_ENABLED
+    int ierr;
     ierr = MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     ierr = MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
 #endif
@@ -170,9 +174,15 @@ int TreecodeInitialization(TABIPBparm *parm, struct Particles *particles)
     s_particle_area = particles->area;
     s_source_term = particles->source_term;
 
-    make_matrix(temp_normal, 3, s_numpars);
-    make_vector(temp_area, s_numpars);
-    make_vector(temp_source, 2 * s_numpars);
+    //make_matrix(temp_normal, 3, s_numpars);
+    temp_normal[0] = (double *)malloc(s_numpars * sizeof(double));
+    temp_normal[1] = (double *)malloc(s_numpars * sizeof(double));
+    temp_normal[2] = (double *)malloc(s_numpars * sizeof(double));
+
+    //make_vector(temp_area, s_numpars);
+    //make_vector(temp_source, 2 * s_numpars);
+    temp_area   = (double *)malloc(s_numpars * sizeof(double));
+    temp_source = (double *)malloc(s_numpars * 2 * sizeof(double));
     
 
 /* Call SETUP to allocate arrays for Taylor expansions */
@@ -196,7 +206,7 @@ int TreecodeInitialization(TABIPBparm *parm, struct Particles *particles)
     memcpy(temp_area, s_particle_area, s_numpars*sizeof(double));
     memcpy(temp_source, s_source_term, 2*s_numpars*sizeof(double));
     
-    for (i = 0; i < s_numpars; i++) {
+    for (int i = 0; i < s_numpars; i++) {
         s_particle_normal_x[i]    = temp_normal[0][particles->order[i]];
         s_particle_normal_y[i]    = temp_normal[1][particles->order[i]];
         s_particle_normal_z[i]    = temp_normal[2][particles->order[i]];
@@ -205,12 +215,20 @@ int TreecodeInitialization(TABIPBparm *parm, struct Particles *particles)
         s_source_term[i + s_numpars] = temp_source[particles->order[i] + s_numpars];
     }
 
-    free_matrix(temp_normal);
-    free_vector(temp_area);
-    free_vector(temp_source);
+    free(temp_normal[0]);
+    free(temp_normal[1]);
+    free(temp_normal[2]);
+    free(temp_area);
+    free(temp_source);
 
-    make_matrix(s_target_charge, s_numpars, 4);
-    make_matrix(s_source_charge, s_numpars, 4);
+    s_target_charge_   = (double *)malloc(s_numpars * sizeof(double));
+    s_target_charge_dx = (double *)malloc(s_numpars * sizeof(double));
+    s_target_charge_dy = (double *)malloc(s_numpars * sizeof(double));
+    s_target_charge_dz = (double *)malloc(s_numpars * sizeof(double));
+    s_source_charge_   = (double *)malloc(s_numpars * sizeof(double));
+    s_source_charge_dx = (double *)malloc(s_numpars * sizeof(double));
+    s_source_charge_dy = (double *)malloc(s_numpars * sizeof(double));
+    s_source_charge_dz = (double *)malloc(s_numpars * sizeof(double));
 
     return 0;
 }
@@ -220,25 +238,35 @@ int TreecodeInitialization(TABIPBparm *parm, struct Particles *particles)
 /********************************************************/
 int TreecodeFinalization(struct Particles *particles)
 {
-
-    int i, ierr;
     double *temp_area, *temp_source, *temp_xvct;
-    double **temp_normal, **temp_position;
+    double *temp_normal[3], *temp_position[3];
     
     int rank = 0, num_procs = 1;
     
 #ifdef MPI_ENABLED
+    int ierr;
     ierr = MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     ierr = MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
 #endif
 
 /***********reorder particles*************/
 
-    make_matrix(temp_position, 3, s_numpars);
-    make_matrix(temp_normal, 3, s_numpars);
-    make_vector(temp_area, s_numpars);
-    make_vector(temp_source, 2 * s_numpars);
-    make_vector(temp_xvct, 2 * s_numpars);
+    //make_matrix(temp_position, 3, s_numpars);
+    //make_matrix(temp_normal, 3, s_numpars);
+    //make_vector(temp_area, s_numpars);
+    //make_vector(temp_source, 2 * s_numpars);
+    //make_vector(temp_xvct, 2 * s_numpars);
+
+    temp_position[0] = (double *)malloc(s_numpars * sizeof(double));
+    temp_position[1] = (double *)malloc(s_numpars * sizeof(double));
+    temp_position[2] = (double *)malloc(s_numpars * sizeof(double));
+    temp_normal[0] = (double *)malloc(s_numpars * sizeof(double));
+    temp_normal[1] = (double *)malloc(s_numpars * sizeof(double));
+    temp_normal[2] = (double *)malloc(s_numpars * sizeof(double));
+
+    temp_area   = (double *)malloc(s_numpars * sizeof(double));
+    temp_source = (double *)malloc(s_numpars * 2 * sizeof(double));
+    temp_xvct   = (double *)malloc(s_numpars * 2 * sizeof(double));
 
     memcpy(temp_position[0], particles->x, s_numpars*sizeof(double));
     memcpy(temp_position[1], particles->y, s_numpars*sizeof(double));
@@ -250,7 +278,7 @@ int TreecodeFinalization(struct Particles *particles)
     memcpy(temp_source, particles->source_term, 2*s_numpars*sizeof(double));
     memcpy(temp_xvct, particles->xvct, 2*s_numpars*sizeof(double));
     
-    for (i = 0; i < s_numpars; i++) {
+    for (int i = 0; i < s_numpars; i++) {
         particles->x[particles->order[i]]     = temp_position[0][i];
         particles->y[particles->order[i]]     = temp_position[1][i];
         particles->z[particles->order[i]]     = temp_position[2][i];
@@ -266,16 +294,26 @@ int TreecodeFinalization(struct Particles *particles)
                                                      = temp_xvct[i + s_numpars];
     }
 
-    free_matrix(temp_position);
-    free_matrix(temp_normal);
-    free_vector(temp_area);
-    free_vector(temp_source);
-    free_vector(temp_xvct);
+    free(temp_position[0]);
+    free(temp_position[1]);
+    free(temp_position[2]);
+    free(temp_normal[0]);
+    free(temp_normal[1]);
+    free(temp_normal[2]);
+    free(temp_area);
+    free(temp_source);
+    free(temp_xvct);
 
 /***********treecode_initialization*******/
 
-    free_matrix(s_target_charge);
-    free_matrix(s_source_charge);
+    free(s_target_charge_);
+    free(s_target_charge_dx);
+    free(s_target_charge_dy);
+    free(s_target_charge_dz);
+    free(s_source_charge_);
+    free(s_source_charge_dx);
+    free(s_source_charge_dy);
+    free(s_source_charge_dz);
     
 /***********clean tree structure**********/
 
@@ -283,7 +321,7 @@ int TreecodeFinalization(struct Particles *particles)
 
 /***********variables in setup************/
 
-    free_vector(particles->order);
+    free(particles->order);
 
 /*****************************************/
 
@@ -307,7 +345,6 @@ int matvec(double *alpha, double *tpoten_old, double *beta, double *tpoten)
 /* the main part of treecode */
 /* in gmres *matvec(Alpha, X, Beta, Y) where y := alpha*A*x + beta*y */
   /* local variables */
-    int i, j, k, ii, ierr;
     double temp_x, temp_area;
     double temp_charge[4];
     double pre1, pre2;
@@ -318,11 +355,13 @@ int matvec(double *alpha, double *tpoten_old, double *beta, double *tpoten)
     int rank = 0, num_procs = 1;
     
 #ifdef MPI_ENABLED
+    int ierr;
     ierr = MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     ierr = MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
 #endif
     
-    make_vector(tpoten_temp, 2 * s_numpars);
+    //make_vector(tpoten_temp, 2 * s_numpars);
+    tpoten_temp = (double *)malloc(s_numpars * 2 * sizeof(double));
     memcpy(tpoten_temp, tpoten, 2 * s_numpars * sizeof(double));
     memset(tpoten, 0, 2 * s_numpars * sizeof(double));
     
@@ -336,8 +375,8 @@ int matvec(double *alpha, double *tpoten_old, double *beta, double *tpoten)
     
     particles_per_process = s_numpars / num_procs;
 
-    for (ii = 0; ii <= particles_per_process; ii++) {
-        i = ii * num_procs + rank;
+    for (int ii = 0; ii <= particles_per_process; ii++) {
+        int i = ii * num_procs + rank;
         
         if (i < s_numpars) {
             peng[0] = 0.0;
@@ -351,9 +390,10 @@ int matvec(double *alpha, double *tpoten_old, double *beta, double *tpoten)
             s_target_normal[1] = s_particle_normal_y[i];
             s_target_normal[2] = s_particle_normal_z[i];
         
-            for (k = 0; k < 4; k++) {
-                temp_charge[k] = s_target_charge[i][k];
-            }
+            temp_charge[0] = s_target_charge_  [i];
+            temp_charge[1] = s_target_charge_dx[i];
+            temp_charge[2] = s_target_charge_dy[i];
+            temp_charge[3] = s_target_charge_dz[i];
 
       /* remove the singularity */
             temp_x = s_particle_position_x[i];
@@ -379,7 +419,7 @@ int matvec(double *alpha, double *tpoten_old, double *beta, double *tpoten)
                          MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 #endif
 
-    free_vector(tpoten_temp);
+    free(tpoten_temp);
 
     s_RemoveMoments(s_tree_root);
 
@@ -393,12 +433,10 @@ int psolve(double *z, double *r)
 {
 /* r as original while z as scaled */
 
-        int i;
-        double scale1, scale2;
-        scale1 = 0.5 * (1.0 + s_eps);
-        scale2 = 0.5 * (1.0 + 1.0/s_eps);
+        double scale1 = 0.5 * (1.0 + s_eps);
+        double scale2 = 0.5 * (1.0 + 1.0/s_eps);
 
-        for (i = 0; i < s_numpars; i++) {
+        for (int i = 0; i < s_numpars; i++) {
                 z[i] = r[i]/scale1;
                 z[i + s_numpars] = r[i + s_numpars]/scale2;
         }
@@ -413,9 +451,8 @@ int psolve_precond(double *z, double *r)
 {
 /* r as original while z as scaled */
 
-    int i, j, idx = 0, nrow = 0, nrow2, ibeg = 0, iend = 0;
-    int *ipiv, inc, nrhs, info;
-    //double **matrixA;
+    int idx = 0, nrow = 0, nrow2, ibeg = 0, iend = 0;
+    int *ipiv;
     double *columnMajorA, *rhs;
     double L1, L2, L3, L4, area;
     double tp[3], tq[3], sp[3], sq[3];
@@ -429,9 +466,9 @@ int psolve_precond(double *z, double *r)
     pre2 = 0.5*(1.0+1.0/s_eps);
   
     //make_matrix(matrixA, 2*s_max_per_leaf, 2*s_max_per_leaf);
-    make_vector(columnMajorA, 4*s_max_per_leaf*s_max_per_leaf);
-    make_vector(ipiv, 2*s_max_per_leaf);
-    make_vector(rhs, 2*s_max_per_leaf);
+    columnMajorA = (double *)malloc(4*s_max_per_leaf*s_max_per_leaf*sizeof(double));
+    rhs          = (double *)malloc(2*s_max_per_leaf*sizeof(double));
+    ipiv         = (int *)malloc(2*s_max_per_leaf*sizeof(int));
 
     while (idx < s_numpars) {
         leaflength(s_tree_root, idx, &nrow);
@@ -443,7 +480,7 @@ int psolve_precond(double *z, double *r)
         memset(ipiv, 0, nrow2*sizeof(int));
         memset(rhs, 0, nrow2*sizeof(double));
 
-        for (i = ibeg; i <= iend; i++) {
+        for (int i = ibeg; i <= iend; i++) {
             tp[0] = s_particle_position_x[i];
             tp[1] = s_particle_position_y[i];
             tp[2] = s_particle_position_z[i];
@@ -451,7 +488,7 @@ int psolve_precond(double *z, double *r)
             tq[1] = s_particle_normal_y[i];
             tq[2] = s_particle_normal_z[i];
 
-            for (j = ibeg; j < i; j++) {
+            for (int j = ibeg; j < i; j++) {
                 sp[0] = s_particle_position_x[j];
                 sp[1] = s_particle_position_y[j];
                 sp[2] = s_particle_position_z[j];
@@ -490,22 +527,16 @@ int psolve_precond(double *z, double *r)
                 L3 = G4 - G3;
                 L4 = G10 - G20/s_eps;
 
-                //matrixA[i-ibeg][j-ibeg] = -L1*area;
-                //matrixA[i-ibeg][j+nrow-ibeg] = -L2*area;
-                //matrixA[i+nrow-ibeg][j-ibeg] = -L3*area;
-                //matrixA[i+nrow-ibeg][j+nrow-ibeg] = -L4*area;
                 columnMajorA[(j-ibeg)*nrow2 + i-ibeg] = -L1*area;
                 columnMajorA[(j+nrow-ibeg)*nrow2 + i-ibeg] = -L2*area;
                 columnMajorA[(j-ibeg)*nrow2 + i+nrow-ibeg] = -L3*area;
                 columnMajorA[(j+nrow-ibeg)*nrow2 + i+nrow-ibeg] = -L4*area;
             }
 
-            //matrixA[i-ibeg][i-ibeg] = pre1;
-            //matrixA[i+nrow-ibeg][i+nrow-ibeg] = pre2;
             columnMajorA[(i-ibeg)*nrow2 + i-ibeg] = pre1;
             columnMajorA[(i+nrow-ibeg)*nrow2 + i+nrow-ibeg] = pre2;
 
-            for (j = i+1; j <= iend; j++) {
+            for (int j = i+1; j <= iend; j++) {
                 sp[0] = s_particle_position_x[j];
                 sp[1] = s_particle_position_y[j];
                 sp[2] = s_particle_position_z[j];
@@ -544,10 +575,6 @@ int psolve_precond(double *z, double *r)
                 L3 = G4 - G3;
                 L4 = G10 - G20/s_eps;
 
-                //matrixA[i-ibeg][j-ibeg] = -L1*area;
-                //matrixA[i-ibeg][j+nrow-ibeg] = -L2*area;
-                //matrixA[i+nrow-ibeg][j-ibeg] = -L3*area;
-                //matrixA[i+nrow-ibeg][j+nrow-ibeg] = -L4*area;
                 columnMajorA[(j-ibeg)*nrow2 + i-ibeg] = -L1*area;
                 columnMajorA[(j+nrow-ibeg)*nrow2 + i-ibeg] = -L2*area;
                 columnMajorA[(j-ibeg)*nrow2 + i+nrow-ibeg] = -L3*area;
@@ -555,14 +582,10 @@ int psolve_precond(double *z, double *r)
             }
         }
 
-        for (i = 0; i < nrow; i++) {
+        for (int i = 0; i < nrow; i++) {
             rhs[i] = r[i+ibeg];
             rhs[i+nrow] = r[i+ibeg+s_numpars];
         }
-
-        // Jiahui's implementation of LU decomposition
-        //inc = lu_decomp(matrixA, nrow2, ipiv);
-        //lu_solve(matrixA, nrow2, ipiv, rhs);
 
         // Apple Accelerate implementation of LAPACK LU decomposition
         //nrhs = 1;
@@ -571,7 +594,7 @@ int psolve_precond(double *z, double *r)
         // LAPACKE implementation of LAPACK LU decomposition
         LAPACKE_dgesv(LAPACK_COL_MAJOR, nrow2, 1, columnMajorA, nrow2, ipiv, rhs, nrow2);
 
-        for (i = 0; i < nrow; i++) {
+        for (int i = 0; i < nrow; i++) {
             z[i+ibeg] = rhs[i];
             z[i+ibeg+s_numpars] = rhs[i+nrow];
         }
@@ -580,9 +603,9 @@ int psolve_precond(double *z, double *r)
     }
 
     //free_matrix(matrixA);
-    free_vector(columnMajorA);
-    free_vector(rhs);
-    free_vector(ipiv);
+    free(columnMajorA);
+    free(rhs);
+    free(ipiv);
   
     return 0;
 }
@@ -601,10 +624,10 @@ static int s_Setup(double xyz_limits[6], struct Particles *particles)
  the smallest box containing the particles is determined. The particle
  positions and charges are copied so that they can be restored upon exit.*/
  
-    int ierr;
     int rank = 0, num_procs = 1;
     
 #ifdef MPI_ENABLED
+    int ierr;
     ierr = MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     ierr = MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
 #endif
@@ -613,8 +636,10 @@ static int s_Setup(double xyz_limits[6], struct Particles *particles)
         printf("Setting up arrays for Taylor expansion...\n");
     }
     
-    make_vector(tt, s_torder_lim);
-    make_vector(ww, s_torder_lim);
+    //make_vector(tt, s_torder_lim);
+    //make_vector(ww, s_torder_lim);
+    tt = (double *)malloc(s_torder_lim * sizeof(double));
+    ww = (double *)malloc(s_torder_lim * sizeof(double));
     
     /* initializing array for Chev points */
     for (int i = 0; i < s_torder_lim; i++)
@@ -637,7 +662,8 @@ static int s_Setup(double xyz_limits[6], struct Particles *particles)
     xyz_limits[4] = MinVal(s_particle_position_z, s_numpars);
     xyz_limits[5] = MaxVal(s_particle_position_z, s_numpars);
     
-    make_vector(particles->order, particles->num);
+    //make_vector(particles->order, particles->num);
+    particles->order = (int *)malloc(particles->num * sizeof(int));
 
     for (int i = 0; i < particles->num; i++) {
         particles->order[i] = i;
@@ -654,15 +680,15 @@ static int s_ComputePBKernel(double *phi)
 
     for (int i = 0; i < s_numpars; i++) {
 
-        s_target_charge[i][0] = ONE_OVER_4PI;
-        s_target_charge[i][1] = ONE_OVER_4PI * s_particle_normal_x[i];
-        s_target_charge[i][2] = ONE_OVER_4PI * s_particle_normal_y[i];
-        s_target_charge[i][3] = ONE_OVER_4PI * s_particle_normal_z[i];
+        s_target_charge_  [i] = ONE_OVER_4PI;
+        s_target_charge_dx[i] = ONE_OVER_4PI * s_particle_normal_x[i];
+        s_target_charge_dy[i] = ONE_OVER_4PI * s_particle_normal_y[i];
+        s_target_charge_dz[i] = ONE_OVER_4PI * s_particle_normal_z[i];
         
-        s_source_charge[i][0] = s_particle_area[i] * phi[s_numpars+i];
-        s_source_charge[i][1] = s_particle_normal_x[i] * s_particle_area[i] * phi[i];
-        s_source_charge[i][2] = s_particle_normal_y[i] * s_particle_area[i] * phi[i];
-        s_source_charge[i][3] = s_particle_normal_z[i] * s_particle_area[i] * phi[i];
+        s_source_charge_  [i] = s_particle_area[i] * phi[s_numpars+i];
+        s_source_charge_dx[i] = s_particle_normal_x[i] * s_particle_area[i] * phi[i];
+        s_source_charge_dy[i] = s_particle_normal_y[i] * s_particle_area[i] * phi[i];
+        s_source_charge_dz[i] = s_particle_normal_z[i] * s_particle_area[i] * phi[i];
 
     }
 
@@ -677,19 +703,21 @@ static int s_ComputeAllMoments(struct TreeLinkedListNode *p, int ifirst)
 /* REMOVE_NODE recursively removes each node from the tree and deallocates
  * its memory for MS array if it exits. */
 
-    int i;
-    
     if (p->exist_ms == 0 && ifirst == 0) {
-        make_matrix(p->ms, 4, s_torder3);
-        make_vector(p->tx, s_torder_lim);
-        make_vector(p->ty, s_torder_lim);
-        make_vector(p->tz, s_torder_lim);
+        //make_matrix(p->ms, 4, s_torder3);
+        p->ms[0] = (double *)malloc(s_torder3 * sizeof(double));  
+        p->ms[1] = (double *)malloc(s_torder3 * sizeof(double)); 
+        p->ms[2] = (double *)malloc(s_torder3 * sizeof(double)); 
+        p->ms[3] = (double *)malloc(s_torder3 * sizeof(double));  
+        p->tx = (double *)malloc(s_torder_lim * sizeof(double));
+        p->ty = (double *)malloc(s_torder_lim * sizeof(double));
+        p->tz = (double *)malloc(s_torder_lim * sizeof(double));
         s_ComputeMoments(p);
         p->exist_ms = 1;
     }
 
     if (p->num_children > 0) {
-        for (i = 0; i < p->num_children; i++) {
+        for (int i = 0; i < p->num_children; i++) {
             s_ComputeAllMoments(p->child[i], 0);
         }
     }
@@ -705,46 +733,36 @@ static int s_ComputeMoments(struct TreeLinkedListNode *p)
 /* COMP_MS computes the moments for node P needed in the Taylor
  * approximation */
 
-    int i, j, k1, k2, k3, kk;
-    double dx, dy, dz;
-    double x0, x1, y0, y1, z0, z1;
-    double sumA1, sumA2, sumA3;
-    double temp11, temp12, temp21, temp22;
-    double mom1, mom2, mom3, mom4, mom5, mom6, mom7, mom8;
-    double xx, yy, zz;
-    double *xibeg, *yibeg, *zibeg, *qq;
-    
-    double Dd, dj[s_torder_lim];
+    double dj[s_torder_lim];
     double a1i[s_torder_lim], a2j[s_torder_lim], a3k[s_torder_lim];
     double w1i[s_torder_lim];
     double summ[4][s_torder3];
-    int a1exactind, a2exactind, a3exactind;
     
     
-    for (i = 0; i < 4; i++) {
-        for (j = 0; j < s_torder3; j++) {
+    for (int i = 0; i < 4; i++) {
+        for (int j = 0; j < s_torder3; j++) {
             p->ms[i][j] = 0.0;
         }
     }
     
-    xibeg = &(s_particle_position_x[p->ibeg]);
-    yibeg = &(s_particle_position_y[p->ibeg]);
-    zibeg = &(s_particle_position_z[p->ibeg]);
+    double* xibeg = &(s_particle_position_x[p->ibeg]);
+    double* yibeg = &(s_particle_position_y[p->ibeg]);
+    double* zibeg = &(s_particle_position_z[p->ibeg]);
     
-    x0 = p->x_min;
-    x1 = p->x_max;
-    y0 = p->y_min;
-    y1 = p->y_max;
-    z0 = p->z_min;
-    z1 = p->z_max;
+    double x0 = p->x_min;
+    double x1 = p->x_max;
+    double y0 = p->y_min;
+    double y1 = p->y_max;
+    double z0 = p->z_min;
+    double z1 = p->z_max;
     
-    for (i = 0; i < 4; i++) {
-        for (j = 0; j < s_torder3; j++) {
+    for (int i = 0; i < 4; i++) {
+        for (int j = 0; j < s_torder3; j++) {
             summ[i][j] = 0.0;
         }
     }
     
-    for (i = 0; i < s_torder_lim; i++) {
+    for (int i = 0; i < s_torder_lim; i++) {
         p->tx[i] = x0 + (tt[i] + 1.0)/2.0 * (x1 - x0);
         p->ty[i] = y0 + (tt[i] + 1.0)/2.0 * (y1 - y0);
         p->tz[i] = z0 + (tt[i] + 1.0)/2.0 * (z1 - z0);
@@ -752,28 +770,31 @@ static int s_ComputeMoments(struct TreeLinkedListNode *p)
     
     dj[0] = 0.5;
     dj[s_order] = 0.5;
-    for (j = 1; j < s_order; j++)
+    for (int j = 1; j < s_order; j++)
         dj[j] = 1.0;
     
-    for (j = 0; j < s_torder_lim; j++)
+    for (int j = 0; j < s_torder_lim; j++)
         w1i[j] = ((j % 2 == 0)? 1 : -1) * dj[j];
 
-    for (i = 0; i < p->numpar; i++) {
+    for (int i = 0; i < p->numpar; i++) {
     
-        sumA1 = 0.0;
-        sumA2 = 0.0;
-        sumA3 = 0.0;
+        double sumA1 = 0.0;
+        double sumA2 = 0.0;
+        double sumA3 = 0.0;
         
-        a1exactind = -1;
-        a2exactind = -1;
-        a3exactind = -1;
+        int a1exactind = -1;
+        int a2exactind = -1;
+        int a3exactind = -1;
     
-        xx = xibeg[i];
-        yy = yibeg[i];
-        zz = zibeg[i];
-        qq = s_source_charge[p->ibeg+i];
+        double xx = xibeg[i];
+        double yy = yibeg[i];
+        double zz = zibeg[i];
+        double qq_   = s_source_charge_  [p->ibeg+i];
+        double qq_dx = s_source_charge_dx[p->ibeg+i];
+        double qq_dy = s_source_charge_dy[p->ibeg+i];
+        double qq_dz = s_source_charge_dz[p->ibeg+i];
         
-        for (j = 0; j < s_torder_lim; j++) {
+        for (int j = 0; j < s_torder_lim; j++) {
             a1i[j] = w1i[j] / (xx - p->tx[j]);
             a2j[j] = w1i[j] / (yy - p->ty[j]);
             a3k[j] = w1i[j] / (zz - p->tz[j]);
@@ -789,42 +810,42 @@ static int s_ComputeMoments(struct TreeLinkedListNode *p)
         
         if (a1exactind > -1) {
             sumA1 = 1.0;
-            for (j = 0; j < s_torder_lim; j++) a1i[j] = 0.0;
+            for (int j = 0; j < s_torder_lim; j++) a1i[j] = 0.0;
             a1i[a1exactind] = 1.0;
         }
         
         if (a2exactind > -1) {
             sumA2 = 1.0;
-            for (j = 0; j < s_torder_lim; j++) a2j[j] = 0.0;
+            for (int j = 0; j < s_torder_lim; j++) a2j[j] = 0.0;
             a2j[a2exactind] = 1.0;
         }
         
         if (a3exactind > -1) {
             sumA3 = 1.0;
-            for (j = 0; j < s_torder_lim; j++) a3k[j] = 0.0;
+            for (int j = 0; j < s_torder_lim; j++) a3k[j] = 0.0;
             a3k[a3exactind] = 1.0;
         }
         
-        Dd = 1.0 / (sumA1 * sumA2 * sumA3);
-        
-        kk = -1;
-        for (k1 = 0; k1 < s_torder_lim; k1++) {
-            for (k2 = 0; k2 < s_torder_lim; k2++) {
-                for (k3 = 0; k3 < s_torder_lim; k3++) {
+        double Dd = 1.0 / (sumA1 * sumA2 * sumA3);
+
+        int kk = -1;
+        for (int k1 = 0; k1 < s_torder_lim; k1++) {
+            for (int k2 = 0; k2 < s_torder_lim; k2++) {
+                for (int k3 = 0; k3 < s_torder_lim; k3++) {
                     kk++;
                 
-                    mom1 = a1i[k1] * a2j[k2] * a3k[k3] * Dd;
+                    double mom1 = a1i[k1] * a2j[k2] * a3k[k3] * Dd;
                     
-                    summ[0][kk] += mom1 * qq[0];
-                    summ[1][kk] += mom1 * qq[1];
-                    summ[2][kk] += mom1 * qq[2];
-                    summ[3][kk] += mom1 * qq[3];
+                    summ[0][kk] += mom1 * qq_;
+                    summ[1][kk] += mom1 * qq_dx;
+                    summ[2][kk] += mom1 * qq_dy;
+                    summ[3][kk] += mom1 * qq_dz;
                 }
             }
         }
     }
     
-    for (j = 0; j < 4; j++)
+    for (int j = 0; j < 4; j++)
         memcpy(p->ms[j], summ[j], s_torder3*sizeof(double));
 
     return 0;
@@ -838,15 +859,14 @@ static int s_RunTreecode(struct TreeLinkedListNode *p, double *tpoten_old, doubl
 {
   /* RunTreecode() is self recurrence function */
   
-    double tx, ty, tz, dist, pengchild[2];
-    int i;
+    double pengchild[2];
 
 
   /* determine DISTSQ for MAC test */
-    tx = p->x_mid - s_target_position[0];
-    ty = p->y_mid - s_target_position[1];
-    tz = p->z_mid - s_target_position[2];
-    dist = sqrt(tx*tx + ty*ty + tz*tz);
+    double tx = p->x_mid - s_target_position[0];
+    double ty = p->y_mid - s_target_position[1];
+    double tz = p->z_mid - s_target_position[2];
+    double dist = sqrt(tx*tx + ty*ty + tz*tz);
 
   /* initialize potential energy */
     peng[0] = 0.0; 
@@ -864,7 +884,7 @@ static int s_RunTreecode(struct TreeLinkedListNode *p, double *tpoten_old, doubl
       /* If MAC fails check to see if there are children. If not, perform */
       /* direct calculation.  If there are children, call routine */
       /* recursively for each. */
-            for (i = 0; i < p->num_children; i++) {
+            for (int i = 0; i < p->num_children; i++) {
                 pengchild[0] = 0.0; 
                 pengchild[1] = 0.0;
                 s_RunTreecode(p->child[i], tpoten_old, tempq, pengchild);
@@ -888,14 +908,14 @@ static int s_ComputeTreePB(struct TreeLinkedListNode *p, double tempq[4], double
     double pt_comp_dy = 0.;
     double pt_comp_dz = 0.;
     
-    double* restrict cluster_x = p->tx;
-    double* restrict cluster_y = p->ty;
-    double* restrict cluster_z = p->tz;
+    double* __restrict__ cluster_x = p->tx;
+    double* __restrict__ cluster_y = p->ty;
+    double* __restrict__ cluster_z = p->tz;
 
-    double* restrict cluster_q_   = p->ms[0];
-    double* restrict cluster_q_dx = p->ms[1];
-    double* restrict cluster_q_dy = p->ms[2];
-    double* restrict cluster_q_dz = p->ms[3];
+    double* __restrict__ cluster_q_   = p->ms[0];
+    double* __restrict__ cluster_q_dx = p->ms[1];
+    double* __restrict__ cluster_q_dy = p->ms[2];
+    double* __restrict__ cluster_q_dz = p->ms[3];
     
     double target_x = s_target_position[0];
     double target_y = s_target_position[1];
@@ -964,7 +984,6 @@ static int s_ComputeDirectPB(int ibeg, int iend,
 {
   /* COMPF_DIRECT directly computes the force on the current target
  * particle determined by the global variable s_target_position.*/
-    int j;
     double peng_old[2], L1, L2, L3, L4, area;
     double tp[3], tq[3], sp[3], sq[3], r_s[3];
     double rs, irs, sumrs;
@@ -982,7 +1001,7 @@ static int s_ComputeDirectPB(int ibeg, int iend,
     tq[1] = s_target_normal[1];
     tq[2] = s_target_normal[2];
     
-    for (j = ibeg; j < iend+1; j++) {
+    for (int j = ibeg; j < iend+1; j++) {
         sp[0] = s_particle_position_x[j];
         sp[1] = s_particle_position_y[j];
         sp[2] = s_particle_position_z[j];
@@ -1040,18 +1059,19 @@ static int s_RemoveMoments(struct TreeLinkedListNode *p)
 /* REMOVE_NODE recursively removes each node from the
  * tree and deallocates its memory for MS array if it exits. */
  
-    int i;
-
     if (p->exist_ms == 1) {
-        free_matrix(p->ms);
-        free_vector(p->tx);
-        free_vector(p->ty);
-        free_vector(p->tz);
+        free(p->ms[0]);
+        free(p->ms[1]);
+        free(p->ms[2]);
+        free(p->ms[3]);
+        free(p->tx);
+        free(p->ty);
+        free(p->tz);
         p->exist_ms = 0;
     }
 
     if (p->num_children > 0) {
-        for (i = 0; i < p->num_children; i++)
+        for (int i = 0; i < p->num_children; i++)
             s_RemoveMoments(p->child[i]);
     }
 
@@ -1069,99 +1089,14 @@ static void leaflength(struct TreeLinkedListNode *p, int idx, int *nrow)
 {
 /* find the leaf length */
 
-    int i;
-
     if (idx == p->ibeg && p->num_children == 0) {
         *nrow = p->numpar;
     } else {
         if (p->num_children != 0) {
-            for (i = 0; i < p->num_children; i++)
+            for (int i = 0; i < p->num_children; i++)
                 leaflength(p->child[i], idx, nrow);
         }
      }
 
-}
-/**********************************************************/
-
-
-/**********************************************************/
-static int lu_decomp(double **A, int N, int *ipiv)
-{
-/* we're doing it this way because something is wrong with
- * linking with CMake */
- 
-  int i, j, k, imax;
-  double maxA, *ptr, absA, Tol = 1.0e-14;
-
-  for ( i = 0; i <= N; i++ )
-    ipiv[i] = i; // record pivoting number
-
-  for ( i = 0; i < N; i++ ) {
-    maxA = 0.0;
-    imax = i;
-    for (k = i; k < N; k++)
-      if ((absA = fabs(A[k][i])) > maxA) {
-        maxA = absA;
-        imax = k;
-      }
-
-    if (maxA < Tol) return 0; //failure, matrix is degenerate
-
-    if (imax != i) {
-      //pivoting P
-      j = ipiv[i];
-      ipiv[i] = ipiv[imax];
-      ipiv[imax] = j;
-
-      //pivoting rows of A
-      ptr = A[i];
-      A[i] = A[imax];
-      A[imax] = ptr;
-
-      //counting pivots starting from N (for determinant)
-      ipiv[N]++;
-    }
-
-    for (j = i + 1; j < N; j++) {
-      A[j][i] /= A[i][i];
-
-      for (k = i + 1; k < N; k++)
-        A[j][k] -= A[j][i] * A[i][k];
-    }
-  }
-
-  return 1;
-}
-/**********************************************************/
-
-
-/**********************************************************/
-static void lu_solve(double **matrixA, int N, int *ipiv, double *rhs)
-{
-  /* b will contain the solution */
-  
-  int i, k;
-  double *xtemp;
-
-  make_vector(xtemp, N);
-
-  for (i = 0; i < N; i++) {
-    xtemp[i] = rhs[ipiv[i]];
-
-    for (k = 0; k < i; k++)
-      xtemp[i] -= matrixA[i][k] * xtemp[k];
-  }
-
-  for (i = N - 1; i >= 0; i--) {
-    for (k = i + 1; k < N; k++)
-      xtemp[i] -= matrixA[i][k] * xtemp[k];
-
-    xtemp[i] = xtemp[i] / matrixA[i][i];
-  }
-
-  for (i = 0; i < N; i++) {
-    rhs[i] = xtemp[i];
-  }
-  free_vector(xtemp);
 }
 /**********************************************************/

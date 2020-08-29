@@ -13,7 +13,7 @@
 void pc_partition(double *a, double *b, double *c, int *indarr,
                   int ibeg, int iend, double val, int *midind)
 {
-    double ta, tb, tc, td, tw;
+    double ta, tb, tc;
     int lower, upper, tind;
     
     

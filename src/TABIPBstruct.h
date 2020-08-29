@@ -84,7 +84,7 @@ typedef struct sTABIPBvars {
     double surface_area;
     
     /* positions and normals of vertices */
-    double **vert, **snrm;
+    double *vert[3], *snrm[3];
 
     /* surface potential on vertices */
     double *vert_ptl;
@@ -100,7 +100,7 @@ typedef struct sTABIPBvars {
     int gmres_iter;
 
     /* connectivity data for surface triangulation */
-    int **face;
+    int *face[3];
 
 } TABIPBvars;
 

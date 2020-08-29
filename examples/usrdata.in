@@ -6,8 +6,8 @@ pdie          1
 sdie          80
 bulk          0.30
 temp          300
-tree_order    4
+tree_order    10
 tree_n0       500
-tree_mac      0.8
+tree_mac      0.9
 precondition  OFF
 outdata       VTK

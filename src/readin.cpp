@@ -47,7 +47,7 @@ int Readin(TABIPBparm *parm, TABIPBvars *vars)
     char fname_tp[256];
 
     int i, j, i1, i2, i3, j1, j2, j3, ii, jj, kk;
-    int nfacenew, nface, ichanged, ierr;
+    int nfacenew, ichanged, ierr;
     int natm_msms;
 
     double den, prob_rds, a1, a2, a3, b1, b2, b3;
@@ -55,7 +55,8 @@ int Readin(TABIPBparm *parm, TABIPBvars *vars)
     double dist_local, area_local;
     double r[3][3], xx[3], yy[3];
 
-    int **face_copy, **face;
+    int nface = -1;
+    int *face_copy[3], *face[3];
     
     int rank = 0, num_procs = 1;
     
@@ -161,9 +162,19 @@ int Readin(TABIPBparm *parm, TABIPBvars *vars)
 
    /*allocate variables for vertices file*/
     vars->natm = parm->number_of_lines;    //natm is number of lines in .xyzr
-    make_matrix(vars->vert, 3, vars->nspt);
-    make_matrix(vars->snrm, 3, vars->nspt);
-    make_vector(vars->vert_ptl, 2 * vars->nspt);
+
+    //make_matrix(vars->vert, 3, vars->nspt);
+    vars->vert[0] = (double *)malloc(vars->nspt * sizeof(double));
+    vars->vert[1] = (double *)malloc(vars->nspt * sizeof(double));
+    vars->vert[2] = (double *)malloc(vars->nspt * sizeof(double));
+
+    //make_matrix(vars->snrm, 3, vars->nspt);
+    vars->snrm[0] = (double *)malloc(vars->nspt * sizeof(double));
+    vars->snrm[1] = (double *)malloc(vars->nspt * sizeof(double));
+    vars->snrm[2] = (double *)malloc(vars->nspt * sizeof(double));
+
+    //make_vector(vars->vert_ptl, 2 * vars->nspt);
+    vars->vert_ptl = (double *)malloc(2 * vars->nspt * sizeof(double));
 
     if (rank == 0) {
         for (i = 0; i <= vars->nspt-1; i++) {
@@ -199,7 +210,10 @@ int Readin(TABIPBparm *parm, TABIPBvars *vars)
             ierr = fscanf(fp, "%d ", &nface);
         }
 
-        make_matrix(face, 3, nface);
+        //make_matrix(face, 3, nface);
+        face[0] = (int *)malloc(nface * sizeof(int));
+        face[1] = (int *)malloc(nface * sizeof(int));
+        face[2] = (int *)malloc(nface * sizeof(int));
 
         for (i = 0; i < nface; i++) {
             ierr = fscanf(fp,"%d %d %d %d %d",&j1,&j2,&j3,&i1,&i2);
@@ -218,7 +232,10 @@ int Readin(TABIPBparm *parm, TABIPBvars *vars)
    */
         nfacenew = nface;
 
-        make_matrix(face_copy, 3, nface);
+        //make_matrix(face_copy, 3, nface);
+        face_copy[0] = (int *)malloc(nface * sizeof(int));
+        face_copy[1] = (int *)malloc(nface * sizeof(int));
+        face_copy[2] = (int *)malloc(nface * sizeof(int));
 
         for (i = 0; i < 3; i++)
             memcpy(face_copy[i], face[i], nface * sizeof(int));
@@ -288,8 +305,13 @@ int Readin(TABIPBparm *parm, TABIPBvars *vars)
     MPI_Bcast(&vars->nface, 1, MPI_INT, 0, MPI_COMM_WORLD);
 #endif
 
-    make_matrix(vars->face, 3, vars->nface);
-    make_vector(vars->xvct, 2 * vars->nface);
+    //make_matrix(vars->face, 3, vars->nface);
+    vars->face[0] = (int *)malloc(vars->nface * sizeof(int));
+    vars->face[1] = (int *)malloc(vars->nface * sizeof(int));
+    vars->face[2] = (int *)malloc(vars->nface * sizeof(int));
+
+    //make_vector(vars->xvct, 2 * vars->nface);
+    vars->xvct = (double *)malloc(vars->nface * 2 * sizeof(double));
 
     if (rank == 0) {
         for (i = 0; i < vars->nface; i++) {
@@ -298,8 +320,12 @@ int Readin(TABIPBparm *parm, TABIPBvars *vars)
             }
         }
 
-        free_matrix(face);
-        free_matrix(face_copy);
+        free(face[0]);
+        free(face[1]);
+        free(face[2]);
+        free(face_copy[0]);
+        free(face_copy[1]);
+        free(face_copy[2]);
     
         remove("molecule.xyzr");
         remove("molecule.vert");
