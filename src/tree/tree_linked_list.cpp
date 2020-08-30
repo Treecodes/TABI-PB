@@ -1,3 +1,6 @@
+#include <vector>
+#include <iostream>
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
@@ -46,18 +49,20 @@ void TreeLinkedList_Construct(struct TreeLinkedListNode **p, struct TreeLinkedLi
     (*p)->numpar = iend - ibeg + 1;
     
     if (current_level + 1 > *max_depth) {
-//        printf("[TreeLinkedList_Sources_Construct] Increasing max depth to %i\n",current_level + 1);
         *max_depth = current_level + 1;
     }
     (*p)->level = current_level;
-
-    (*p)->x_min = MinVal(sources->x + ibeg, (*p)->numpar);
-    (*p)->x_max = MaxVal(sources->x + ibeg, (*p)->numpar);
-    (*p)->y_min = MinVal(sources->y + ibeg, (*p)->numpar);
-    (*p)->y_max = MaxVal(sources->y + ibeg, (*p)->numpar);
-    (*p)->z_min = MinVal(sources->z + ibeg, (*p)->numpar);
-    (*p)->z_max = MaxVal(sources->z + ibeg, (*p)->numpar);
     
+    
+    (*p)->x_min = *std::min_element(sources->x.begin() + ibeg, sources->x.begin() + iend + 1);
+    (*p)->x_max = *std::max_element(sources->x.begin() + ibeg, sources->x.begin() + iend + 1);
+
+    (*p)->y_min = *std::min_element(sources->y.begin() + ibeg, sources->y.begin() + iend + 1);
+    (*p)->y_max = *std::max_element(sources->y.begin() + ibeg, sources->y.begin() + iend + 1);
+
+    (*p)->z_min = *std::min_element(sources->z.begin() + ibeg, sources->z.begin() + iend + 1);
+    (*p)->z_max = *std::max_element(sources->z.begin() + ibeg, sources->z.begin() + iend + 1);
+
 
     double xl = (*p)->x_max - (*p)->x_min;
     double yl = (*p)->y_max - (*p)->y_min;
@@ -97,6 +102,7 @@ void TreeLinkedList_Construct(struct TreeLinkedListNode **p, struct TreeLinkedLi
         double y_mid = (*p)->y_mid;
         double z_mid = (*p)->z_mid;
         int numposchild;
+
 
         pc_partition_8(sources->x, sources->y, sources->z, sources->order,
                        xyzmms, xl, yl, zl, &numposchild, x_mid, y_mid, z_mid, ind);

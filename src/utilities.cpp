@@ -1,23 +1,24 @@
 /**************************************************************************
-* FILE NAME: utilities.c                                                  *
-*                                                                         *
-* PURPOSE: Contains helper routines for calculating min and max values    *
-*          in an array (used by treecode.c and tabipb.c), as well as      *
-*          routine to calculate triangle area (used by readin.c and       *
-*          tabipb.c)                                                      *
-*                                                                         *
-* AUTHORS: Leighton Wilson, University of Michigan, Ann Arbor, MI         *
-*          Jiahui Chen, Southern Methodist University, Dallas, TX         *
-*                                                                         *
-* BASED ON PACKAGE ORIGINALLY WRITTEN IN FORTRAN BY:                      *
-*          Weihua Geng, Southern Methodist University, Dallas, TX         *
-*          Robery Krasny, University of Michigan, Ann Arbor, MI           *
-*                                                                         *
+* FILE NAME: utilities.c
+*
+* PURPOSE: Contains helper routines for calculating min and max values
+*          in an array (used by treecode.c and tabipb.c), as well as
+*          routine to calculate triangle area (used by readin.c and
+*          tabipb.c)
+*
+* AUTHORS: Leighton Wilson, University of Michigan, Ann Arbor, MI
+*          Jiahui Chen, Southern Methodist University, Dallas, TX
+*
+* BASED ON PACKAGE ORIGINALLY WRITTEN IN FORTRAN BY:
+*          Weihua Geng, Southern Methodist University, Dallas, TX
+*          Robery Krasny, University of Michigan, Ann Arbor, MI
+*
 **************************************************************************/
 
-#include <math.h>
+#include <cmath>
 
 #include "utilities.h"
+
 
 /**********************************************************/
 double MinVal(double *variables, int number) 
@@ -67,12 +68,12 @@ double TriangleArea(double v[3][3])
         c[i] = v[i][1] - v[i][2];
     }
 
-    aa = sqrt(a[0]*a[0] + a[1]*a[1] + a[2]*a[2]);
-    bb = sqrt(b[0]*b[0] + b[1]*b[1] + b[2]*b[2]);
-    cc = sqrt(c[0]*c[0] + c[1]*c[1] + c[2]*c[2]);
+    aa = std::sqrt(a[0]*a[0] + a[1]*a[1] + a[2]*a[2]);
+    bb = std::sqrt(b[0]*b[0] + b[1]*b[1] + b[2]*b[2]);
+    cc = std::sqrt(c[0]*c[0] + c[1]*c[1] + c[2]*c[2]);
 
     ss = 0.5 * (aa + bb + cc);
-    area = sqrt(ss * (ss-aa) * (ss-bb) * (ss-cc));
+    area = std::sqrt(ss * (ss-aa) * (ss-bb) * (ss-cc));
 
     return area;
 }

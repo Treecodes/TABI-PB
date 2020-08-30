@@ -12,6 +12,8 @@
 *                                                                         *
 **************************************************************************/
 
+#include <vector>
+
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
@@ -76,8 +78,8 @@ int TABIPB(TABIPBparm *parm, TABIPBvars *vars) {
     TreecodeInitialization(parm, particles);
 
     /* call GMRES */
-    RunGMRES(particles->num, particles->source_term,
-             parm->precond, particles->xvct, &iter);
+    RunGMRES(particles->num, particles->source_term.data(),
+             parm->precond, particles->xvct.data(), &iter);
 
     /* compute solvation and coulombic energy */
     energy_solvation = s_ComputeSolvationEnergy(parm, vars, particles);
@@ -94,17 +96,17 @@ int TABIPB(TABIPBparm *parm, TABIPBvars *vars) {
     s_OutputPotential(vars, particles);
 
     /* deconstruct particles */
-    free(particles->x);
-    free(particles->y);
-    free(particles->z);
-    
-    free(particles->nx);
-    free(particles->ny);
-    free(particles->nz);
-    
-    free(particles->area);
-    free(particles->source_term);
-    free(particles->xvct);
+//    free(particles->x);
+//    free(particles->y);
+//    free(particles->z);
+//
+//    free(particles->nx);
+//    free(particles->ny);
+//    free(particles->nz);
+//
+//    free(particles->area);
+//    free(particles->source_term);
+//    free(particles->xvct);
     free(particles);
     
     return 0;
@@ -137,17 +139,29 @@ static int s_ConstructTreeParticles(TABIPBvars *vars, struct Particles *particle
     //NODE PATCH METHOD
     particles->num = vars->nspt;
     
-    particles->x  = (double *)malloc(particles->num * sizeof(double));
-    particles->y  = (double *)malloc(particles->num * sizeof(double));
-    particles->z  = (double *)malloc(particles->num * sizeof(double));
+    particles->x.resize(particles->num);
+    particles->y.resize(particles->num);
+    particles->z.resize(particles->num);
     
-    particles->nx = (double *)malloc(particles->num * sizeof(double));
-    particles->ny = (double *)malloc(particles->num * sizeof(double));
-    particles->nz = (double *)malloc(particles->num * sizeof(double));
+    particles->nx.resize(particles->num);
+    particles->ny.resize(particles->num);
+    particles->nz.resize(particles->num);
     
-    particles->area        = (double *)malloc(particles->num * sizeof(double));
-    particles->source_term = (double *)malloc(2 * particles->num * sizeof(double));
-    particles->xvct        = (double *)malloc(2 * particles->num * sizeof(double));
+    particles->area.resize(particles->num);
+    particles->source_term.resize(2 * particles->num);
+    particles->xvct.resize(2 * particles->num);
+    
+//    particles->x  = (double *)malloc(particles->num * sizeof(double));
+//    particles->y  = (double *)malloc(particles->num * sizeof(double));
+//    particles->z  = (double *)malloc(particles->num * sizeof(double));
+//
+//    particles->nx = (double *)malloc(particles->num * sizeof(double));
+//    particles->ny = (double *)malloc(particles->num * sizeof(double));
+//    particles->nz = (double *)malloc(particles->num * sizeof(double));
+//
+//    particles->area        = (double *)malloc(particles->num * sizeof(double));
+//    particles->source_term = (double *)malloc(2 * particles->num * sizeof(double));
+//    particles->xvct        = (double *)malloc(2 * particles->num * sizeof(double));
 
     for (i = 0; i < vars->nspt; i++) {
         particles->x[i] = vars->vert[0][i];
@@ -388,7 +402,7 @@ static int s_OutputPotential(TABIPBvars *vars, struct Particles *particles)
 
     para_temp = UNITS_COEFF * 4 * PI;
     
-    memcpy(vars->vert_ptl, particles->xvct, 2 * vars->nspt * sizeof(double));
+    memcpy(vars->vert_ptl, particles->xvct.data(), 2 * vars->nspt * sizeof(double));
 
     for (i = 0; i < vars->nface; i++) {
         vars->xvct[i] = 0.0;

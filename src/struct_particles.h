@@ -23,22 +23,24 @@
 #ifndef H_PARTICLES_STRUCT_H
 #define H_PARTICLES_STRUCT_H
 
+#include <vector>
+
 struct Particles {
     
     int num;
-    double *x;
-    double *y;
-    double *z;
+    std::vector<double> x;
+    std::vector<double> y;
+    std::vector<double> z;
     
-    double *nx;
-    double *ny;
-    double *nz;
+    std::vector<double> nx;
+    std::vector<double> ny;
+    std::vector<double> nz;
     
-    double *area;
-    double *source_term;
-    double *xvct;
+    std::vector<double> area;
+    std::vector<double> source_term;
+    std::vector<double> xvct;
 
-    int *order;
+    std::vector<size_t> order;
 };
 
 #endif /* H_PARTICLE_STRUCT_H */

@@ -1,19 +1,23 @@
 /**************************************************************************
-* FILE NAME: treecode.c                                                   *
-*                                                                         *
-* PURPOSE: Contains all treecode-related functions and variables,         *
-*          including treecode initialization and finalization functions   *
-*          that interface with tabipb.c, and matrix-vector multiplication *
-*          and solve functions that interface with run_gmres.c            *
-*                                                                         *
-* AUTHORS: Leighton Wilson, University of Michigan, Ann Arbor, MI         *
-*          Jiahui Chen, Southern Methodist University, Dallas, TX         *
-*                                                                         *
-* BASED ON PACKAGE ORIGINALLY WRITTEN IN FORTRAN BY:                      *
-*          Weihua Geng, Southern Methodist University, Dallas, TX         *
-*          Robery Krasny, University of Michigan, Ann Arbor, MI           *
-*                                                                         *
+* FILE NAME: treecode.c
+*
+* PURPOSE: Contains all treecode-related functions and variables,
+*          including treecode initialization and finalization functions
+*          that interface with tabipb.c, and matrix-vector multiplication
+*          and solve functions that interface with run_gmres.c
+*
+* AUTHORS: Leighton Wilson, University of Michigan, Ann Arbor, MI
+*          Jiahui Chen, Southern Methodist University, Dallas, TX
+*
+* BASED ON PACKAGE ORIGINALLY WRITTEN IN FORTRAN BY:
+*          Weihua Geng, Southern Methodist University, Dallas, TX
+*          Robery Krasny, University of Michigan, Ann Arbor, MI
+*
 **************************************************************************/
+
+#include <vector>
+#include <numeric>
+#include <iostream>
 
 #include <stdio.h>
 #include <math.h>
@@ -114,6 +118,22 @@ static int s_RemoveMoments(struct TreeLinkedListNode *p);
 static void leaflength(struct TreeLinkedListNode *p, int idx, int *nrow);
 
 
+template <typename order_iterator, typename value_iterator>
+void reorder(order_iterator order_begin, order_iterator order_end, value_iterator v_begin)
+{
+    typedef typename std::iterator_traits< value_iterator >::value_type value_t;
+    typedef typename std::iterator_traits< order_iterator >::value_type index_t;
+    
+    auto v_end = v_begin + std::distance(order_begin, order_end) + 1;
+    std::vector<value_t> tmp(v_begin, v_end);
+
+    std::for_each(order_begin, order_end,
+                  [&tmp, &v_begin](index_t idx){ *v_begin = tmp[idx]; std::advance(v_begin, 1); });
+}
+
+
+
+
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* TreecodeInitialization and Finalization are used by       * * * */
 /* tabipb() to interface with the treecode                   * * * */
@@ -161,28 +181,6 @@ int TreecodeInitialization(TABIPBparm *parm, struct Particles *particles)
     s_max_level = 0;
 
     level = 0;
-
-    
-    s_particle_position_x = particles->x;
-    s_particle_position_y = particles->y;
-    s_particle_position_z = particles->z;
-    
-    s_particle_normal_x = particles->nx;
-    s_particle_normal_y = particles->ny;
-    s_particle_normal_z = particles->nz;
-    
-    s_particle_area = particles->area;
-    s_source_term = particles->source_term;
-
-    //make_matrix(temp_normal, 3, s_numpars);
-    temp_normal[0] = (double *)malloc(s_numpars * sizeof(double));
-    temp_normal[1] = (double *)malloc(s_numpars * sizeof(double));
-    temp_normal[2] = (double *)malloc(s_numpars * sizeof(double));
-
-    //make_vector(temp_area, s_numpars);
-    //make_vector(temp_source, 2 * s_numpars);
-    temp_area   = (double *)malloc(s_numpars * sizeof(double));
-    temp_source = (double *)malloc(s_numpars * 2 * sizeof(double));
     
 
 /* Call SETUP to allocate arrays for Taylor expansions */
@@ -199,28 +197,23 @@ int TreecodeInitialization(TABIPBparm *parm, struct Particles *particles)
         printf("Created tree for %d particles with max %d per node.\n\n",
                s_numpars, s_max_per_leaf);
     }
-
-    memcpy(temp_normal[0], s_particle_normal_x, s_numpars*sizeof(double));
-    memcpy(temp_normal[1], s_particle_normal_y, s_numpars*sizeof(double));
-    memcpy(temp_normal[2], s_particle_normal_z, s_numpars*sizeof(double));
-    memcpy(temp_area, s_particle_area, s_numpars*sizeof(double));
-    memcpy(temp_source, s_source_term, 2*s_numpars*sizeof(double));
     
-    for (int i = 0; i < s_numpars; i++) {
-        s_particle_normal_x[i]    = temp_normal[0][particles->order[i]];
-        s_particle_normal_y[i]    = temp_normal[1][particles->order[i]];
-        s_particle_normal_z[i]    = temp_normal[2][particles->order[i]];
-        s_particle_area[i]           =   temp_area[particles->order[i]];
-        s_source_term[i]             = temp_source[particles->order[i]];
-        s_source_term[i + s_numpars] = temp_source[particles->order[i] + s_numpars];
-    }
-
-    free(temp_normal[0]);
-    free(temp_normal[1]);
-    free(temp_normal[2]);
-    free(temp_area);
-    free(temp_source);
-
+    reorder(particles->order.begin(), particles->order.end(), particles->nx.begin());
+    reorder(particles->order.begin(), particles->order.end(), particles->ny.begin());
+    reorder(particles->order.begin(), particles->order.end(), particles->nz.begin());
+    reorder(particles->order.begin(), particles->order.end(), particles->area.begin());
+    reorder(particles->order.begin(), particles->order.end(), particles->source_term.begin());
+    reorder(particles->order.begin(), particles->order.end(), particles->source_term.begin() + s_numpars);
+    
+    s_particle_position_x = particles->x.data();
+    s_particle_position_y = particles->y.data();
+    s_particle_position_z = particles->z.data();
+    s_particle_normal_x = particles->nx.data();
+    s_particle_normal_y = particles->ny.data();
+    s_particle_normal_z = particles->nz.data();
+    s_particle_area = particles->area.data();
+    s_source_term = particles->source_term.data();
+    
     s_target_charge_   = (double *)malloc(s_numpars * sizeof(double));
     s_target_charge_dx = (double *)malloc(s_numpars * sizeof(double));
     s_target_charge_dy = (double *)malloc(s_numpars * sizeof(double));
@@ -250,60 +243,17 @@ int TreecodeFinalization(struct Particles *particles)
 #endif
 
 /***********reorder particles*************/
-
-    //make_matrix(temp_position, 3, s_numpars);
-    //make_matrix(temp_normal, 3, s_numpars);
-    //make_vector(temp_area, s_numpars);
-    //make_vector(temp_source, 2 * s_numpars);
-    //make_vector(temp_xvct, 2 * s_numpars);
-
-    temp_position[0] = (double *)malloc(s_numpars * sizeof(double));
-    temp_position[1] = (double *)malloc(s_numpars * sizeof(double));
-    temp_position[2] = (double *)malloc(s_numpars * sizeof(double));
-    temp_normal[0] = (double *)malloc(s_numpars * sizeof(double));
-    temp_normal[1] = (double *)malloc(s_numpars * sizeof(double));
-    temp_normal[2] = (double *)malloc(s_numpars * sizeof(double));
-
-    temp_area   = (double *)malloc(s_numpars * sizeof(double));
-    temp_source = (double *)malloc(s_numpars * 2 * sizeof(double));
-    temp_xvct   = (double *)malloc(s_numpars * 2 * sizeof(double));
-
-    memcpy(temp_position[0], particles->x, s_numpars*sizeof(double));
-    memcpy(temp_position[1], particles->y, s_numpars*sizeof(double));
-    memcpy(temp_position[2], particles->z, s_numpars*sizeof(double));
-    memcpy(temp_normal[0], particles->nx, s_numpars*sizeof(double));
-    memcpy(temp_normal[1], particles->ny, s_numpars*sizeof(double));
-    memcpy(temp_normal[2], particles->nz, s_numpars*sizeof(double));
-    memcpy(temp_area, particles->area, s_numpars*sizeof(double));
-    memcpy(temp_source, particles->source_term, 2*s_numpars*sizeof(double));
-    memcpy(temp_xvct, particles->xvct, 2*s_numpars*sizeof(double));
     
-    for (int i = 0; i < s_numpars; i++) {
-        particles->x[particles->order[i]]     = temp_position[0][i];
-        particles->y[particles->order[i]]     = temp_position[1][i];
-        particles->z[particles->order[i]]     = temp_position[2][i];
-        particles->nx[particles->order[i]]    = temp_normal[0][i];
-        particles->ny[particles->order[i]]    = temp_normal[1][i];
-        particles->nz[particles->order[i]]    = temp_normal[2][i];
-        particles->area[particles->order[i]]         = temp_area[i];
-        particles->source_term[particles->order[i]]  = temp_source[i];
-        particles->source_term[particles->order[i] + s_numpars]
-                                                     = temp_source[i + s_numpars];
-        particles->xvct[particles->order[i]]         = temp_xvct[i];
-        particles->xvct[particles->order[i] + s_numpars]
-                                                     = temp_xvct[i + s_numpars];
-    }
+    reorder(particles->order.begin(), particles->order.end(), particles->nx.begin());
+    reorder(particles->order.begin(), particles->order.end(), particles->ny.begin());
+    reorder(particles->order.begin(), particles->order.end(), particles->nz.begin());
+    reorder(particles->order.begin(), particles->order.end(), particles->area.begin());
+    reorder(particles->order.begin(), particles->order.end(), particles->source_term.begin());
+    reorder(particles->order.begin(), particles->order.end(), particles->source_term.begin() + particles->num);
+    reorder(particles->order.begin(), particles->order.end(), particles->xvct.begin());
+    reorder(particles->order.begin(), particles->order.end(), particles->xvct.begin() + particles->num);
 
-    free(temp_position[0]);
-    free(temp_position[1]);
-    free(temp_position[2]);
-    free(temp_normal[0]);
-    free(temp_normal[1]);
-    free(temp_normal[2]);
-    free(temp_area);
-    free(temp_source);
-    free(temp_xvct);
-
+    
 /***********treecode_initialization*******/
 
     free(s_target_charge_);
@@ -318,10 +268,6 @@ int TreecodeFinalization(struct Particles *particles)
 /***********clean tree structure**********/
 
     TreeLinkedList_Free(&s_tree_root);
-
-/***********variables in setup************/
-
-    free(particles->order);
 
 /*****************************************/
 
@@ -635,9 +581,7 @@ static int s_Setup(double xyz_limits[6], struct Particles *particles)
     if (rank == 0) {
         printf("Setting up arrays for Taylor expansion...\n");
     }
-    
-    //make_vector(tt, s_torder_lim);
-    //make_vector(ww, s_torder_lim);
+
     tt = (double *)malloc(s_torder_lim * sizeof(double));
     ww = (double *)malloc(s_torder_lim * sizeof(double));
     
@@ -652,22 +596,18 @@ static int s_Setup(double xyz_limits[6], struct Particles *particles)
         double xx = i * M_PI / s_order;
         ww[i] = -cos(xx) / (2 * sin(xx) * sin(xx));
     }
-
-/* find bounds of Cartesion box enclosing the particles */
-
-    xyz_limits[0] = MinVal(s_particle_position_x, s_numpars);
-    xyz_limits[1] = MaxVal(s_particle_position_x, s_numpars);
-    xyz_limits[2] = MinVal(s_particle_position_y, s_numpars);
-    xyz_limits[3] = MaxVal(s_particle_position_y, s_numpars);
-    xyz_limits[4] = MinVal(s_particle_position_z, s_numpars);
-    xyz_limits[5] = MaxVal(s_particle_position_z, s_numpars);
     
-    //make_vector(particles->order, particles->num);
-    particles->order = (int *)malloc(particles->num * sizeof(int));
+    xyz_limits[0] = *std::min_element(particles->x.begin(), particles->x.end());
+    xyz_limits[1] = *std::max_element(particles->x.begin(), particles->x.end());
 
-    for (int i = 0; i < particles->num; i++) {
-        particles->order[i] = i;
-    }
+    xyz_limits[2] = *std::min_element(particles->y.begin(), particles->y.end());
+    xyz_limits[3] = *std::max_element(particles->y.begin(), particles->y.end());
+
+    xyz_limits[4] = *std::min_element(particles->z.begin(), particles->z.end());
+    xyz_limits[5] = *std::max_element(particles->z.begin(), particles->z.end());
+    
+    particles->order.resize(particles->num);
+    std::iota(particles->order.begin(), particles->order.end(), 0);
 
     return 0;
 }

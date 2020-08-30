@@ -9,7 +9,8 @@
 target_link_libraries(tabipb ${LAPACK_LIBRARIES})
 include_directories(SYSTEM ${LAPACK_INCLUDE_PATH})
 
-  target_compile_definitions(tabipb PUBLIC ${BLA_DEFINITIONS})
+target_compile_definitions(tabipb PUBLIC ${BLA_DEFINITIONS})
+target_compile_features(tabipb PUBLIC cxx_std_11)
 #  target_link_libraries(tabipb ${BLAS_LIBRARIES})
 #  target_include_directories(tabipb
 #    INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}
