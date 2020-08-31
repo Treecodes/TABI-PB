@@ -1,6 +1,6 @@
 # C code for standalone
   add_executable(tabipb
-    main.cpp tabipb.cpp gmres.c
+    main.cpp tabipb.cpp gmres.cpp
     run_gmres.cpp readin.cpp treecode.cpp
     print_output.cpp utilities.cpp xmalloc.cpp
     tree/tree_linked_list.cpp tree/partition.cpp)

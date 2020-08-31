@@ -15,7 +15,9 @@
 #ifndef H_RUN_GMRES_H
 #define H_RUN_GMRES_H
 
+#include "struct_particles.h"
+
 int RunGMRES(int nface, double *source_term, int precond,
-             double *xvct, long int *iter);
+             double *xvct, long int *iter, struct Particles *particles);
 
 #endif /* H_RUN_GMRES_H */

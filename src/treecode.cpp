@@ -69,18 +69,6 @@ static int s_torder3;
 /* variable used by kernel independent moment computation */
 double *tt, *ww;
 
-/* these point to arrays located in TreeParticles */
-static double *s_particle_position_x = NULL;
-static double *s_particle_position_y = NULL;
-static double *s_particle_position_z = NULL;
-
-static double *s_particle_normal_x = NULL;
-static double *s_particle_normal_y = NULL;
-static double *s_particle_normal_z = NULL;
-
-static double *s_particle_area = NULL;
-static double *s_source_term = NULL;
-
 /* global variables used when computing potential/force */
 static double s_target_position[3];
 static double s_target_normal[3];
@@ -103,14 +91,17 @@ static struct TreeLinkedListNode *s_tree_root = NULL;
 
 /* internal functions */
 static int s_Setup(double xyz_limits[6], struct Particles *particles);
-static int s_ComputePBKernel(double *phi);
-static int s_ComputeAllMoments(struct TreeLinkedListNode *p, int ifirst);
-static int s_ComputeMoments(struct TreeLinkedListNode *p);
+static int s_ComputePBKernel(double *phi, struct Particles *particles);
+
+static int s_ComputeAllMoments(struct TreeLinkedListNode *p, int ifirst, struct Particles *particles);
+static int s_ComputeMoments(struct TreeLinkedListNode *p, struct Particles *particles);
+
 static int s_RunTreecode(struct TreeLinkedListNode *p, double *tpoten_old,
-                         double tempq[4], double peng[2]);
-static int s_ComputeTreePB(struct TreeLinkedListNode *p, double tempq[4], double peng[2]);
-static int s_ComputeDirectPB(int ibeg, int iend, double *tpoten_old,
-                             double peng[2]);
+                double tempq[4], double peng[2], struct Particles *particles);
+                         
+static int s_ComputeTreePB(struct TreeLinkedListNode *p, double tempq[4], double peng[2], struct Particles *particles);
+static int s_ComputeDirectPB(int ibeg, int iend, double *tpoten_old, double peng[2],
+                struct Particles *particles);
                              
 static int s_RemoveMoments(struct TreeLinkedListNode *p);
 
@@ -205,15 +196,6 @@ int TreecodeInitialization(TABIPBparm *parm, struct Particles *particles)
     reorder(particles->order.begin(), particles->order.end(), particles->source_term.begin());
     reorder(particles->order.begin(), particles->order.end(), particles->source_term.begin() + s_numpars);
     
-    s_particle_position_x = particles->x.data();
-    s_particle_position_y = particles->y.data();
-    s_particle_position_z = particles->z.data();
-    s_particle_normal_x = particles->nx.data();
-    s_particle_normal_y = particles->ny.data();
-    s_particle_normal_z = particles->nz.data();
-    s_particle_area = particles->area.data();
-    s_source_term = particles->source_term.data();
-    
     s_target_charge_   = (double *)malloc(s_numpars * sizeof(double));
     s_target_charge_dx = (double *)malloc(s_numpars * sizeof(double));
     s_target_charge_dy = (double *)malloc(s_numpars * sizeof(double));
@@ -286,7 +268,7 @@ int TreecodeFinalization(struct Particles *particles)
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**********************************************************/
-int matvec(double *alpha, double *tpoten_old, double *beta, double *tpoten)
+int matvec(double *alpha, double *tpoten_old, double *beta, double *tpoten, struct Particles *particles)
 {
 /* the main part of treecode */
 /* in gmres *matvec(Alpha, X, Beta, Y) where y := alpha*A*x + beta*y */
@@ -311,10 +293,10 @@ int matvec(double *alpha, double *tpoten_old, double *beta, double *tpoten)
     memcpy(tpoten_temp, tpoten, 2 * s_numpars * sizeof(double));
     memset(tpoten, 0, 2 * s_numpars * sizeof(double));
     
-    s_ComputePBKernel(tpoten_old);
+    s_ComputePBKernel(tpoten_old, particles);
     
   /* Generate the moments if not allocated yet */
-    s_ComputeAllMoments(s_tree_root, 1);
+    s_ComputeAllMoments(s_tree_root, 1, particles);
 
     pre1 = 0.50 * (1.0 + s_eps);
     pre2 = 0.50 * (1.0 + 1.0/s_eps);
@@ -329,12 +311,12 @@ int matvec(double *alpha, double *tpoten_old, double *beta, double *tpoten)
             peng[1] = 0.0;
             peng_old[0] = tpoten_old[i];
             peng_old[1] = tpoten_old[i+s_numpars];
-            s_target_position[0] = s_particle_position_x[i];
-            s_target_position[1] = s_particle_position_y[i];
-            s_target_position[2] = s_particle_position_z[i];
-            s_target_normal[0] = s_particle_normal_x[i];
-            s_target_normal[1] = s_particle_normal_y[i];
-            s_target_normal[2] = s_particle_normal_z[i];
+            s_target_position[0] = particles->x[i];
+            s_target_position[1] = particles->y[i];
+            s_target_position[2] = particles->z[i];
+            s_target_normal[0] = particles->nx[i];
+            s_target_normal[1] = particles->ny[i];
+            s_target_normal[2] = particles->nz[i];
         
             temp_charge[0] = s_target_charge_  [i];
             temp_charge[1] = s_target_charge_dx[i];
@@ -342,21 +324,21 @@ int matvec(double *alpha, double *tpoten_old, double *beta, double *tpoten)
             temp_charge[3] = s_target_charge_dz[i];
 
       /* remove the singularity */
-            temp_x = s_particle_position_x[i];
-            temp_area = s_particle_area[i];
-            s_particle_position_x[i] += 100.123456789;
-            s_particle_area[i] = 0.0;
+            temp_x = particles->x[i];
+            temp_area = particles->area[i];
+            particles->x[i] += 100.123456789;
+            particles->area[i] = 0.0;
 
       /* start to use Treecode */
-            s_RunTreecode(s_tree_root, tpoten_old, temp_charge, peng);
+            s_RunTreecode(s_tree_root, tpoten_old, temp_charge, peng, particles);
 
             tpoten[i] = tpoten_temp[i] * *beta
                       + (pre1 * peng_old[0] - peng[0]) * *alpha;
             tpoten[s_numpars+i] = tpoten_temp[s_numpars+i] * *beta
                                 + (pre2 * peng_old[1] - peng[1]) * *alpha;
 
-            s_particle_position_x[i] = temp_x;
-            s_particle_area[i] = temp_area;
+            particles->x[i] = temp_x;
+            particles->area[i] = temp_area;
         }
     }
     
@@ -375,12 +357,14 @@ int matvec(double *alpha, double *tpoten_old, double *beta, double *tpoten)
 
 
 /**********************************************************/
-int psolve(double *z, double *r)
+int psolve(double *z, double *r, struct Particles *particles)
 {
 /* r as original while z as scaled */
 
         double scale1 = 0.5 * (1.0 + s_eps);
         double scale2 = 0.5 * (1.0 + 1.0/s_eps);
+        
+        int s_numpars = particles->num;
 
         for (int i = 0; i < s_numpars; i++) {
                 z[i] = r[i]/scale1;
@@ -393,7 +377,7 @@ int psolve(double *z, double *r)
 
 
 /**********************************************************/
-int psolve_precond(double *z, double *r)
+int psolve_precond(double *z, double *r, struct Particles *particles)
 {
 /* r as original while z as scaled */
 
@@ -410,6 +394,14 @@ int psolve_precond(double *z, double *r)
 
     pre1 = 0.5*(1.0+s_eps);
     pre2 = 0.5*(1.0+1.0/s_eps);
+    
+    const double* __restrict__ s_particle_position_x = particles->x.data();
+    const double* __restrict__ s_particle_position_y = particles->y.data();
+    const double* __restrict__ s_particle_position_z = particles->z.data();
+    const double* __restrict__ s_particle_normal_x   = particles->nx.data();
+    const double* __restrict__ s_particle_normal_y   = particles->ny.data();
+    const double* __restrict__ s_particle_normal_z   = particles->nz.data();
+    const double* __restrict__ s_particle_area       = particles->area.data();
   
     //make_matrix(matrixA, 2*s_max_per_leaf, 2*s_max_per_leaf);
     columnMajorA = (double *)malloc(4*s_max_per_leaf*s_max_per_leaf*sizeof(double));
@@ -615,20 +607,20 @@ static int s_Setup(double xyz_limits[6], struct Particles *particles)
 
 
 /********************************************************/
-static int s_ComputePBKernel(double *phi)
+static int s_ComputePBKernel(double *phi, struct Particles *particles)
 {
 
     for (int i = 0; i < s_numpars; i++) {
 
         s_target_charge_  [i] = ONE_OVER_4PI;
-        s_target_charge_dx[i] = ONE_OVER_4PI * s_particle_normal_x[i];
-        s_target_charge_dy[i] = ONE_OVER_4PI * s_particle_normal_y[i];
-        s_target_charge_dz[i] = ONE_OVER_4PI * s_particle_normal_z[i];
+        s_target_charge_dx[i] = ONE_OVER_4PI * particles->nx[i];
+        s_target_charge_dy[i] = ONE_OVER_4PI * particles->ny[i];
+        s_target_charge_dz[i] = ONE_OVER_4PI * particles->nz[i];
         
-        s_source_charge_  [i] = s_particle_area[i] * phi[s_numpars+i];
-        s_source_charge_dx[i] = s_particle_normal_x[i] * s_particle_area[i] * phi[i];
-        s_source_charge_dy[i] = s_particle_normal_y[i] * s_particle_area[i] * phi[i];
-        s_source_charge_dz[i] = s_particle_normal_z[i] * s_particle_area[i] * phi[i];
+        s_source_charge_  [i] = particles->area[i] * phi[s_numpars+i];
+        s_source_charge_dx[i] = particles->nx[i] * particles->area[i] * phi[i];
+        s_source_charge_dy[i] = particles->ny[i] * particles->area[i] * phi[i];
+        s_source_charge_dz[i] = particles->nz[i] * particles->area[i] * phi[i];
 
     }
 
@@ -638,7 +630,7 @@ static int s_ComputePBKernel(double *phi)
 
 
 /********************************************************/
-static int s_ComputeAllMoments(struct TreeLinkedListNode *p, int ifirst)
+static int s_ComputeAllMoments(struct TreeLinkedListNode *p, int ifirst, struct Particles *particles)
 {
 /* REMOVE_NODE recursively removes each node from the tree and deallocates
  * its memory for MS array if it exits. */
@@ -652,13 +644,13 @@ static int s_ComputeAllMoments(struct TreeLinkedListNode *p, int ifirst)
         p->tx = (double *)malloc(s_torder_lim * sizeof(double));
         p->ty = (double *)malloc(s_torder_lim * sizeof(double));
         p->tz = (double *)malloc(s_torder_lim * sizeof(double));
-        s_ComputeMoments(p);
+        s_ComputeMoments(p, particles);
         p->exist_ms = 1;
     }
 
     if (p->num_children > 0) {
         for (int i = 0; i < p->num_children; i++) {
-            s_ComputeAllMoments(p->child[i], 0);
+            s_ComputeAllMoments(p->child[i], 0, particles);
         }
     }
 
@@ -668,7 +660,7 @@ static int s_ComputeAllMoments(struct TreeLinkedListNode *p, int ifirst)
 
 
 /********************************************************/
-static int s_ComputeMoments(struct TreeLinkedListNode *p)
+static int s_ComputeMoments(struct TreeLinkedListNode *p, struct Particles *particles)
 {
 /* COMP_MS computes the moments for node P needed in the Taylor
  * approximation */
@@ -678,6 +670,9 @@ static int s_ComputeMoments(struct TreeLinkedListNode *p)
     double w1i[s_torder_lim];
     double summ[4][s_torder3];
     
+    const double* __restrict__ s_particle_position_x = particles->x.data();
+    const double* __restrict__ s_particle_position_y = particles->y.data();
+    const double* __restrict__ s_particle_position_z = particles->z.data();
     
     for (int i = 0; i < 4; i++) {
         for (int j = 0; j < s_torder3; j++) {
@@ -685,9 +680,9 @@ static int s_ComputeMoments(struct TreeLinkedListNode *p)
         }
     }
     
-    double* xibeg = &(s_particle_position_x[p->ibeg]);
-    double* yibeg = &(s_particle_position_y[p->ibeg]);
-    double* zibeg = &(s_particle_position_z[p->ibeg]);
+    const double* xibeg = &(s_particle_position_x[p->ibeg]);
+    const double* yibeg = &(s_particle_position_y[p->ibeg]);
+    const double* zibeg = &(s_particle_position_z[p->ibeg]);
     
     double x0 = p->x_min;
     double x1 = p->x_max;
@@ -795,12 +790,11 @@ static int s_ComputeMoments(struct TreeLinkedListNode *p)
 
 /********************************************************/
 static int s_RunTreecode(struct TreeLinkedListNode *p, double *tpoten_old, double tempq[4],
-                         double peng[2])
+                         double peng[2], struct Particles *particles)
 {
   /* RunTreecode() is self recurrence function */
   
     double pengchild[2];
-
 
   /* determine DISTSQ for MAC test */
     double tx = p->x_mid - s_target_position[0];
@@ -816,10 +810,10 @@ static int s_RunTreecode(struct TreeLinkedListNode *p, double *tpoten_old, doubl
 /* box use the expansion for the approximation. */
 
     if (p->radius < dist*theta && p->numpar > 40) {
-        s_ComputeTreePB(p, tempq, peng);
+        s_ComputeTreePB(p, tempq, peng, particles);
     } else {
         if (p->num_children == 0) {
-            s_ComputeDirectPB(p->ibeg, p->iend, tpoten_old, peng);
+            s_ComputeDirectPB(p->ibeg, p->iend, tpoten_old, peng, particles);
         } else {
       /* If MAC fails check to see if there are children. If not, perform */
       /* direct calculation.  If there are children, call routine */
@@ -827,7 +821,7 @@ static int s_RunTreecode(struct TreeLinkedListNode *p, double *tpoten_old, doubl
             for (int i = 0; i < p->num_children; i++) {
                 pengchild[0] = 0.0; 
                 pengchild[1] = 0.0;
-                s_RunTreecode(p->child[i], tpoten_old, tempq, pengchild);
+                s_RunTreecode(p->child[i], tpoten_old, tempq, pengchild, particles);
                 peng[0] += pengchild[0];
                 peng[1] += pengchild[1];
             }
@@ -840,13 +834,20 @@ static int s_RunTreecode(struct TreeLinkedListNode *p, double *tpoten_old, doubl
 
 
 /********************************************************/
-static int s_ComputeTreePB(struct TreeLinkedListNode *p, double tempq[4], double peng[2])
+static int s_ComputeTreePB(struct TreeLinkedListNode *p, double tempq[4], double peng[2],                                                         struct Particles *particles)
 {
     
     double pt_comp_ = 0.;
     double pt_comp_dx = 0.;
     double pt_comp_dy = 0.;
     double pt_comp_dz = 0.;
+    
+    const double* __restrict__ s_particle_position_x = particles->x.data();
+    const double* __restrict__ s_particle_position_y = particles->y.data();
+    const double* __restrict__ s_particle_position_z = particles->z.data();
+    const double* __restrict__ s_particle_normal_x = particles->nx.data();
+    const double* __restrict__ s_particle_normal_y = particles->ny.data();
+    const double* __restrict__ s_particle_normal_z = particles->nz.data();
     
     double* __restrict__ cluster_x = p->tx;
     double* __restrict__ cluster_y = p->ty;
@@ -919,8 +920,8 @@ static int s_ComputeTreePB(struct TreeLinkedListNode *p, double tempq[4], double
 
 
 /********************************************************/
-static int s_ComputeDirectPB(int ibeg, int iend,
-                             double *tpoten_old, double peng[2])
+static int s_ComputeDirectPB(int ibeg, int iend, double *tpoten_old, double peng[2],
+                             struct Particles *particles)
 {
   /* COMPF_DIRECT directly computes the force on the current target
  * particle determined by the global variable s_target_position.*/
@@ -930,6 +931,14 @@ static int s_ComputeDirectPB(int ibeg, int iend,
     double G0, kappa_rs, exp_kappa_rs, Gk;
     double cos_theta, cos_theta0, tp1, tp2, dot_tqsq;
     double G10, G20, G1, G2, G3, G4;
+    
+    const double* __restrict__ s_particle_position_x = particles->x.data();
+    const double* __restrict__ s_particle_position_y = particles->y.data();
+    const double* __restrict__ s_particle_position_z = particles->z.data();
+    const double* __restrict__ s_particle_normal_x   = particles->nx.data();
+    const double* __restrict__ s_particle_normal_y   = particles->ny.data();
+    const double* __restrict__ s_particle_normal_z   = particles->nz.data();
+    const double* __restrict__ s_particle_area       = particles->area.data();
 
     peng[0] = 0.0;
     peng[1] = 0.0;

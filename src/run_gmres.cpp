@@ -25,40 +25,30 @@
 
 /********************************************************/
 int RunGMRES(int nface, double *source_term, int precond,
-             double *xvct, long int *iter)
+             double *xvct, long int *iter, struct Particles *particles)
 {
-    int i;
     static long int info;
-    long int RESTRT, ldw, ldh, N;
-    double resid;
-    double *work, *h;
-
-//    extern "C" {
-//        extern int gmres_(long int n, double *b, double *x, long int *restrt,
-//                          double *work, long int ldw, double *h, long int ldh,
-//                          long int *iter, double *resid, int (*matvec)(),
-//                          int (*psolve)(), long int *info);
-//    }
 
     /* parameters for GMRES */
-    RESTRT = 10;
-    N = 2 * nface;
-    ldw = N;
-    ldh = RESTRT + 1;
+    long int RESTRT = 10;
+    long int N = 2 * nface;
+    long int ldw = N;
+    long int ldh = RESTRT + 1;
+    double resid = 1e-4;
+        
     *iter = 100;
-    resid = 1e-4;
 
-    work = (double *)malloc(ldw * (RESTRT + 4) * sizeof(double));
-    h    = (double *)malloc(ldh * (RESTRT + 2) * sizeof(double));
+    double *work = (double *)malloc(ldw * (RESTRT + 4) * sizeof(double));
+    double *h    = (double *)malloc(ldh * (RESTRT + 2) * sizeof(double));
     
-    for (i = 0; i < N; i++) xvct[i] = 0.0;
+    for (long int i = 0; i < N; i++) xvct[i] = 0.0;
     
     if (precond == 0) {
         gmres_(N, source_term, xvct, &RESTRT, work, ldw,
-               h, ldh, iter, &resid, &matvec, psolve, &info);
+               h, ldh, iter, &resid, &matvec, psolve, &info, particles);
     } else if (precond == 1) {
         gmres_(N, source_term, xvct, &RESTRT, work, ldw,
-               h, ldh, iter, &resid, &matvec, psolve_precond, &info);
+               h, ldh, iter, &resid, &matvec, psolve_precond, &info, particles);
     }
 
     free(work);

@@ -34,6 +34,8 @@
 #include <math.h>
 #include <mkl_cblas.h>
 
+#include "struct_particles.h"
+
 #ifdef MPI_ENABLED
     #include <mpi.h>
 #endif
@@ -158,10 +160,9 @@ static double c_b20 = 0.;
 //*****************************************************************
 int gmres_(long int n, double *b, double *x, long int *restrt, double *work, 
            long int ldw, double *h, long int ldh, long int *iter, double *resid, 
-           int (*matvec) (), int (*psolve) (), long int *info)
-   //long int n, *restrt, ldw, ldh, *iter, *info;
-   //double *b, *x, *work, *h, *resid;
-   //int (*matvec) (), (*psolve) ();
+           int (*matvec) (double *, double *, double *, double *, struct Particles *),
+           int (*psolve) (double *, double *, struct Particles *), long int *info,
+           struct Particles *particles)
 {
     /* System generated locals */
     long int work_offset, h_offset, i__1;
@@ -170,8 +171,9 @@ int gmres_(long int n, double *b, double *x, long int *restrt, double *work,
     /* Local variables */
     static double bnrm2, rnorm, aa, bb, tol;
     static long int i, k, r, s, v, w, y, maxit, cs, av, sn;
-    extern /* Subroutine */ int update_();
-    extern /* Subroutine */ int basis_(); 
+    extern /* Subroutine */ int update_(long int *, long int, double *, double *, long int,
+                                        double *, double *, double *, long int);
+    extern /* Subroutine */ int basis_(long int *, long int, double *, double *, long int, double *);
     
     int rank = 0;
     
@@ -181,8 +183,6 @@ int gmres_(long int n, double *b, double *x, long int *restrt, double *work,
 #endif
 
     /* Parameter adjustments */
-		   
-    //printf("%d\t%f\t%f\t%d\t%d\t%d\t%d\t%f\n",*n,b[0],x[0],*restrt,*ldw,*ldh,*iter,*resid);
 
     h_offset = ldh + 1;
     h -= h_offset;
@@ -228,22 +228,16 @@ int gmres_(long int n, double *b, double *x, long int *restrt, double *work,
 
 /*     Set initial residual (AV is temporary workspace here). */
 
-	//printf("llf%d\t%f\n",*n,b[1]);
-	//getchar();
     cblas_dcopy(n, &b[1], c__1, &work[av * ldw + 1], c__1);
-	//for (i=0;i<10;i++) printf("lsf%e\t%e\n",work[av * ldw + 1+i],work[av * ldw + 1+i+work_dim1/2] );
-	//getchar();
 
     if (cblas_dnrm2(n, &x[1], c__1) != 0.) {
 /*        AV is temporary workspace here. */
 
 		cblas_dcopy(n, &b[1], c__1, &work[av * ldw + 1], c__1);
-		(*matvec)(&c_b7, &x[1], &c_b8, &work[av * ldw + 1]);
-//		(*matvec)(&x[1],&work[av * ldw + 1]);
-
+		(*matvec)(&c_b7, &x[1], &c_b8, &work[av * ldw + 1], particles);
 	}
 
-    (*psolve)(&work[r * ldw + 1], &work[av * ldw + 1]);
+    (*psolve)(&work[r * ldw + 1], &work[av * ldw + 1], particles);
 
     bnrm2 = cblas_dnrm2(n, &b[1], c__1);
     if (bnrm2 == 0.) {
@@ -279,26 +273,11 @@ L30:
 
     ++i;
     ++(*iter);
-//int ii;
-//	for (ii=39000;ii<39010;ii++) printf("ggss %e\t%e\n",work[(v + i - 1) * ldw + 1+ii],work[av * ldw + 1+ii] );
 
-//for(ii=0;ii<10;ii++) printf("work=%f, for i=%d\n",
-//    work[(v + i - 1) * ldw+1+ii],(v + i - 1) * ldw+1+ii);
-
-
-//printf("call iteration at 253, index start at %d, last of work is %f\n",
-//       (v + i - 1) * ldw + 1, work[(v + i - 1) * ldw + 2*30000]);
-//work[(v + i - 1) * ldw + 1]=10;
-       (*matvec)(&c_b8, &work[(v + i - 1) * ldw + 1], &c_b20, &work[av * 
-	    ldw + 1]);
-
-	//(*matvec)(&work[(v + i - 1) * ldw + 1], &work[av *ldw + 1]);
-//int ii;
-//	for (ii=39000;ii<39010;ii++) printf("llff %e\t%e\n",work[(v + i - 1) * ldw + 1+ii],work[av * ldw + 1+ii] );
-	//getchar();
+    (*matvec)(&c_b8, &work[(v + i - 1) * ldw + 1], &c_b20, &work[av *
+	    ldw + 1], particles);
     
-    
-	(*psolve)(&work[w * ldw + 1], &work[av * ldw + 1]);
+	(*psolve)(&work[w * ldw + 1], &work[av * ldw + 1], particles);
 
 /*           Construct I-th column of H orthnormal to the previous */
 /*           I-1 columns. */
@@ -364,9 +343,8 @@ L50:
 /*        (AV is temporary workspace here.) */
 
     cblas_dcopy(n, &b[1], c__1, &work[av * ldw + 1], c__1);
-    (*matvec)(&c_b7, &x[1], &c_b8, &work[av * ldw + 1]);
-//	(*matvec)(&x[1], &work[av * ldw + 1]);
-    (*psolve)(&work[r * ldw + 1], &work[av * ldw + 1]);
+    (*matvec)(&c_b7, &x[1], &c_b8, &work[av * ldw + 1], particles);
+    (*psolve)(&work[r * ldw + 1], &work[av * ldw + 1], particles);
     work[i + 1 + s * ldw] = cblas_dnrm2(n, &work[r * ldw + 1], c__1);
     *resid = work[i + 1 + s * ldw] / bnrm2;
     if (*resid <= tol) {
@@ -399,9 +377,8 @@ L70:
 
 
 /*     =============================================================== */
-/* Subroutine */ int update_(i, n, x, h, ldh, y, s, v, ldv)
-long int *i, n, ldh, ldv;
-double *x, *h, *y, *s, *v;
+/* Subroutine */ int update_(long int *i, long int n, double *x, double *h, long int ldh,
+                             double *y, double *s, double *v, long int ldv)
 {
     /* System generated locals */
     long int h_offset, v_offset;
@@ -438,9 +415,7 @@ double *x, *h, *y, *s, *v;
 
 
 /*     ========================================================= */
-/* Subroutine */ int basis_(i, n, h, v, ldv, w)
-long int *i, n, ldv;
-double *h, *v, *w;
+/* Subroutine */ int basis_(long int *i, long int n, double *h, double *v, long int ldv, double *w)
 {
     /* System generated locals */
     long int v_offset, i__1;
@@ -476,5 +451,3 @@ double *h, *v, *w;
     return 0;
 
 }
-
-

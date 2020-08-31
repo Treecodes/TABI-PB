@@ -16,12 +16,14 @@
 #ifndef H_TREECODE_GMRES_INTERFACE_H
 #define H_TREECODE_GMRES_INTERFACE_H
 
+#include "struct_particles.h"
+
 /* functions used by GMRes */
 int matvec(double *alpha, double *tpoten_old,
-           double *beta, double *tpoten);
+           double *beta, double *tpoten, struct Particles *particles);
 
-int psolve(double *z, double *r);
+int psolve(double *z, double *r, struct Particles *particles);
 
-int psolve_precond(double *z, double *r);
+int psolve_precond(double *z, double *r, struct Particles *particles);
 
 #endif /* H_TREECODE_GMRES_INTERFACE_H */
