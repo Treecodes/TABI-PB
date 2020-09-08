@@ -34,18 +34,14 @@
 #include <math.h>
 #include <mkl_cblas.h>
 
-#include "struct_particles.h"
-
-#ifdef MPI_ENABLED
-    #include <mpi.h>
-#endif
+#include "treecode.h"
 
 /* Table of constant values */
 
-static long int c__1 = 1;
-static double c_b7 = -1.;
-static double c_b8 = 1.;
-static double c_b20 = 0.;
+constexpr long int c__1  =  1;
+constexpr double   c_b7  = -1.;
+constexpr double   c_b8  =  1.;
+constexpr double   c_b20 =  0.;
 
 /*  -- Iterative template routine --
 *     Univ. of Tennessee and Oak Ridge National Laboratory
@@ -158,11 +154,9 @@ static double c_b20 = 0.;
 
 
 //*****************************************************************
-int gmres_(long int n, double *b, double *x, long int *restrt, double *work, 
-           long int ldw, double *h, long int ldh, long int *iter, double *resid, 
-           int (*matvec) (double *, double *, double *, double *, struct Particles *),
-           int (*psolve) (double *, double *, struct Particles *), long int *info,
-           struct Particles *particles)
+int Treecode::gmres_(long int n, const double *b, double *x, long int *restrt, double *work,
+                     long int ldw, double *h, long int ldh, long int *iter, double *resid,
+                     long int *info)
 {
     /* System generated locals */
     long int work_offset, h_offset, i__1;
@@ -174,13 +168,6 @@ int gmres_(long int n, double *b, double *x, long int *restrt, double *work,
     extern /* Subroutine */ int update_(long int *, long int, double *, double *, long int,
                                         double *, double *, double *, long int);
     extern /* Subroutine */ int basis_(long int *, long int, double *, double *, long int, double *);
-    
-    int rank = 0;
-    
-#ifdef MPI_ENABLED
-    int ierr;
-    ierr = MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-#endif
 
     /* Parameter adjustments */
 
@@ -234,10 +221,10 @@ int gmres_(long int n, double *b, double *x, long int *restrt, double *work,
 /*        AV is temporary workspace here. */
 
 		cblas_dcopy(n, &b[1], c__1, &work[av * ldw + 1], c__1);
-		(*matvec)(&c_b7, &x[1], &c_b8, &work[av * ldw + 1], particles);
+		Treecode::matrix_vector(c_b7, &x[1], c_b8, &work[av * ldw + 1]);
 	}
 
-    (*psolve)(&work[r * ldw + 1], &work[av * ldw + 1], particles);
+    Treecode::precondition(&work[r * ldw + 1], &work[av * ldw + 1]);
 
     bnrm2 = cblas_dnrm2(n, &b[1], c__1);
     if (bnrm2 == 0.) {
@@ -274,10 +261,9 @@ L30:
     ++i;
     ++(*iter);
 
-    (*matvec)(&c_b8, &work[(v + i - 1) * ldw + 1], &c_b20, &work[av *
-	    ldw + 1], particles);
+    Treecode::matrix_vector(c_b8, &work[(v + i - 1) * ldw + 1], c_b20, &work[av * ldw + 1]);
     
-	(*psolve)(&work[w * ldw + 1], &work[av * ldw + 1], particles);
+	Treecode::precondition(&work[w * ldw + 1], &work[av * ldw + 1]);
 
 /*           Construct I-th column of H orthnormal to the previous */
 /*           I-1 columns. */
@@ -315,9 +301,7 @@ L30:
 	    ldw, h[i + cs * ldh], h[i + sn * ldh]);
     *resid = (d__1 = work[i + 1 + s * ldw], fabs(d__1)) / bnrm2;
 
-    if (rank == 0) {
-	    printf("iteration no. = %ld, error = %e\n", *iter, *resid);
-    }
+    printf("iteration no. = %ld, error = %e\n", *iter, *resid);
 
     if (*resid <= tol) {
 	update_(&i, n, &x[1], &h[h_offset], ldh, &work[y * ldw + 1], &
@@ -343,8 +327,8 @@ L50:
 /*        (AV is temporary workspace here.) */
 
     cblas_dcopy(n, &b[1], c__1, &work[av * ldw + 1], c__1);
-    (*matvec)(&c_b7, &x[1], &c_b8, &work[av * ldw + 1], particles);
-    (*psolve)(&work[r * ldw + 1], &work[av * ldw + 1], particles);
+    Treecode::matrix_vector(c_b7, &x[1], c_b8, &work[av * ldw + 1]);
+    Treecode::precondition(&work[r * ldw + 1], &work[av * ldw + 1]);
     work[i + 1 + s * ldw] = cblas_dnrm2(n, &work[r * ldw + 1], c__1);
     *resid = work[i + 1 + s * ldw] / bnrm2;
     if (*resid <= tol) {

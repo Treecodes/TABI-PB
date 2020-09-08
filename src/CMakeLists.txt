@@ -1,9 +1,13 @@
 # C code for standalone
-  add_executable(tabipb
-    main.cpp tabipb.cpp gmres.cpp
-    run_gmres.cpp readin.cpp treecode.cpp
-    print_output.cpp utilities.cpp xmalloc.cpp
-    tree/tree_linked_list.cpp tree/partition.cpp)
+  add_executable(tabipb main.cpp
+        params.cpp params.h
+        molecule.cpp molecule.h
+        particles.cpp particles.h
+        tree.cpp tree.h
+        clusters.cpp clusters.h
+        interaction_list.cpp interaction_list.h
+        treecode.cpp treecode.h
+        gmres.cpp constants.h)
 
 
 target_link_libraries(tabipb ${LAPACK_LIBRARIES})
