@@ -29,20 +29,13 @@ private:
             std::array<std::size_t, 2> source_node_particle_idxs);
     
     void particle_cluster_interact(double* potential,
-            std::array<std::size_t, 2> target_node_particle_idxs,
-            std::array<std::size_t, 2> source_cluster_interp_pts_idxs,
-            std::array<std::size_t, 2> source_cluster_charges_idxs);
+            std::array<std::size_t, 2> target_node_particle_idxs, std::size_t source_node_idx);
                                    
     void cluster_particle_interact(double* potential,
-            std::array<std::size_t, 2> target_cluster_interp_pts_idxs,
-            std::array<std::size_t, 2> target_cluster_potential_idxs,
-            std::array<std::size_t, 2> source_node_particle_idxs);
+            std::size_t target_node_idx, std::array<std::size_t, 2> source_node_particle_idxs);
             
     void cluster_cluster_interact(double* potential,
-            std::array<std::size_t, 2> target_cluster_interp_pts_idxs,
-            std::array<std::size_t, 2> target_cluster_potential_idxs,
-            std::array<std::size_t, 2> source_cluster_interp_pts_idxs,
-            std::array<std::size_t, 2> source_cluster_charges_idxs);
+            std::size_t target_node_idx, std::size_t source_node_idx);
     
 public:
     Treecode(class Particles& particles, class Clusters& clusters, const class Tree& tree,
@@ -50,7 +43,7 @@ public:
         : particles_(particles), clusters_(clusters), tree_(tree),
           interaction_list_(interaction_list), params_(params)
           { potential_.resize(2 * particles_.num()); };
-    ~Treecode() {};
+    ~Treecode() = default;
     
     long int run_GMRES();
     void output();

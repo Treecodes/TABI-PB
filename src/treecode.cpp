@@ -4,7 +4,7 @@
 #include "constants.h"
 #include "treecode.h"
 
-#include <stdio.h>
+#include <cstdio>
 #include <cstdlib>
 
 long int Treecode::run_GMRES()
@@ -45,7 +45,7 @@ void Treecode::matrix_vector(double alpha, double* potential_old,
     double potential_coeff_1 = 0.5 * (1. +      params_.phys_eps_);
     double potential_coeff_2 = 0.5 * (1. + 1. / params_.phys_eps_);
     
-    double* potential_temp = (double *)std::malloc(potential_.size() * sizeof(double));
+    auto* potential_temp = (double *)std::malloc(potential_.size() * sizeof(double));
     std::memcpy(potential_temp, potential_new, potential_.size() * sizeof(double));
     std::memset(potential_new, 0, potential_.size() * sizeof(double));
     
@@ -53,61 +53,22 @@ void Treecode::matrix_vector(double alpha, double* potential_old,
     clusters_.upward_pass();
     clusters_.clear_potentials();
 
-/*
-    for (auto target_node_idx : tree_.leaves()) {
-        auto target_node_particle_idxs = tree_.node_particle_idxs(target_node_idx);
-        
-        for (auto source_node_idx : interaction_list_.particle_particle(target_node_idx)) {
-            auto source_node_particle_idxs = tree_.node_particle_idxs(source_node_idx);
-            
-            Treecode::particle_particle_interact(potential_new, potential_old,
-                    target_node_particle_idxs, source_node_particle_idxs);
-        }
-    
-        for (auto source_node_idx : interaction_list_.particle_cluster(target_node_idx)) {
-            auto source_cluster_interp_pts_idxs = clusters_.cluster_interp_pts_idxs(source_node_idx);
-            auto source_cluster_charges_idxs    = clusters_.cluster_charges_idxs(source_node_idx);
-             
-            Treecode::particle_cluster_interact(potential_new, target_node_particle_idxs,
-                    source_cluster_interp_pts_idxs, source_cluster_charges_idxs);
-        }
-    }
-*/
-
     for (std::size_t target_node_idx = 0; target_node_idx < tree_.num_nodes(); ++target_node_idx) {
-        auto target_node_particle_idxs      = tree_.node_particle_idxs(target_node_idx);
-        auto target_cluster_interp_pts_idxs = clusters_.cluster_interp_pts_idxs(target_node_idx);
-        auto target_cluster_charges_idxs    = clusters_.cluster_charges_idxs(target_node_idx);
         
-        for (auto source_node_idx : interaction_list_.particle_particle(target_node_idx)) {
-            auto source_node_particle_idxs = tree_.node_particle_idxs(source_node_idx);
-            
+        for (auto source_node_idx : interaction_list_.particle_particle(target_node_idx))
             Treecode::particle_particle_interact(potential_new, potential_old,
-                    target_node_particle_idxs, source_node_particle_idxs);
-        }
+                    tree_.node_particle_idxs(target_node_idx), tree_.node_particle_idxs(source_node_idx));
     
-        for (auto source_node_idx : interaction_list_.particle_cluster(target_node_idx)) {
-            auto source_cluster_interp_pts_idxs = clusters_.cluster_interp_pts_idxs(source_node_idx);
-            auto source_cluster_charges_idxs    = clusters_.cluster_charges_idxs(source_node_idx);
-             
-            Treecode::particle_cluster_interact(potential_new, target_node_particle_idxs,
-                    source_cluster_interp_pts_idxs, source_cluster_charges_idxs);
-        }
+        for (auto source_node_idx : interaction_list_.particle_cluster(target_node_idx))
+            Treecode::particle_cluster_interact(potential_new, 
+                    tree_.node_particle_idxs(target_node_idx), source_node_idx);
         
-        for (auto source_node_idx : interaction_list_.cluster_particle(target_node_idx)) {
-            auto source_node_particle_idxs = tree_.node_particle_idxs(source_node_idx);
-             
-            Treecode::cluster_particle_interact(potential_new, target_cluster_interp_pts_idxs,
-                    target_cluster_charges_idxs, source_node_particle_idxs);
-        }
+        for (auto source_node_idx : interaction_list_.cluster_particle(target_node_idx))
+            Treecode::cluster_particle_interact(potential_new, 
+                    target_node_idx, tree_.node_particle_idxs(source_node_idx));
         
-        for (auto source_node_idx : interaction_list_.cluster_cluster(target_node_idx)) {
-            auto source_cluster_interp_pts_idxs = clusters_.cluster_interp_pts_idxs(source_node_idx);
-            auto source_cluster_charges_idxs    = clusters_.cluster_charges_idxs(source_node_idx);
-             
-            Treecode::cluster_cluster_interact(potential_new, target_cluster_interp_pts_idxs,
-                    target_cluster_charges_idxs, source_cluster_interp_pts_idxs, source_cluster_charges_idxs);
-        }
+        for (auto source_node_idx : interaction_list_.cluster_cluster(target_node_idx))
+            Treecode::cluster_cluster_interact(potential_new, target_node_idx, source_node_idx);
     }
     
     clusters_.downward_pass(potential_new);
@@ -120,7 +81,7 @@ void Treecode::matrix_vector(double alpha, double* potential_old,
         potential_new[i] =  beta * potential_temp[i]
                 + alpha * (potential_coeff_2 * potential_old[i] - potential_new[i]);
                 
-    free(potential_temp);
+    std::free(potential_temp);
 }
 
 
@@ -129,8 +90,8 @@ void Treecode::precondition(double *z, double *r)
     double potential_coeff_1 = 0.5 * (1. +      params_.phys_eps_);
     double potential_coeff_2 = 0.5 * (1. + 1. / params_.phys_eps_);
     
-    for (std::size_t i = 0;                     i < potential_.size() / 2; ++i) z[i] = r[i] / potential_coeff_1;
-    for (std::size_t i = potential_.size() / 2; i < potential_.size();     ++i) z[i] = r[i] / potential_coeff_2;
+    for (std::size_t i = 0;                i <     particles_.num(); ++i) z[i] = r[i] / potential_coeff_1;
+    for (std::size_t i = particles_.num(); i < 2 * particles_.num(); ++i) z[i] = r[i] / potential_coeff_2;
 }
 
 
@@ -232,22 +193,19 @@ void Treecode::particle_particle_interact(double* potential, double* potential_o
 }
 
 
-void Treecode::particle_cluster_interact(double* potential,
+void Treecode::particle_cluster_interact(double* potential, 
                                          std::array<std::size_t, 2> target_node_particle_idxs,
-                                         std::array<std::size_t, 2> source_cluster_interp_pts_idxs,
-                                         std::array<std::size_t, 2> source_cluster_charges_idxs)
+                                         std::size_t source_node_idx)
 {
+    std::size_t num_particles   = particles_.num();
+    int num_interp_pts_per_node = clusters_.num_interp_pts_per_node();
+    int num_charges_per_node    = clusters_.num_charges_per_node();
+
     std::size_t target_node_particle_begin      = target_node_particle_idxs[0];
     std::size_t target_node_particle_end        = target_node_particle_idxs[1];
 
-    std::size_t source_cluster_interp_pts_begin = source_cluster_interp_pts_idxs[0];
-    std::size_t source_cluster_interp_pts_end   = source_cluster_interp_pts_idxs[1];
-
-    std::size_t source_cluster_charges_begin    = source_cluster_charges_idxs[0];
-    std::size_t source_cluster_charges_end      = source_cluster_charges_idxs[1];
-    
-    std::size_t num_particles   = particles_.num();
-    int num_interp_pts_per_node = clusters_.num_interp_pts_per_node();
+    std::size_t source_cluster_interp_pts_begin = source_node_idx * num_interp_pts_per_node;
+    std::size_t source_cluster_charges_begin    = source_node_idx * num_charges_per_node;
     
     double eps    = params_.phys_eps_;
     double kappa  = params_.phys_kappa_;
@@ -339,21 +297,17 @@ void Treecode::particle_cluster_interact(double* potential,
 }
 
 
-void Treecode::cluster_particle_interact(double* potential,
-                                         std::array<std::size_t, 2> target_cluster_interp_pts_idxs,
-                                         std::array<std::size_t, 2> target_cluster_potentials_idxs,
+void Treecode::cluster_particle_interact(double* potential, std::size_t target_node_idx,
                                          std::array<std::size_t, 2> source_node_particle_idxs)
 {
-    std::size_t target_cluster_interp_pts_begin = target_cluster_interp_pts_idxs[0];
-    std::size_t target_cluster_interp_pts_end   = target_cluster_interp_pts_idxs[1];
-
-    std::size_t target_cluster_potentials_begin = target_cluster_potentials_idxs[0];
-    std::size_t target_cluster_potentials_end   = target_cluster_potentials_idxs[1];
+    int num_interp_pts_per_node = clusters_.num_interp_pts_per_node();
+    int num_potentials_per_node = clusters_.num_charges_per_node();
     
+    std::size_t target_cluster_interp_pts_begin = target_node_idx * num_interp_pts_per_node;
+    std::size_t target_cluster_potentials_begin = target_node_idx * num_potentials_per_node;
+
     std::size_t source_node_particle_begin      = source_node_particle_idxs[0];
     std::size_t source_node_particle_end        = source_node_particle_idxs[1];
-    
-    int num_interp_pts_per_node = clusters_.num_interp_pts_per_node();
     
     double eps    = params_.phys_eps_;
     double kappa  = params_.phys_kappa_;
@@ -444,25 +398,17 @@ void Treecode::cluster_particle_interact(double* potential,
 }
 
 
-void Treecode::cluster_cluster_interact(double* potential,
-                                        std::array<std::size_t, 2> target_cluster_interp_pts_idxs,
-                                        std::array<std::size_t, 2> target_cluster_potentials_idxs,
-                                        std::array<std::size_t, 2> source_cluster_interp_pts_idxs,
-                                        std::array<std::size_t, 2> source_cluster_charges_idxs)
+void Treecode::cluster_cluster_interact(double* potential, std::size_t target_node_idx, 
+                                        std::size_t source_node_idx)
 {
-    std::size_t target_cluster_interp_pts_begin = target_cluster_interp_pts_idxs[0];
-    std::size_t target_cluster_interp_pts_end   = target_cluster_interp_pts_idxs[1];
-
-    std::size_t target_cluster_potentials_begin = target_cluster_potentials_idxs[0];
-    std::size_t target_cluster_potentials_end   = target_cluster_potentials_idxs[1];
-    
-    std::size_t source_cluster_interp_pts_begin = source_cluster_interp_pts_idxs[0];
-    std::size_t source_cluster_interp_pts_end   = source_cluster_interp_pts_idxs[1];
-
-    std::size_t source_cluster_charges_begin    = source_cluster_charges_idxs[0];
-    std::size_t source_cluster_charges_end      = source_cluster_charges_idxs[1];
-    
     int num_interp_pts_per_node = clusters_.num_interp_pts_per_node();
+    int num_charges_per_node    = clusters_.num_charges_per_node();
+
+    std::size_t target_cluster_interp_pts_begin = target_node_idx * num_interp_pts_per_node;
+    std::size_t target_cluster_potentials_begin = target_node_idx * num_charges_per_node;
+    
+    std::size_t source_cluster_interp_pts_begin = source_node_idx * num_interp_pts_per_node;
+    std::size_t source_cluster_charges_begin    = source_node_idx * num_charges_per_node;
     
     double eps    = params_.phys_eps_;
     double kappa  = params_.phys_kappa_;
