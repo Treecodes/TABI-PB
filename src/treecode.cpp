@@ -119,74 +119,67 @@ void Treecode::particle_particle_interact(double* potential, double* potential_o
 
     const double* __restrict__ particles_area_ptr = particles_.area_ptr();
     
-    double peng_old[2], L1, L2, L3, L4, area;
-    double tp[3], tq[3], sp[3], sq[3], r_s[3];
-    double rs, irs, sumrs;
-    double G0, kappa_rs, exp_kappa_rs, Gk;
-    double cos_theta, cos_theta0, tp1, tp2, dot_tqsq;
-    double G10, G20, G1, G2, G3, G4;
-    
     std::size_t num_particles = particles_.num();
 
     for (std::size_t j = target_node_particle_begin; j < target_node_particle_end; ++j) {
         
-        tp[0] = particles_x_ptr[j];
-        tp[1] = particles_y_ptr[j];
-        tp[2] = particles_z_ptr[j];
+        double target_x = particles_x_ptr[j];
+        double target_y = particles_y_ptr[j];
+        double target_z = particles_z_ptr[j];
         
-        tq[0] = particles_nx_ptr[j];
-        tq[1] = particles_ny_ptr[j];
-        tq[2] = particles_nz_ptr[j];
+        double target_nx = particles_nx_ptr[j];
+        double target_ny = particles_ny_ptr[j];
+        double target_nz = particles_nz_ptr[j];
     
         for (std::size_t k = source_node_particle_begin; k < source_node_particle_end; ++k) {
         
-            sp[0] = particles_x_ptr[k];
-            sp[1] = particles_y_ptr[k];
-            sp[2] = particles_z_ptr[k];
+            double source_x = particles_x_ptr[k];
+            double source_y = particles_y_ptr[k];
+            double source_z = particles_z_ptr[k];
             
-            sq[0] = particles_nx_ptr[k];
-            sq[1] = particles_ny_ptr[k];
-            sq[2] = particles_nz_ptr[k];
-            area  = particles_area_ptr[k];
+            double source_nx = particles_nx_ptr[k];
+            double source_ny = particles_ny_ptr[k];
+            double source_nz = particles_nz_ptr[k];
+            double source_area = particles_area_ptr[k];
             
-            peng_old[0] = potential_old[k];
-            peng_old[1] = potential_old[k + num_particles];
+            double potential_old_0 = potential_old[k];
+            double potential_old_1 = potential_old[k + num_particles];
             
-            r_s[0] = sp[0]-tp[0];
-            r_s[1] = sp[1]-tp[1];
-            r_s[2] = sp[2]-tp[2];
-            sumrs = r_s[0]*r_s[0] + r_s[1]*r_s[1] + r_s[2]*r_s[2];
+            double dist_x = source_x - target_x;
+            double dist_y = source_y - target_y;
+            double dist_z = source_z - target_z;
+            double sumrs = dist_x * dist_x + dist_y * dist_y + dist_z * dist_z;
             
             if (sumrs > 0) {
-                rs = std::sqrt(sumrs);
-                irs = 1. / rs;
-                G0 = constants::ONE_OVER_4PI * irs;
-                kappa_rs = kappa * rs;
-                exp_kappa_rs = std::exp(-kappa_rs);
-                Gk = exp_kappa_rs * G0;
+                double rs = std::sqrt(sumrs);
+                double irs = 1. / rs;
+                double G0 = constants::ONE_OVER_4PI * irs;
+                double kappa_rs = kappa * rs;
+                double exp_kappa_rs = std::exp(-kappa_rs);
+                double Gk = exp_kappa_rs * G0;
                 
-                cos_theta  = (sq[0]*r_s[0] + sq[1]*r_s[1] + sq[2]*r_s[2]) * irs;
-                cos_theta0 = (tq[0]*r_s[0] + tq[1]*r_s[1] + tq[2]*r_s[2]) * irs;
-                tp1 = G0* irs;
-                tp2 = (1.0 + kappa_rs) * exp_kappa_rs;
+                double cos_theta  = (source_nx * dist_x + source_ny * dist_y + source_nz * dist_z) * irs;
+                double cos_theta0 = (target_nx * dist_x + target_ny * dist_y + target_nz * dist_z) * irs;
+                double tp1 = G0 * irs;
+                double tp2 = (1.0 + kappa_rs) * exp_kappa_rs;
 
-                G10 = cos_theta0 * tp1;
-                G20 = tp2 * G10;
+                double G10 = cos_theta0 * tp1;
+                double G20 = tp2 * G10;
 
-                G1 = cos_theta * tp1;
-                G2 = tp2 * G1;
+                double G1 = cos_theta * tp1;
+                double G2 = tp2 * G1;
 
-                dot_tqsq = sq[0]*tq[0] + sq[1]*tq[1] + sq[2]*tq[2];
-                G3 = (dot_tqsq - 3.0*cos_theta0*cos_theta) * irs*tp1;
-                G4 = tp2*G3 - kappa2*cos_theta0*cos_theta*Gk;
+                double dot_tqsq = source_nx * target_nx + source_ny * target_ny + source_nz * target_nz;
+                double G3 = (dot_tqsq - 3.0 * cos_theta0 * cos_theta) * irs * tp1;
+                double G4 = tp2 * G3 - kappa2 * cos_theta0 * cos_theta * Gk;
 
-                L1 = G1 - eps*G2;
-                L2 = G0 - Gk;
-                L3 = G4 - G3;
-                L4 = G10 - G20/eps;
+                double L1 = G1 - eps * G2;
+                double L2 = G0 - Gk;
+                double L3 = G4 - G3;
+                double L4 = G10 - G20 / eps;
                 
-                potential[j]                 += (L1*peng_old[0] + L2*peng_old[1]) * area;
-                potential[j + num_particles] += (L3*peng_old[0] + L4*peng_old[1]) * area;
+                potential[j]                 += (L1 * potential_old_0 + L2 * potential_old_1) * source_area;
+                potential[j + num_particles] += (L3 * potential_old_0 + L4 * potential_old_1) * source_area;
             }
         }
     }

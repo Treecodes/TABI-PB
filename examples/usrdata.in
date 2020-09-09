@@ -8,6 +8,6 @@ bulk              0.30
 temp              300
 tree_degree       3
 tree_max_per_leaf 50
-tree_theta        0.8
+tree_theta        0.0
 precondition      OFF
 outdata           VTK
