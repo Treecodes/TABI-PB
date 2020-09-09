@@ -117,7 +117,6 @@ else()
     set(MKL_LINK_TOOL_COMMAND ${MKL_LINK_TOOL} "-libs")
 
     # possible versions
-<<<<<<< HEAD
     # <11.3|11.2|11.1|11.0|10.3|10.2|10.1|10.0|ParallelStudioXE2016|ParallelStudioXE2015|
     #  ComposerXE2013SP1|ComposerXE2013|ComposerXE2011|CompilerPro>
 

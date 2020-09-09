@@ -50,13 +50,6 @@ set(LAPACK_LIBRARIES /opt/intel/mkl/lib/libmkl_rt.dylib)
 set(LAPACK_INCLUDE_PATH /opt/intel/mkl/include)
 
 
-if(ENABLE_MPI_BUILD)
-  find_package(MPI REQUIRED)
-  add_definitions(-DMPI_ENABLED)
-  message("MPI C Libraries: ${MPI_C_LIBRARIES}")
-  message("MPI C Path: ${MPI_C_INCLUDE_PATH}")
-endif()
-
 # FFLAGS depend on the compiler
 get_filename_component (CXX_COMPILER_NAME ${CMAKE_CXX_COMPILER} NAME)
 
