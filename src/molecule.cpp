@@ -27,6 +27,7 @@ Molecule::Molecule(struct Params& params) : params_(params)
     }
     
     num_atoms_ = radius_.size();
+    Molecule::compute_coulombic_energy();
 }
 
 
@@ -43,9 +44,9 @@ void Molecule::build_xyzr_file() const
 }
 
 
-double Molecule::compute_coulombic_energy() const
+void Molecule::compute_coulombic_energy()
 {
-    double coulombic_energy = 0.0;
+    double coulombic_energy = 0.;
     double epsp = params_.phys_eps_solute_;
     
     const double* __restrict__ molecule_coords_ptr = coords_.data();
@@ -65,6 +66,5 @@ double Molecule::compute_coulombic_energy() const
                               / std::sqrt(dist_x*dist_x + dist_y*dist_y + dist_z*dist_z);
         }
     }
-
-    return coulombic_energy;
+    coulombic_energy_ = coulombic_energy;
 }

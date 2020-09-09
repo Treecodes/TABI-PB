@@ -11,10 +11,15 @@ class Particles {
 
 private:
     std::size_t num_;
+    std::size_t num_faces_;
     double surface_area_;
     
     const class Molecule& molecule_;
     const struct Params& params_;
+    
+    std::vector<std::size_t> face_x_;
+    std::vector<std::size_t> face_y_;
+    std::vector<std::size_t> face_z_;
     
     std::vector<double> x_;
     std::vector<double> y_;
@@ -36,8 +41,6 @@ private:
     std::vector<double> source_charge_dx_;
     std::vector<double> source_charge_dy_;
     std::vector<double> source_charge_dz_;
-    
-    std::vector<double> potential_;
 
     std::vector<std::size_t> order_;
     
@@ -58,7 +61,10 @@ public:
     const std::array<double, 6> bounds(std::size_t begin, std::size_t end) const;
     double compute_solvation_energy(std::vector<double>& potential) const;
     
+    void output_VTK(const std::vector<double>& potential) const;
+    
     std::size_t num() const { return num_; };
+    
     const double* x_ptr() const { return x_.data(); };
     const double* y_ptr() const { return y_.data(); };
     const double* z_ptr() const { return z_.data(); };
@@ -79,8 +85,6 @@ public:
     const double* source_charge_dx_ptr() const { return source_charge_dx_.data(); };
     const double* source_charge_dy_ptr() const { return source_charge_dy_.data(); };
     const double* source_charge_dz_ptr() const { return source_charge_dz_.data(); };
-    
-    double *potential_ptr() { return potential_.data(); }
 };
 
 #endif /* H_PARTICLE_STRUCT_H */

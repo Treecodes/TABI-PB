@@ -16,7 +16,9 @@ static double triangle_area(std::array<std::array<double, 3>, 3> v);
 
 template <typename order_iterator, typename value_iterator>
 static void apply_order(order_iterator order_begin, order_iterator order_end, value_iterator v_begin);
-    
+template <typename order_iterator, typename value_iterator>
+static void apply_unorder(order_iterator order_begin, order_iterator order_end, value_iterator v_begin);
+ 
 Particles::Particles(const class Molecule& mol, const struct Params& params)
     : molecule_(mol), params_(params)
 {
@@ -35,8 +37,6 @@ Particles::Particles(const class Molecule& mol, const struct Params& params)
     
     order_.resize(num_);
     std::iota(order_.begin(), order_.end(), 0);
-    
-    potential_.resize(2 * num_);
 };
 
 
@@ -91,21 +91,14 @@ void Particles::generate_particles(Params::Mesh mesh, double mesh_density, doubl
     std::getline(vert_file, line);
     
     std::getline(vert_file, line);
-    std::size_t num_vertices = std::stoul(line);
-    
-    std::vector<double> vertex_x;
-    std::vector<double> vertex_y;
-    std::vector<double> vertex_z;
-    std::vector<double> vertex_normal_x;
-    std::vector<double> vertex_normal_y;
-    std::vector<double> vertex_normal_z;
-    
-    vertex_x.reserve(num_vertices);
-    vertex_y.reserve(num_vertices);
-    vertex_z.reserve(num_vertices);
-    vertex_normal_x.reserve(num_vertices);
-    vertex_normal_y.reserve(num_vertices);
-    vertex_normal_z.reserve(num_vertices);
+    num_ = std::stoul(line);
+
+    x_.reserve(num_);
+    y_.reserve(num_);
+    z_.reserve(num_);
+    nx_.reserve(num_);
+    ny_.reserve(num_);
+    nz_.reserve(num_);
     
     while (std::getline(vert_file, line)) {
         
@@ -113,13 +106,12 @@ void Particles::generate_particles(Params::Mesh mesh, double mesh_density, doubl
         std::vector<std::string> tokenized_line{std::istream_iterator<std::string> {iss},
                                                 std::istream_iterator<std::string> {} };
                                                 
-        vertex_x.push_back(std::stod(tokenized_line[0]));
-        vertex_y.push_back(std::stod(tokenized_line[1]));
-        vertex_z.push_back(std::stod(tokenized_line[2]));
-        
-        vertex_normal_x.push_back(std::stod(tokenized_line[3]));
-        vertex_normal_y.push_back(std::stod(tokenized_line[4]));
-        vertex_normal_z.push_back(std::stod(tokenized_line[5]));
+        x_.push_back(std::stod(tokenized_line[0]));
+        y_.push_back(std::stod(tokenized_line[1]));
+        z_.push_back(std::stod(tokenized_line[2]));
+        nx_.push_back(std::stod(tokenized_line[3]));
+        ny_.push_back(std::stod(tokenized_line[4]));
+        nz_.push_back(std::stod(tokenized_line[5]));
     }
     
     vert_file.close();
@@ -131,14 +123,11 @@ void Particles::generate_particles(Params::Mesh mesh, double mesh_density, doubl
     std::getline(face_file, line);
     
     std::getline(face_file, line);
-    std::size_t num_faces = std::stoul(line);
-    std::vector<std::size_t> face_x;
-    std::vector<std::size_t> face_y;
-    std::vector<std::size_t> face_z;
+    num_faces_ = std::stoul(line);
     
-    face_x.reserve(num_faces);
-    face_y.reserve(num_faces);
-    face_z.reserve(num_faces);
+    face_x_.reserve(num_faces_);
+    face_y_.reserve(num_faces_);
+    face_z_.reserve(num_faces_);
     
     while (std::getline(face_file, line)) {
         
@@ -146,9 +135,9 @@ void Particles::generate_particles(Params::Mesh mesh, double mesh_density, doubl
         std::vector<std::string> tokenized_line{std::istream_iterator<std::string> {iss},
                                                 std::istream_iterator<std::string> {} };
                                                 
-        face_x.push_back(std::stoul(tokenized_line[0]));
-        face_y.push_back(std::stoul(tokenized_line[1]));
-        face_z.push_back(std::stoul(tokenized_line[2]));
+        face_x_.push_back(std::stoul(tokenized_line[0]));
+        face_y_.push_back(std::stoul(tokenized_line[1]));
+        face_z_.push_back(std::stoul(tokenized_line[2]));
     }
     
     face_file.close();
@@ -156,85 +145,12 @@ void Particles::generate_particles(Params::Mesh mesh, double mesh_density, doubl
     std::remove("molecule.xyzr");
     std::remove("triangulatedSurf.vert");
     std::remove("triangulatedSurf.face");
-    
-    /*
-    // Removing bad triangles
-    std::size_t num_removed = 0;
-    
-    for (std::size_t i = 0; i < num_faces; ++i) {
-        
-        std::size_t iface[3] {face_x[i], face_y[i], face_z[i]};
-        double xx[3] {0., 0., 0.};
-        double r[3][3];
 
-        for (int ii = 0; ii < 3; ++ii) {
-        
-            r[0][ii] = vertex_x[iface[ii]-1];
-            r[1][ii] = vertex_y[iface[ii]-1];
-            r[2][ii] = vertex_z[iface[ii]-1];
-            
-            xx[0] += 1.0/3.0 * r[0][ii];
-            xx[1] += 1.0/3.0 * r[1][ii];
-            xx[2] += 1.0/3.0 * r[2][ii];
-        }
-
-        double triangle_area = triangleArea(r);
-        
-        if (triangle_area < 1e-5) {
-            face_x.erase(face_x.begin() + i - num_removed);
-            face_y.erase(face_y.begin() + i - num_removed);
-            face_z.erase(face_z.begin() + i - num_removed);
-            num_removed++;
-            continue;
-        }
-
-        for (std::size_t j = i-10; (j >= 0 && j < i); ++j) {
-        
-            std::size_t jface[3] {face_x[j], face_y[j], face_z[j]};
-            double yy[3] {0., 0., 0.};
-
-            for (int jj = 0; jj < 3; ++jj) {
-            
-                r[0][jj] = vertex_x[jface[jj]-1];
-                r[1][jj] = vertex_y[jface[jj]-1];
-                r[2][jj] = vertex_z[jface[jj]-1];
-                
-                yy[0] += 1.0/3.0 * r[0][jj];
-                yy[1] += 1.0/3.0 * r[1][jj];
-                yy[2] += 1.0/3.0 * r[2][jj];
-            }
-
-            double triangle_distance = 0.0;
-            for (int jj = 0; jj < 3; ++jj) {
-                triangle_distance += (xx[jj]-yy[jj]) * (xx[jj]-yy[jj]);
-            }
-            triangle_distance = std::sqrt(triangle_distance);
-
-            if (triangle_distance < 1e-5) {
-                face_x.erase(face_x.begin() + i - num_removed);
-                face_y.erase(face_y.begin() + i - num_removed);
-                face_z.erase(face_z.begin() + i - num_removed);
-                num_removed++;
-                break;
-            }
-        }
-    }
-    */
-    
-    num_ = num_vertices;
-    x_ = std::move(vertex_x);
-    y_ = std::move(vertex_y);
-    z_ = std::move(vertex_z);
-    
-    nx_ = std::move(vertex_normal_x);
-    ny_ = std::move(vertex_normal_y);
-    nz_ = std::move(vertex_normal_z);
-    
     area_.assign(num_, 0.);
     
-    for (std::size_t i = 0; i < num_faces; ++i) {
+    for (std::size_t i = 0; i < num_faces_; ++i) {
     
-        std::array<std::size_t, 3> iface {face_x[i], face_y[i], face_z[i]};
+        std::array<std::size_t, 3> iface {face_x_[i], face_y_[i], face_z_[i]};
         std::array<std::array<double, 3>, 3> r; 
         
         for (int ii = 0; ii < 3; ++ii) {
@@ -488,20 +404,20 @@ void Particles::reorder()
 
 void Particles::unorder(std::vector<double>& potential)
 {
-    apply_order(order_.begin(), order_.end(), x_.begin());
-    apply_order(order_.begin(), order_.end(), y_.begin());
-    apply_order(order_.begin(), order_.end(), z_.begin());
+    apply_unorder(order_.begin(), order_.end(), x_.begin());
+    apply_unorder(order_.begin(), order_.end(), y_.begin());
+    apply_unorder(order_.begin(), order_.end(), z_.begin());
     
-    apply_order(order_.begin(), order_.end(), nx_.begin());
-    apply_order(order_.begin(), order_.end(), ny_.begin());
-    apply_order(order_.begin(), order_.end(), nz_.begin());
+    apply_unorder(order_.begin(), order_.end(), nx_.begin());
+    apply_unorder(order_.begin(), order_.end(), ny_.begin());
+    apply_unorder(order_.begin(), order_.end(), nz_.begin());
     
-    apply_order(order_.begin(), order_.end(), area_.begin());
-    apply_order(order_.begin(), order_.end(), source_term_.begin());
-    apply_order(order_.begin(), order_.end(), source_term_.begin() + num_);
+    apply_unorder(order_.begin(), order_.end(), area_.begin());
+    apply_unorder(order_.begin(), order_.end(), source_term_.begin());
+    apply_unorder(order_.begin(), order_.end(), source_term_.begin() + num_);
     
-    apply_order(order_.begin(), order_.end(), potential.begin());
-    apply_order(order_.begin(), order_.end(), potential.begin() + num_);
+    apply_unorder(order_.begin(), order_.end(), potential.begin());
+    apply_unorder(order_.begin(), order_.end(), potential.begin() + num_);
 }
 
 
@@ -537,6 +453,43 @@ void Particles::compute_charges(const double* potential)
 }
 
 
+void Particles::output_VTK(const std::vector<double>& potential) const
+{
+    std::ofstream vtk_file("output.vtk");
+    vtk_file << "# vtk DataFile Version 1.0\n";
+    vtk_file << "vtk file output.vtk\n";
+    vtk_file << "ASCII\n";
+    vtk_file << "DATASET POLYDATA\n\n";
+    
+    vtk_file << "POINTS " << num_ << " double\n";
+    vtk_file << std::fixed << std::setprecision(6);
+    for (std::size_t i = 0; i < num_; ++i)
+        vtk_file << x_[i] << " " << y_[i] << " " << z_[i] << "\n";
+        
+    vtk_file << "POLYGONS " << num_faces_ << " " << num_faces_ * 4 << "\n";
+    for (std::size_t i = 0; i < num_faces_; ++i)
+        vtk_file << "3 " << face_x_[i]-1 << " " << face_y_[i]-1 << " " << face_z_[i]-1 << "\n";
+
+    // These are in KCAL. Multiplying by KCAL_TO_KJ would make them KJ.
+    vtk_file << "\nPOINT_DATA " << num_ << "\n";
+    vtk_file << "SCALARS Potential double\n";
+    vtk_file << "LOOKUP_TABLE default\n";
+    std::copy(potential.begin(), potential.begin() + num_, std::ostream_iterator<double>(vtk_file, "\n"));
+    
+    // If we want induced surface charges, we can multiply NormalPotential by (1/eps + 1)
+    vtk_file << "SCALARS NormalPotential double\n";
+    vtk_file << "LOOKUP_TABLE default\n";
+    std::copy(potential.begin() + num_, potential.end(), std::ostream_iterator<double>(vtk_file, "\n"));
+
+    vtk_file << "\nNORMALS Normals double\n";
+    for (std::size_t i = 0; i < num_; ++i)
+        vtk_file << nx_[i] << " " << ny_[i] << " " << nz_[i] << "\n";
+        
+    vtk_file << std::endl;
+    vtk_file.close();
+}
+
+
 static double triangle_area(std::array<std::array<double, 3>, 3> v)
 {
     std::array<double, 3> a, b, c;
@@ -567,4 +520,21 @@ static void apply_order(order_iterator order_begin, order_iterator order_end, va
 
     std::for_each(order_begin, order_end,
                   [&tmp, &v_begin](index_t idx){ *v_begin = tmp[idx]; std::advance(v_begin, 1); });
+}
+
+
+template <typename order_iterator, typename value_iterator>
+static void apply_unorder(order_iterator order_begin, order_iterator order_end, value_iterator v_begin)
+{
+    using value_t = typename std::iterator_traits< value_iterator >::value_type;
+    using index_t = typename std::iterator_traits< order_iterator >::value_type;
+    
+    auto v_end = v_begin + std::distance(order_begin, order_end);
+    std::vector<value_t> tmp(v_begin, v_end);
+    
+    auto v_iter = v_begin;
+    std::for_each(order_begin, order_end,
+                  [&tmp, &v_iter](index_t idx){ tmp[idx] = *v_iter; std::advance(v_iter, 1); });
+    
+    std::copy(tmp.begin(), tmp.end(), v_begin);
 }
