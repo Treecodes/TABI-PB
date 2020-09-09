@@ -148,35 +148,29 @@ void Treecode::particle_particle_interact(double* potential, double* potential_o
             double dist_x = source_x - target_x;
             double dist_y = source_y - target_y;
             double dist_z = source_z - target_z;
-            double sumrs = dist_x * dist_x + dist_y * dist_y + dist_z * dist_z;
+            double r = std::sqrt(dist_x * dist_x + dist_y * dist_y + dist_z * dist_z);
             
-            if (sumrs > 0) {
-                double rs = std::sqrt(sumrs);
-                double irs = 1. / rs;
-                double G0 = constants::ONE_OVER_4PI * irs;
-                double kappa_rs = kappa * rs;
-                double exp_kappa_rs = std::exp(-kappa_rs);
-                double Gk = exp_kappa_rs * G0;
+            if (r > 0) {
+                double one_over_r = 1. / r;
+                double G0 = constants::ONE_OVER_4PI * one_over_r;
+                double kappa_r = kappa * r;
+                double exp_kappa_r = std::exp(-kappa_r);
+                double Gk = exp_kappa_r * G0;
                 
-                double cos_theta  = (source_nx * dist_x + source_ny * dist_y + source_nz * dist_z) * irs;
-                double cos_theta0 = (target_nx * dist_x + target_ny * dist_y + target_nz * dist_z) * irs;
-                double tp1 = G0 * irs;
-                double tp2 = (1.0 + kappa_rs) * exp_kappa_rs;
-
-                double G10 = cos_theta0 * tp1;
-                double G20 = tp2 * G10;
-
-                double G1 = cos_theta * tp1;
-                double G2 = tp2 * G1;
+                double cos_theta  = (source_nx * dist_x + source_ny * dist_y + source_nz * dist_z) * one_over_r;
+                double cos_theta0 = (target_nx * dist_x + target_ny * dist_y + target_nz * dist_z) * one_over_r;
+                
+                double tp1 = G0 * one_over_r;
+                double tp2 = (1. + kappa_r) * exp_kappa_r;
 
                 double dot_tqsq = source_nx * target_nx + source_ny * target_ny + source_nz * target_nz;
-                double G3 = (dot_tqsq - 3.0 * cos_theta0 * cos_theta) * irs * tp1;
+                double G3 = (dot_tqsq - 3. * cos_theta0 * cos_theta) * one_over_r * tp1;
                 double G4 = tp2 * G3 - kappa2 * cos_theta0 * cos_theta * Gk;
 
-                double L1 = G1 - eps * G2;
+                double L1 = cos_theta  * tp1 * (1. - tp2 * eps);
                 double L2 = G0 - Gk;
                 double L3 = G4 - G3;
-                double L4 = G10 - G20 / eps;
+                double L4 = cos_theta0 * tp1 * (1. - tp2 / eps);
                 
                 potential[j]                 += (L1 * potential_old_0 + L2 * potential_old_1) * source_area;
                 potential[j + num_particles] += (L3 * potential_old_0 + L4 * potential_old_1) * source_area;
