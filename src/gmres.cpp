@@ -30,8 +30,7 @@
 
 #define max(a,b) ((a) >= (b) ? (a) : (b))
 
-#include <stdio.h>
-#include <math.h>
+#include <cstdio>
 #include <mkl_cblas.h>
 
 #include "treecode.h"
@@ -301,7 +300,7 @@ L30:
 	    ldw, h[i + cs * ldh], h[i + sn * ldh]);
     *resid = (d__1 = work[i + 1 + s * ldw], fabs(d__1)) / bnrm2;
 
-    printf("iteration no. = %ld, error = %e\n", *iter, *resid);
+    std::printf("iteration no. = %ld, error = %e\n", *iter, *resid);
 
     if (*resid <= tol) {
 	update_(&i, n, &x[1], &h[h_offset], ldh, &work[y * ldw + 1], &

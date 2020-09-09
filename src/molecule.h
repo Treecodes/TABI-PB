@@ -20,7 +20,7 @@ private:
 
 public:
     Molecule(struct Params&);
-    ~Molecule() {};
+    ~Molecule() = default;
     
     void build_xyzr_file() const;
     double compute_coulombic_energy() const;

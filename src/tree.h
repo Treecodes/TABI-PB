@@ -50,7 +50,7 @@ private:
     
 public:
     Tree(class Particles&, const struct Params&);
-    ~Tree() {};
+    ~Tree() = default;
     
     std::size_t num_nodes() const { return num_nodes_; };
     const std::array<double, 12> node_particle_bounds(std::size_t node_idx) const;

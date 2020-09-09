@@ -24,7 +24,7 @@ private:
     
 public:
     InteractionList(const class Tree& tree, const struct Params& params);
-    ~InteractionList() {};
+    ~InteractionList() = default;
     
     const std::vector<std::size_t>& particle_particle(std::size_t idx) const { return particle_particle_[idx]; }
     const std::vector<std::size_t>& particle_cluster (std::size_t idx) const { return particle_cluster_ [idx]; }

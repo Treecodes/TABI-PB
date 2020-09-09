@@ -52,7 +52,7 @@ struct Params {
     bool output_csv_;
     
     Params(char* paramfile);
-    ~Params() {};
+    ~Params() = default;
 };
 
 #endif /* H_TABIPB_PARAMS_STRUCT_H */

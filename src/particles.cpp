@@ -12,7 +12,7 @@
 #include "particles.h"
 
 
-static double triangleArea(double v[3][3]);
+static double triangle_area(std::array<std::array<double, 3>, 3> v);
 
 template <typename order_iterator, typename value_iterator>
 static void apply_order(order_iterator order_begin, order_iterator order_end, value_iterator v_begin);
@@ -234,8 +234,8 @@ void Particles::generate_particles(Params::Mesh mesh, double mesh_density, doubl
     
     for (std::size_t i = 0; i < num_faces; ++i) {
     
-        std::size_t iface[3] {face_x[i], face_y[i], face_z[i]};
-        double r[3][3];
+        std::array<std::size_t, 3> iface {face_x[i], face_y[i], face_z[i]};
+        std::array<std::array<double, 3>, 3> r; 
         
         for (int ii = 0; ii < 3; ++ii) {
             r[0][ii] = x_[iface[ii]-1];
@@ -244,7 +244,7 @@ void Particles::generate_particles(Params::Mesh mesh, double mesh_density, doubl
         }
 
         for (int j = 0; j < 3; ++j) {
-            area_[iface[j]-1] += triangleArea(r);
+            area_[iface[j]-1] += triangle_area(r);
         }
     }
     
@@ -537,9 +537,9 @@ void Particles::compute_charges(const double* potential)
 }
 
 
-static double triangleArea(double v[3][3])
+static double triangle_area(std::array<std::array<double, 3>, 3> v)
 {
-    double a[3], b[3], c[3];
+    std::array<double, 3> a, b, c;
 
     for (int i = 0; i < 3; ++i) {
         a[i] = v[i][0] - v[i][1];
@@ -559,8 +559,8 @@ static double triangleArea(double v[3][3])
 template <typename order_iterator, typename value_iterator>
 static void apply_order(order_iterator order_begin, order_iterator order_end, value_iterator v_begin)
 {
-    typedef typename std::iterator_traits< value_iterator >::value_type value_t;
-    typedef typename std::iterator_traits< order_iterator >::value_type index_t;
+    using value_t = typename std::iterator_traits< value_iterator >::value_type;
+    using index_t = typename std::iterator_traits< order_iterator >::value_type;
     
     auto v_end = v_begin + std::distance(order_begin, order_end) + 1;
     std::vector<value_t> tmp(v_begin, v_end);

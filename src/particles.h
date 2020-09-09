@@ -46,7 +46,7 @@ private:
     
 public:
     Particles(const class Molecule&, const struct Params&);
-    ~Particles() {};
+    ~Particles() = default;
     
     int partition_8(std::size_t, std::size_t, std::array<std::size_t, 16>&);
     void reorder();

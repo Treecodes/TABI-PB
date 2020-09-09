@@ -39,7 +39,7 @@ private:
     
 public:
     Clusters(const class Particles& particles, const class Tree& tree, const struct Params& params);
-    ~Clusters() {};
+    ~Clusters() = default;
     
     void upward_pass();
     void downward_pass(double* potential);
