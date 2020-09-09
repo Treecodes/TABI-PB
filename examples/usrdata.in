@@ -1,13 +1,13 @@
-mol           1aie.pqr
-mesh          NanoShaper SES
-sdens         1 
-srad          1.4
-pdie          1
-sdie          80
-bulk          0.30
-temp          300
-tree_order    10 
-tree_n0       500
-tree_mac      0.8
-precondition  OFF
-outdata       VTK
+mol               1aie.pqr
+mesh              SES
+sdens             1
+srad              1.4
+pdie              1
+sdie              80
+bulk              0.30
+temp              300
+tree_degree       3
+tree_max_per_leaf 50
+tree_theta        0.8
+precondition      OFF
+outdata           VTK

@@ -30,20 +30,17 @@
 
 #define max(a,b) ((a) >= (b) ? (a) : (b))
 
-#include <stdio.h>
-#include <math.h>
+#include <cstdio>
 #include <mkl_cblas.h>
 
-#ifdef MPI_ENABLED
-    #include <mpi.h>
-#endif
+#include "treecode.h"
 
 /* Table of constant values */
 
-static long int c__1 = 1;
-static double c_b7 = -1.;
-static double c_b8 = 1.;
-static double c_b20 = 0.;
+constexpr long int c__1  =  1;
+constexpr double   c_b7  = -1.;
+constexpr double   c_b8  =  1.;
+constexpr double   c_b20 =  0.;
 
 /*  -- Iterative template routine --
 *     Univ. of Tennessee and Oak Ridge National Laboratory
@@ -156,11 +153,9 @@ static double c_b20 = 0.;
 
 
 //*****************************************************************
-int gmres_(n, b, x, restrt, work, ldw, h, ldh, iter, resid, matvec, psolve, 
-           info)
-   long int n, *restrt, ldw, ldh, *iter, *info;
-   double *b, *x, *work, *h, *resid;
-   int (*matvec) (), (*psolve) ();
+int Treecode::gmres_(long int n, const double *b, double *x, long int *restrt, double *work,
+                     long int ldw, double *h, long int ldh, long int *iter, double *resid,
+                     long int *info)
 {
     /* System generated locals */
     long int work_offset, h_offset, i__1;
@@ -169,18 +164,11 @@ int gmres_(n, b, x, restrt, work, ldw, h, ldh, iter, resid, matvec, psolve,
     /* Local variables */
     static double bnrm2, rnorm, aa, bb, tol;
     static long int i, k, r, s, v, w, y, maxit, cs, av, sn;
-    extern /* Subroutine */ int update_();
-    extern /* Subroutine */ int basis_(); 
-    
-    int rank = 0, ierr;
-    
-#ifdef MPI_ENABLED
-    ierr = MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-#endif
+    extern /* Subroutine */ int update_(long int *, long int, double *, double *, long int,
+                                        double *, double *, double *, long int);
+    extern /* Subroutine */ int basis_(long int *, long int, double *, double *, long int, double *);
 
     /* Parameter adjustments */
-		   
-    //printf("%d\t%f\t%f\t%d\t%d\t%d\t%d\t%f\n",*n,b[0],x[0],*restrt,*ldw,*ldh,*iter,*resid);
 
     h_offset = ldh + 1;
     h -= h_offset;
@@ -226,22 +214,16 @@ int gmres_(n, b, x, restrt, work, ldw, h, ldh, iter, resid, matvec, psolve,
 
 /*     Set initial residual (AV is temporary workspace here). */
 
-	//printf("llf%d\t%f\n",*n,b[1]);
-	//getchar();
     cblas_dcopy(n, &b[1], c__1, &work[av * ldw + 1], c__1);
-	//for (i=0;i<10;i++) printf("lsf%e\t%e\n",work[av * ldw + 1+i],work[av * ldw + 1+i+work_dim1/2] );
-	//getchar();
 
     if (cblas_dnrm2(n, &x[1], c__1) != 0.) {
 /*        AV is temporary workspace here. */
 
 		cblas_dcopy(n, &b[1], c__1, &work[av * ldw + 1], c__1);
-		(*matvec)(&c_b7, &x[1], &c_b8, &work[av * ldw + 1]);
-//		(*matvec)(&x[1],&work[av * ldw + 1]);
-
+		Treecode::matrix_vector(c_b7, &x[1], c_b8, &work[av * ldw + 1]);
 	}
 
-    (*psolve)(&work[r * ldw + 1], &work[av * ldw + 1]);
+    Treecode::precondition(&work[r * ldw + 1], &work[av * ldw + 1]);
 
     bnrm2 = cblas_dnrm2(n, &b[1], c__1);
     if (bnrm2 == 0.) {
@@ -277,26 +259,10 @@ L30:
 
     ++i;
     ++(*iter);
-//int ii;
-//	for (ii=39000;ii<39010;ii++) printf("ggss %e\t%e\n",work[(v + i - 1) * ldw + 1+ii],work[av * ldw + 1+ii] );
 
-//for(ii=0;ii<10;ii++) printf("work=%f, for i=%d\n",
-//    work[(v + i - 1) * ldw+1+ii],(v + i - 1) * ldw+1+ii);
-
-
-//printf("call iteration at 253, index start at %d, last of work is %f\n",
-//       (v + i - 1) * ldw + 1, work[(v + i - 1) * ldw + 2*30000]);
-//work[(v + i - 1) * ldw + 1]=10;
-       (*matvec)(&c_b8, &work[(v + i - 1) * ldw + 1], &c_b20, &work[av * 
-	    ldw + 1]);
-
-	//(*matvec)(&work[(v + i - 1) * ldw + 1], &work[av *ldw + 1]);
-//int ii;
-//	for (ii=39000;ii<39010;ii++) printf("llff %e\t%e\n",work[(v + i - 1) * ldw + 1+ii],work[av * ldw + 1+ii] );
-	//getchar();
+    Treecode::matrix_vector(c_b8, &work[(v + i - 1) * ldw + 1], c_b20, &work[av * ldw + 1]);
     
-    
-	(*psolve)(&work[w * ldw + 1], &work[av * ldw + 1]);
+	Treecode::precondition(&work[w * ldw + 1], &work[av * ldw + 1]);
 
 /*           Construct I-th column of H orthnormal to the previous */
 /*           I-1 columns. */
@@ -334,9 +300,7 @@ L30:
 	    ldw, h[i + cs * ldh], h[i + sn * ldh]);
     *resid = (d__1 = work[i + 1 + s * ldw], fabs(d__1)) / bnrm2;
 
-    if (rank == 0) {
-	    printf("iteration no. = %ld, error = %e\n", *iter, *resid);
-    }
+    std::printf("iteration no. = %ld, error = %e\n", *iter, *resid);
 
     if (*resid <= tol) {
 	update_(&i, n, &x[1], &h[h_offset], ldh, &work[y * ldw + 1], &
@@ -362,9 +326,8 @@ L50:
 /*        (AV is temporary workspace here.) */
 
     cblas_dcopy(n, &b[1], c__1, &work[av * ldw + 1], c__1);
-    (*matvec)(&c_b7, &x[1], &c_b8, &work[av * ldw + 1]);
-//	(*matvec)(&x[1], &work[av * ldw + 1]);
-    (*psolve)(&work[r * ldw + 1], &work[av * ldw + 1]);
+    Treecode::matrix_vector(c_b7, &x[1], c_b8, &work[av * ldw + 1]);
+    Treecode::precondition(&work[r * ldw + 1], &work[av * ldw + 1]);
     work[i + 1 + s * ldw] = cblas_dnrm2(n, &work[r * ldw + 1], c__1);
     *resid = work[i + 1 + s * ldw] / bnrm2;
     if (*resid <= tol) {
@@ -397,9 +360,8 @@ L70:
 
 
 /*     =============================================================== */
-/* Subroutine */ int update_(i, n, x, h, ldh, y, s, v, ldv)
-long int *i, n, ldh, ldv;
-double *x, *h, *y, *s, *v;
+/* Subroutine */ int update_(long int *i, long int n, double *x, double *h, long int ldh,
+                             double *y, double *s, double *v, long int ldv)
 {
     /* System generated locals */
     long int h_offset, v_offset;
@@ -436,9 +398,7 @@ double *x, *h, *y, *s, *v;
 
 
 /*     ========================================================= */
-/* Subroutine */ int basis_(i, n, h, v, ldv, w)
-long int *i, n, ldv;
-double *h, *v, *w;
+/* Subroutine */ int basis_(long int *i, long int n, double *h, double *v, long int ldv, double *w)
 {
     /* System generated locals */
     long int v_offset, i__1;
@@ -474,5 +434,3 @@ double *h, *v, *w;
     return 0;
 
 }
-
-

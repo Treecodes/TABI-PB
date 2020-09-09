@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.1...3.14)
-project(TABI-PB VERSION 2.0 LANGUAGES C)
+project(TABI-PB VERSION 3.0 LANGUAGES CXX)
 
 #set(CMAKE_VERBOSE_MAKEFILE ON)
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
@@ -23,7 +23,6 @@ set(EXECUTABLE_INSTALL_PATH bin)
 ################################################
 ##### Make a directory for the executable
 ################################################
-option(ENABLE_MPI_BUILD "build MPI parallel" OFF)
 file(MAKE_DIRECTORY build/bin)
 
 set(BLA_DEFINITIONS)
@@ -46,7 +45,10 @@ if (MKL_FOUND)
   set(BLA_DEFINITIONS USE_MKL)
 endif()
 
-message("BLAS Libraries: ${BLAS_LIBRARIES}")
+message(STATUS "BLAS Libraries: ${BLAS_LIBRARIES}")
+set(LAPACK_LIBRARIES /opt/intel/mkl/lib/libmkl_rt.dylib)
+set(LAPACK_INCLUDE_PATH /opt/intel/mkl/include)
+
 
 if(ENABLE_MPI_BUILD)
   find_package(MPI REQUIRED)
@@ -56,13 +58,12 @@ if(ENABLE_MPI_BUILD)
 endif()
 
 # FFLAGS depend on the compiler
-get_filename_component (C_COMPILER_NAME ${CMAKE_C_COMPILER} NAME)
+get_filename_component (CXX_COMPILER_NAME ${CMAKE_CXX_COMPILER} NAME)
 
-set (CMAKE_C_FLAGS_RELEASE "-O3")
-set (CMAKE_C_FLAGS_DEBUG   "-Wall")
-message ("CMAKE_C_COMPILER full path: ${CMAKE_C_COMPILER}")
-message ("C compiler: ${C_COMPILER_NAME}")
-message ("C ID: ${CMAKE_C_COMPILER_ID}")
+set (CMAKE_CXX_FLAGS_RELEASE "-O3")
+set (CMAKE_CXX_FLAGS_DEBUG   "-Wall")
+message ("CMAKE_CXX_COMPILER full path: ${CMAKE_CXX_COMPILER}")
+message ("CXX compiler: ${C_COMPILER_NAME}")
 message ("CXX ID: ${CMAKE_CXX_COMPILER_ID}")
 
 add_subdirectory(src)
