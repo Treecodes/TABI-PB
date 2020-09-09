@@ -32,37 +32,11 @@ void Treecode::output()
     std::cout << "\nNormal derivative min: " << *pot_normal_min_max.first << ", "
                                      "max: " << *pot_normal_min_max.second << "\n" << std::endl;
                                          
-    //if (params_.output_dat_) Treecode::output_DAT()
-    //if (params_.output_vtk_) Treecode::output_VTK()
-    //if (params_.output_csv_) Treecode::output_CSV()
+    //if (params_.output_vtk_) Treecode::output_VTK();
+    //if (params_.output_csv_) Treecode::output_CSV();
 }
 
 /*
-int OutputDAT(char name[256], TABIPBvars *vars)
-{
-    char fname[256];
-    int i;
-
-    sprintf(fname, "%s.dat", name);
-
-    FILE *fp = fopen(fname, "w");
-    fprintf(fp, "%d %d\n", vars->nspt, vars->nface);
-
-    for (i = 0; i < vars->nspt; i++)
-        fprintf(fp, "%d %f %f %f %f %f %f %f %f\n", i,
-                vars->vert[0][i], vars->vert[1][i], vars->vert[2][i],
-                vars->snrm[0][i], vars->snrm[1][i], vars->snrm[2][i],
-                vars->vert_ptl[i], vars->vert_ptl[i + vars->nspt]);
-
-    for (i = 0; i < vars->nface; i++)
-        fprintf(fp, "%d %d %d\n", vars->face[0][i], vars->face[1][i],
-                                  vars->face[2][i]);
-    fclose(fp);
-    
-    return 0;
-}
-
-
 int OutputVTK(char name[256], TABIPBvars *vars)
 {
     char fname[256], nspt_str[20], nface_str[20], nface4_str[20];
@@ -131,8 +105,6 @@ int OutputVTK(char name[256], TABIPBvars *vars)
 
     return 0;
 }
-
-
 
 
 int OutputCSV(TABIPBparm *parm, TABIPBvars *vars, double cpu_time)

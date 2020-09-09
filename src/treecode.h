@@ -49,6 +49,8 @@ public:
     
     long int run_GMRES();
     void output();
+    void output_VTK() const {};
+    void output_CSV() const {};
 };
 
 #endif /* H_TABIPB_TREECODE_STRUCT_H */
