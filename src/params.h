@@ -47,7 +47,6 @@ struct Params {
     int nonpolar_;
 
    /* output of potential data */
-    bool output_dat_;
     bool output_vtk_;
     bool output_csv_;
     

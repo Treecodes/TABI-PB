@@ -3,7 +3,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
-#include <cassert>
+#include <cstdlib>
 
 #include "constants.h"
 #include "params.h"
@@ -13,7 +13,6 @@ Params::Params(char* infile)
     std::ifstream paramfile (infile, std::ifstream::in);
     assert(paramfile.good() && "param file is not readable");
 
-    output_dat_ = false;
     output_vtk_ = false;
     output_csv_ = false;
     
@@ -36,7 +35,10 @@ Params::Params(char* infile)
         
         if (param_token == "mol" || param_token == "pqr") {
             pqr_file_ = std::ifstream(param_value, std::ifstream::in);
-            assert(pqr_file_.good() && "pqr file is not readable");
+            if (!pqr_file_.good()) {
+                std::cout << "pqr file is not readable. exiting. " << std::endl;
+                std::exit(1);
+            }
             
         } else if (param_token == "pdie") {
             phys_eps_solute_ = std::stod(param_value);
@@ -52,28 +54,46 @@ Params::Params(char* infile)
 
         } else if (param_token == "tree_degree") {
             tree_degree_ = std::stoi(param_value);
-            assert(tree_degree_ >= 0 && "invalide tree_degree value");
+            if (tree_degree_ <= 0) {
+                std::cout << "invalid tree_degree value. exiting. " << std::endl;
+                std::exit(1);
+            }
 
         } else if (param_token == "tree_theta") {
             tree_theta_ = std::stod(param_value);
-            assert((tree_theta_ >= 0. && tree_theta_ <= 1.) && "invalide tree_theta value");
+            if (tree_theta_ < 0. || tree_theta_ > 1.) {
+                std::cout << "invalid tree_theta value. exiting. " << std::endl;
+                std::exit(1);
+            }
         
         } else if (param_token == "tree_max_per_leaf") {
             tree_max_per_leaf_ = std::stoi(param_value);
-            assert(tree_max_per_leaf_ >= 0 && "invalid tree_max_per_leaf value");
+            if (tree_max_per_leaf_ <= 0) {
+                std::cout << "invalid tree_max_per_leaf value. exiting. " << std::endl;
+                std::exit(1);
+            }
         
         } else if (param_token == "mesh") {
             auto it = mesh_table_.find(param_value);
-            assert(it != mesh_table_.end() && "invalid mesh value");
+            if (it == mesh_table_.end()) {
+                std::cout << "invalid mesh value. exiting. " << std::endl;
+                std::exit(1);
+            }
             mesh_ = it->second;
             
         } else if (param_token == "sdens") {
             mesh_density_ = std::stod(param_value);
-            assert(mesh_density_ >= 0 && "invalid density value");
+            if (mesh_density_ < 0) {
+                std::cout << "invalid density value. exiting. " << std::endl;
+                std::exit(1);
+            }
             
         } else if (param_token == "srad") {
             mesh_probe_radius_ = std::stod(param_value);
-            assert(mesh_probe_radius_ >= 0 && "invalid probe radius value");
+            if (mesh_probe_radius_ < 0) {
+                std::cout << "invalid probe radius value. exiting. " << std::endl;
+                std::exit(1);
+            }
         
         } else if (param_token == "precondition") {
             if (param_value == "true") precondition_ = true;
@@ -82,7 +102,6 @@ Params::Params(char* infile)
             if (param_value == "true") nonpolar_ = true;
         
         } else if (param_token == "outdata") {
-             if (param_value == "dat") output_dat_ = true;
              if (param_value == "vtk") output_vtk_ = true;
              if (param_value == "csv") output_csv_ = true;
         

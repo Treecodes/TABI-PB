@@ -1,6 +1,6 @@
 #include <iostream>
 #include <iomanip>
-#include <cassert>
+#include <cstdlib>
 
 #include "params.h"
 #include "molecule.h"
@@ -14,7 +14,7 @@
 int main(int argc, char* argv[])
 {
     // set the parameter struct, which is read in from file provided as argv
-    assert(argc == 2 && "Incorrect number of arguments to main");
+    if (argc < 2) { std::cout << "No input file set." << std::endl; std::exit(1); }
     struct Params params(argv[1]);
     
     //construct the biomolecule from the provided pqr file
@@ -36,31 +36,14 @@ int main(int argc, char* argv[])
     class InteractionList interaction_list(tree, params);
     
     // initialize the treecode and construct the potential output array
-    class Treecode treecode(particles, clusters, tree, interaction_list, params);
+    class Treecode treecode(particles, clusters, 
+                            tree, interaction_list, molecule, params);
     
     // run GMRES on the treecode object
     treecode.run_GMRES();
     
     // output resulting potential
     treecode.output();
-    
-    std::cout << "Coulombic energy: " << molecule.compute_coulombic_energy() << std::endl;
-/*
-    if (main_parm->output_datafile[2] == '1') {
-        ierr = OutputCSV(main_parm, main_vars, cpu_time);
-
-    char name[256];
-    sprintf(name, "tabipb_run");
-
-    ierr = OutputPrint(name, main_vars);
-
-    if (main_parm->output_datafile[0] == '1') {
-        ierr = OutputDAT(name, main_vars);
-    
-    } else if (main_parm->output_datafile[1] == '1') {
-        ierr = OutputVTK(name, main_vars);
-    }
-*/
 
     return 0;
 }

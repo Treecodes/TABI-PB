@@ -6,8 +6,9 @@
         tree.cpp tree.h
         clusters.cpp clusters.h
         interaction_list.cpp interaction_list.h
-        treecode.cpp treecode.h
-        gmres.cpp constants.h)
+        treecode.cpp output.cpp 
+        gmres.cpp treecode.h
+        constants.h)
 
 
 target_link_libraries(tabipb ${LAPACK_LIBRARIES})

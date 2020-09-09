@@ -1,6 +1,6 @@
 mol               1aie.pqr
 mesh              SES
-sdens             4
+sdens             1
 srad              1.4
 pdie              1
 sdie              80

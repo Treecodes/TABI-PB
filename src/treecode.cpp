@@ -30,15 +30,6 @@ long int Treecode::run_GMRES()
 }
 
 
-void Treecode::output()
-{
-    particles_.unorder(potential_);
-    
-    std::cout << "solveng: " << std::setprecision(16)
-              << particles_.compute_solvation_energy(potential_) * constants::UNITS_PARA << std::endl;
-}
-
-
 void Treecode::matrix_vector(double alpha, double* potential_old,
                              double beta,  double* potential_new)
 {

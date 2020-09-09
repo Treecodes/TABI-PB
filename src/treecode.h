@@ -12,6 +12,7 @@ private:
     class Clusters& clusters_;
     const class Tree& tree_;
     const class InteractionList& interaction_list_;
+    const class Molecule& molecule_;
     const struct Params& params_;
     
     std::vector<double> potential_;
@@ -38,10 +39,11 @@ private:
             std::size_t target_node_idx, std::size_t source_node_idx);
     
 public:
-    Treecode(class Particles& particles, class Clusters& clusters, const class Tree& tree,
-             const class InteractionList& interaction_list, const struct Params& params)
+    Treecode(class Particles& particles, class Clusters& clusters,
+             const class Tree& tree, const class InteractionList& interaction_list,
+             const class Molecule& molecule, const struct Params& params)
         : particles_(particles), clusters_(clusters), tree_(tree),
-          interaction_list_(interaction_list), params_(params)
+          interaction_list_(interaction_list), molecule_(molecule), params_(params)
           { potential_.resize(2 * particles_.num()); };
     ~Treecode() = default;
     

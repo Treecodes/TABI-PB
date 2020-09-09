@@ -1,59 +1,43 @@
-/**************************************************************************
-* FILE NAME: print_output.c                                               *
-*                                                                         *
-* PURPOSE: Print TABI-PB output to screen or to file.                     *
-*          Routines called by main (when running standalone) or the APBS  *
-*          wrapper after returning from the primary tabipb routine        *
-*                                                                         *
-* AUTHORS: Leighton Wilson, University of Michigan, Ann Arbor, MI         *
-*          Jiahui Chen, Southern Methodist University, Dallas, TX         *
-*                                                                         *
-* BASED ON PACKAGE ORIGINALLY WRITTEN IN FORTRAN BY:                      *
-*          Weihua Geng, Southern Methodist University, Dallas, TX         *
-*          Robery Krasny, University of Michigan, Ann Arbor, MI           *
-*                                                                         *
-* DEVELOPMENT HISTORY:                                                    *
-*                                                                         *
-* Date        Author            Description Of Change                     *
-* ----        ------            ---------------------                     *
-* 02/10/2018  Leighton Wilson   Updated output printing                   *
-* 01/12/2018  Leighton Wilson   Created; moved from tabipb.c              *
-*                                                                         *
-**************************************************************************/
+#include <iostream>
 
-#include <stdio.h>
-#include <time.h>
-
-#ifdef MPI_ENABLED
-    #include <mpi.h>
-#endif
-
-#include "print_output.h"
-
-#include "global_params.h"
-#include "TABIPBstruct.h"
+#include "constants.h"
+#include "treecode.h"
 
 /********************************************************/
-int OutputPrint(char name[256], TABIPBvars *vars)
+void Treecode::output()
 {
-    printf("\n\n*** OUTPUT FOR %s ***\n", name);
-    printf("\nSolvation energy = %f kJ/mol", vars->soleng);
-    printf("\nFree energy = %f kJ/mol\n\n", vars->soleng+vars->couleng);
-    printf("The max and min potential and normal derivatives on elements:\n");
-    printf("potential %f %f\n", vars->max_xvct, vars->min_xvct);
-    printf("norm derv %f %f\n\n", vars->max_der_xvct,
-                                  vars->min_der_xvct);
-    printf("The max and min potential and normal derivatives on vertices:\n");
-    printf("potential %f %f\n", vars->max_vert_ptl, vars->min_vert_ptl);
-    printf("norm derv %f %f\n\n", vars->max_der_vert_ptl,
-                                  vars->min_der_vert_ptl);
+    particles_.unorder(potential_);
+    
+    auto solvation_energy = constants::UNITS_PARA  * particles_.compute_solvation_energy(potential_);
+    auto coulombic_energy = constants::UNITS_COEFF * molecule_.compute_coulombic_energy();
 
-    return 0;
+    constexpr double pot_scaling = constants::UNITS_COEFF * constants::PI * 4.;
+    std::transform(std::begin(potential_), std::end(potential_),
+                   std::begin(potential_), [](double x){ return x * pot_scaling; });
+                   
+    auto pot_min_max = std::minmax_element(
+        potential_.begin(), potential_.begin() + potential_.size() / 2);
+                                           
+    auto pot_normal_min_max = std::minmax_element(
+        potential_.begin() + potential_.size() / 2, potential_.end());
+        
+    std::cout << "\n\n*** OUTPUT FOR TABI-PB RUN ***";
+    std::cout << "\n\n    Solvation energy = " << solvation_energy
+                                               << " kJ/mol";
+    std::cout << "\n         Free energy = "   << solvation_energy + coulombic_energy
+                                               << " kJ/mol";
+    std::cout << "\n\nThe max and min potential and normal derivatives on vertices:";
+    std::cout << "\n        Potential min: " << *pot_min_max.first << ", "
+                                     "max: " << *pot_min_max.second;
+    std::cout << "\nNormal derivative min: " << *pot_normal_min_max.first << ", "
+                                     "max: " << *pot_normal_min_max.second << "\n" << std::endl;
+                                         
+    //if (params_.output_dat_) Treecode::output_DAT()
+    //if (params_.output_vtk_) Treecode::output_VTK()
+    //if (params_.output_csv_) Treecode::output_CSV()
 }
-/********************************************************/
 
-
-/********************************************************/
+/*
 int OutputDAT(char name[256], TABIPBvars *vars)
 {
     char fname[256];
@@ -77,10 +61,8 @@ int OutputDAT(char name[256], TABIPBvars *vars)
     
     return 0;
 }
-/********************************************************/
 
 
-/********************************************************/
 int OutputVTK(char name[256], TABIPBvars *vars)
 {
     char fname[256], nspt_str[20], nface_str[20], nface4_str[20];
@@ -149,10 +131,10 @@ int OutputVTK(char name[256], TABIPBvars *vars)
 
     return 0;
 }
-/********************************************************/
 
 
-/********************************************************/
+
+
 int OutputCSV(TABIPBparm *parm, TABIPBvars *vars, double cpu_time)
 {
     char timestr[64], meshtype[20], fname[256];
@@ -181,3 +163,4 @@ int OutputCSV(TABIPBparm *parm, TABIPBvars *vars, double cpu_time)
     
     return 0;
 }
+*/
