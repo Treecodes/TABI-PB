@@ -4,37 +4,7 @@
 #include "treecode.h"
 
 /********************************************************/
-void Treecode::output()
-{
-    particles_.unorder(potential_);
-    
-    auto solvation_energy = constants::UNITS_PARA  * particles_.compute_solvation_energy(potential_);
-    auto coulombic_energy = constants::UNITS_COEFF * molecule_.coulombic_energy();
 
-    constexpr double pot_scaling = constants::UNITS_COEFF * constants::PI * 4.;
-    std::transform(std::begin(potential_), std::end(potential_),
-                   std::begin(potential_), [](double x){ return x * pot_scaling; });
-                   
-    auto pot_min_max = std::minmax_element(
-        potential_.begin(), potential_.begin() + potential_.size() / 2);
-                                           
-    auto pot_normal_min_max = std::minmax_element(
-        potential_.begin() + potential_.size() / 2, potential_.end());
-        
-    std::cout << "\n\n*** OUTPUT FOR TABI-PB RUN ***";
-    std::cout << "\n\n    Solvation energy = " << solvation_energy
-                                               << " kJ/mol";
-    std::cout << "\n         Free energy = "   << solvation_energy + coulombic_energy
-                                               << " kJ/mol";
-    std::cout << "\n\nThe max and min potential and normal derivatives on vertices:";
-    std::cout << "\n        Potential min: " << *pot_min_max.first << ", "
-                                     "max: " << *pot_min_max.second;
-    std::cout << "\nNormal derivative min: " << *pot_normal_min_max.first << ", "
-                                     "max: " << *pot_normal_min_max.second << "\n" << std::endl;
-                                         
-    if (params_.output_vtk_) particles_.output_VTK(potential_);
-    //if (params_.output_csv_) Treecode::output_CSV();
-}
 
 /*
 

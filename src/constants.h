@@ -7,7 +7,7 @@ namespace constants {
     constexpr double KCAL_TO_KJ   = 4.184;
     constexpr double BULK_COEFF   = 2529.12179861515279;
     constexpr double UNITS_COEFF  = 1389.3875744; // 332.0716 * kcal2kj
-    constexpr double UNITS_PARA   = 8729.779593448; // 2 * constUnits * PI
+    constexpr double UNITS_PARA   = 8729.779593448; // 2 * UNITS_COEFF * PI
 }
 
 #endif

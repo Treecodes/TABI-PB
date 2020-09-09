@@ -64,6 +64,7 @@ public:
     void output_VTK(const std::vector<double>& potential) const;
     
     std::size_t num() const { return num_; };
+    double surface_area() const { return surface_area_; };
     
     const double* x_ptr() const { return x_.data(); };
     const double* y_ptr() const { return y_.data(); };

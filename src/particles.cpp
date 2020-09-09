@@ -16,6 +16,7 @@ static double triangle_area(std::array<std::array<double, 3>, 3> v);
 
 template <typename order_iterator, typename value_iterator>
 static void apply_order(order_iterator order_begin, order_iterator order_end, value_iterator v_begin);
+
 template <typename order_iterator, typename value_iterator>
 static void apply_unorder(order_iterator order_begin, order_iterator order_end, value_iterator v_begin);
  

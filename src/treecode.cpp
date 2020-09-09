@@ -7,7 +7,7 @@
 #include <cstdio>
 #include <cstdlib>
 
-long int Treecode::run_GMRES()
+void Treecode::run_GMRES()
 {
     static long int info;
     long int restrt = 10;
@@ -26,7 +26,7 @@ long int Treecode::run_GMRES()
     Treecode::gmres_(length, particles_.source_term_ptr(), potential_.data(),
                      &restrt, work.data(), ldw, h.data(), ldh, &iter, &resid, &info);
 
-    return iter;
+    num_iter_ = iter;
 }
 
 
@@ -478,4 +478,56 @@ void Treecode::cluster_cluster_interact(double* potential, std::size_t target_no
     }
     }
     }
+}
+
+
+void Treecode::output()
+{
+    particles_.unorder(potential_);
+    
+    auto solvation_energy = constants::UNITS_PARA  * particles_.compute_solvation_energy(potential_);
+    auto coulombic_energy = constants::UNITS_COEFF * molecule_.coulombic_energy();
+    auto free_energy      = solvation_energy + coulombic_energy;
+
+    constexpr double pot_scaling = constants::UNITS_COEFF * constants::PI * 4.;
+    std::transform(std::begin(potential_), std::end(potential_),
+                   std::begin(potential_), [](double x){ return x * pot_scaling; });
+                   
+    auto pot_min_max = std::minmax_element(
+        potential_.begin(), potential_.begin() + potential_.size() / 2);
+                                           
+    auto pot_normal_min_max = std::minmax_element(
+        potential_.begin() + potential_.size() / 2, potential_.end());
+        
+    auto pot_min = *pot_min_max.first;
+    auto pot_max = *pot_min_max.second;
+    
+    auto pot_normal_min = *pot_normal_min_max.first;
+    auto pot_normal_max = *pot_normal_min_max.second;
+        
+    std::cout << "\n\n*** OUTPUT FOR TABI-PB RUN ***";
+    std::cout << "\n\n    Solvation energy = " << solvation_energy
+                                               << " kJ/mol";
+    std::cout << "\n         Free energy = "   << free_energy
+                                               << " kJ/mol";
+    std::cout << "\n\nThe max and min potential and normal derivatives on vertices:";
+    std::cout << "\n        Potential min: " << pot_min << ", "
+                                     "max: " << pot_max;
+    std::cout << "\nNormal derivative min: " << pot_normal_min << ", "
+                                     "max: " << pot_normal_max << "\n" << std::endl;
+                                     
+    if (params_.output_csv_) {
+        std::ofstream csv_file("output.csv");
+        csv_file << molecule_.num_atoms() << ", " << params_.mesh_ << ", "
+                 << params_.mesh_density_ << ", " << params_.mesh_probe_radius_ << ", "
+                 << params_.tree_degree_ << ", " << params_.tree_theta_ << ", "
+                 << params_.tree_max_per_leaf_ << ", " << params_.precondition_ << ", "
+                 << particles_.num() << ", " << particles_.surface_area() << ", "
+                 << solvation_energy << ", " << coulombic_energy << ", "
+                 << pot_min << ", " << pot_max << ", "
+                 << pot_normal_min << ", " << pot_normal_max << ", "
+                 << num_iter_ << std::endl;
+    }
+    
+    if (params_.output_vtk_) particles_.output_VTK(potential_);
 }

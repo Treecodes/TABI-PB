@@ -17,6 +17,8 @@ private:
     
     std::vector<double> potential_;
     
+    long int num_iter_;
+    
     int gmres_(long int n, const double* b, double* x, long int* restrt,
             double* work, long int ldw, double* h, long int ldh,
             long int* iter, double* residual, long int* info);
@@ -47,9 +49,8 @@ public:
           { potential_.resize(2 * particles_.num()); };
     ~Treecode() = default;
     
-    long int run_GMRES();
+    void run_GMRES();
     void output();
-    void output_VTK() const {};
     void output_CSV() const {};
 };
 

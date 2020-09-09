@@ -11,3 +11,4 @@ tree_max_per_leaf 50
 tree_theta        0.8
 precondition      OFF
 outdata           VTK
+outdata           CSV
