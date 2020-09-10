@@ -1,9 +1,13 @@
+#include <iomanip>
+#include <algorithm>
+#include <iterator>
 #include <vector>
 #include <fstream>
 #include <sstream>
 #include <iostream>
 #include <numeric>
 #include <array>
+#include <cmath>
 #include <cstdlib>
 #include <cstdio>
 

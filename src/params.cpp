@@ -1,8 +1,11 @@
+#include <algorithm>
 #include <string>
 #include <vector>
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <iterator>
+#include <cmath>
 #include <cstdlib>
 
 #include "constants.h"
@@ -11,7 +14,10 @@
 Params::Params(char* infile)
 {
     std::ifstream paramfile (infile, std::ifstream::in);
-    assert(paramfile.good() && "param file is not readable");
+    if (!paramfile.good()) {
+        std::cout << "param file is not readable. exiting. " << std::endl;
+        std::exit(1);
+    }
 
     output_vtk_ = false;
     output_csv_ = false;
@@ -34,7 +40,7 @@ Params::Params(char* infile)
                        [](unsigned char c){ return std::tolower(c); });
         
         if (param_token == "mol" || param_token == "pqr") {
-            pqr_file_ = std::ifstream(param_value, std::ifstream::in);
+            pqr_file_.open(param_value, std::ifstream::in);
             if (!pqr_file_.good()) {
                 std::cout << "pqr file is not readable. exiting. " << std::endl;
                 std::exit(1);

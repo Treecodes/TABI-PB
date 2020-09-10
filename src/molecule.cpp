@@ -1,7 +1,9 @@
+#include <iterator>
 #include <vector>
 #include <string>
 #include <fstream>
 #include <sstream>
+#include <cmath>
 #include <cstddef>
 
 #include "params.h"
