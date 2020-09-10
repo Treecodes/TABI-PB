@@ -6,8 +6,7 @@ add_executable(tabipb main.cpp
         tree.cpp tree.h
         clusters.cpp clusters.h
         interaction_list.cpp interaction_list.h
-        treecode.cpp output.cpp 
-        gmres.cpp treecode.h
+        treecode.cpp gmres.cpp treecode.h
         constants.h)
 
 #target_compile_definitions(tabipb PUBLIC ${BLA_DEFINITIONS})

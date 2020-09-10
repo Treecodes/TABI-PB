@@ -64,6 +64,10 @@ public:
     double* interp_potential_dx_ptr() { return interp_potential_dx_.data(); };
     double* interp_potential_dy_ptr() { return interp_potential_dy_.data(); };
     double* interp_potential_dz_ptr() { return interp_potential_dz_.data(); };
+    
+    void copyin_to_device() const;
+    void delete_from_device() const;
+    
 };
 
 #endif /* H_TABIPB_CLUSTERS_STRUCT_H */

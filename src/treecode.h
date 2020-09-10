@@ -51,7 +51,11 @@ public:
     
     void run_GMRES();
     void output();
-    void output_CSV() const {};
+    
+    void copyin_potential_to_device() const;
+    void update_potential_on_device() const;
+    void update_potential_on_host() const;
+    void copyout_potential_to_host() const;
 };
 
 #endif /* H_TABIPB_TREECODE_STRUCT_H */

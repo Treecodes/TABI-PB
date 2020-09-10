@@ -86,6 +86,10 @@ public:
     const double* source_charge_dx_ptr() const { return source_charge_dx_.data(); };
     const double* source_charge_dy_ptr() const { return source_charge_dy_.data(); };
     const double* source_charge_dz_ptr() const { return source_charge_dz_.data(); };
+    
+    void copyin_to_device() const;
+    void update_source_term_on_host() const;
+    void delete_from_device() const;
 };
 
 #endif /* H_PARTICLE_STRUCT_H */

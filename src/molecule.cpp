@@ -68,3 +68,20 @@ void Molecule::compute_coulombic_energy()
     }
     coulombic_energy_ = coulombic_energy;
 }
+
+
+void Molecule::copyin_to_device() const
+{
+#ifdef OPENACC_ENABLED
+    #pragma acc enter data copyin(coords_.data()[0:coords_.size()], \
+                                  charge_.data()[0:coords_.size()])
+#endif
+}
+
+
+void Molecule::delete_from_device() const
+{
+#ifdef OPENACC_ENABLED
+    #pragma acc exit data delete(coords_.data(), charge_.data())
+#endif
+}

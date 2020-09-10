@@ -307,6 +307,36 @@ void Clusters::clear_potentials()
 }
 
 
+void Clusters::copyin_to_device() const
+{
+#ifdef OPENACC_ENABLED
+    #pragma acc enter data create(interp_x_.data()[0:interp_x_.size()], \
+                                  interp_y_.data()[0:interp_y_.size()], \
+                                  interp_y_.data()[0:interp_y_.size()], \
+                                  interp_charge_   .data()[0:interp_charge_   .size()], \
+                                  interp_charge_dx_.data()[0:interp_charge_dx_.size()], \
+                                  interp_charge_dy_.data()[0:interp_charge_dy_.size()], \
+                                  interp_charge_dz_.data()[0:interp_charge_dz_.size()], \
+                                  interp_potential_   .data()[0:interp_potential_   .size()], \
+                                  interp_potential_dx_.data()[0:interp_potential_dx_.size()], \
+                                  interp_potential_dy_.data()[0:interp_potential_dy_.size()], \
+                                  interp_potential_dz_.data()[0:interp_potential_dz_.size()])
+#endif
+}
+
+
+void Clusters::delete_from_device() const
+{
+#ifdef OPENACC_ENABLED
+    #pragma acc exit data delete(interp_x_.data(), interp_y_.data(), interp_z_.data(), \
+                                 interp_charge_   .data(), interp_charge_dx_.data(), \
+                                 interp_charge_dy_.data(), interp_charge_dz_.data(), \
+                                 interp_potential_   .data(), interp_potential_dx_.data(), \
+                                 interp_potential_dy_.data(), interp_potential_dz_.data(), \)
+#endif
+}
+
+
 const std::array<std::size_t, 2> Clusters::cluster_interp_pts_idxs(std::size_t node_idx) const
 {
     return std::array<std::size_t, 2> {num_interp_pts_per_node_ *  node_idx,

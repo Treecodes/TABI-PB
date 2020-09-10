@@ -491,6 +491,49 @@ void Particles::output_VTK(const std::vector<double>& potential) const
 }
 
 
+void Particles::copyin_to_device() const
+{
+#ifdef OPENACC_ENABLED
+    #pragma acc enter data copyin(x_.data() [0:x_.size()],  y_.data() [0:y_.size()], \
+                                  z_.data() [0:z_.size()], \
+                                  nx_.data()[0:nx_.size()], ny_.data()[0:ny_.size()], \
+                                  nz_.data()[0:nz_.size()], \
+                                  area_.data()[0:area_.size()])
+    #pragma acc enter data create(source_term_.data()[0:source_term_.size()], \
+                                  target_charge_   .data()[0:target_charge_   .size()], \
+                                  target_charge_dx_.data()[0:target_charge_dx_.size()], \
+                                  target_charge_dy_.data()[0:target_charge_dy_.size()], \
+                                  target_charge_dz_.data()[0:target_charge_dz_.size()], \
+                                  source_charge_   .data()[0:source_charge_   .size()], \
+                                  source_charge_dx_.data()[0:source_charge_dx_.size()], \
+                                  source_charge_dy_.data()[0:source_charge_dy_.size()], \
+                                  source_charge_dz_.data()[0:source_charge_dz_.size()])
+#endif
+}
+
+
+void Particles::update_source_term_on_host() const
+{
+#ifdef OPENACC_ENABLED
+    #pragma acc update self(source_term_.data()[0:source_term_.size()])
+#endif
+}
+
+
+void Particles::delete_from_device() const
+{
+#ifdef OPENACC_ENABLED
+    #pragma acc exit data delete(x_.data(), y_.data(), z_.data(), \
+                                 nx_.data(), ny_.data(), nz_.data(), \
+                                 area_.data(), source_term_.data(), \
+                                 target_charge_   .data(), target_charge_dx_.data(), \
+                                 target_charge_dy_.data(), target_charge_dz_.data(), \
+                                 source_charge_   .data(), source_charge_dx_.data(), \
+                                 source_charge_dy_.data(), source_charge_dz_.data(), \)
+#endif
+}
+
+
 static double triangle_area(std::array<std::array<double, 3>, 3> v)
 {
     std::array<double, 3> a, b, c;

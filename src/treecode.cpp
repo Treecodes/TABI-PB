@@ -531,3 +531,35 @@ void Treecode::output()
     
     if (params_.output_vtk_) particles_.output_VTK(potential_);
 }
+
+
+void Treecode::copyin_potential_to_device() const
+{
+#ifdef OPENACC_ENABLED
+    #pragma acc enter data copyin(potential_.data[0:potential_.size()])
+#endif
+}
+
+
+void Treecode::update_potential_on_device() const
+{
+#ifdef OPENACC_ENABLED
+    #pragma acc update device(potential_.data[0:potential_.size()])
+#endif
+}
+
+
+void Treecode::update_potential_on_host() const
+{
+#ifdef OPENACC_ENABLED
+    #pragma acc update self(potential_.data[0:potential_.size()])
+#endif
+}
+
+
+void Treecode::copyout_potential_to_host() const
+{
+#ifdef OPENACC_ENABLED
+    #pragma acc exit data copyout(potential_.data[0:potential_.size()])
+#endif
+}
