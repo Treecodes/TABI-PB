@@ -157,7 +157,7 @@ void Clusters::upward_pass()
             }
             
             if (exact_idx_z > -1) {
-                for (int id = 0; id < coeffs_y.size(); ++id) coeffs_y[id] = 0.;
+                for (int id = 0; id < coeffs_z.size(); ++id) coeffs_z[id] = 0.;
                 //std::memset(coeffs_z.data(), 0, num_interp_pts_per_node_ * sizeof(double));
                 coeffs_z[exact_idx_z] = 1.;
                 denominator_z = 1.;
