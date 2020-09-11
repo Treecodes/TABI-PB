@@ -13,12 +13,15 @@ add_executable(tabipb main.cpp
 #target_link_libraries(tabipb ${LAPACK_LIBRARIES})
 #include_directories(SYSTEM ${LAPACK_INCLUDE_PATH})
 
-target_compile_features(tabipb PUBLIC cxx_std_11)
-target_link_libraries(tabipb LAPACK::LAPACK)
+target_compile_features(tabipb PRIVATE cxx_std_11)
+target_link_libraries(tabipb PRIVATE LAPACK::LAPACK)
+#                      OpenMP::OpenMP_CXX OpenACC::OpenACC_CXX -acc)
+#target_compile_definitions(tabipb PRIVATE OPENACC_ENABLED)
+#target_compile_options(tabipb PRIVATE -Minfo=accel)
 
 #Math linking is unnecessary for Windows
 if(NOT WIN32)
-  target_link_libraries(tabipb m)
+  target_link_libraries(tabipb PRIVATE m)
 endif()
 
 install (TARGETS tabipb DESTINATION bin)

@@ -32,7 +32,7 @@
 
 #include <cmath>
 #include <cstdio>
-#include <cblas.h>
+#include <mkl_cblas.h>
 
 #include "treecode.h"
 

@@ -183,6 +183,8 @@ void Particles::compute_source_term(double eps_solute)
  * S1=sum(qk*G0)/e1 S2=sim(qk*G0')/e1 */
 
     source_term_.assign(2 * num_, 0.);
+    std::size_t num_atoms = molecule_.num_atoms();
+    std::size_t num = num_;
     
     const double* __restrict__ particles_x_ptr = x_.data();
     const double* __restrict__ particles_y_ptr = y_.data();
@@ -197,8 +199,18 @@ void Particles::compute_source_term(double eps_solute)
     
     double* __restrict__ particles_source_term_ptr = source_term_.data();
 
-    for (std::size_t i = 0; i < num_; ++i) {
-        for (std::size_t j = 0; j < molecule_.num_atoms(); ++j) {
+#ifdef OPENACC_ENABLED
+    #pragma acc parallel loop gang present(molecule_coords_ptr, molecule_charge_ptr, \
+                                      particles_x_ptr, particles_y_ptr, particles_z_ptr, \
+                                      particles_nx_ptr, particles_ny_ptr, particles_nz_ptr, \
+                                      particles_source_term_ptr)
+#endif
+    for (std::size_t i = 0; i < num; ++i) {
+
+#ifdef OPENACC_ENABLED
+        #pragma acc loop vector
+#endif
+        for (std::size_t j = 0; j < num_atoms; ++j) {
 
   /* r_s = distance of charge position to triangular */
             double x_dist = molecule_coords_ptr[3*j + 0] - particles_x_ptr[i];
@@ -218,8 +230,8 @@ void Particles::compute_source_term(double eps_solute)
             double G1 = cos_theta * G0 / dist;
 
   /* update source term */
-            particles_source_term_ptr[i]        += molecule_charge_ptr[j] * G0 / eps_solute;
-            particles_source_term_ptr[num_ + i] += molecule_charge_ptr[j] * G1 / eps_solute;
+            particles_source_term_ptr[i]       += molecule_charge_ptr[j] * G0 / eps_solute;
+            particles_source_term_ptr[num + i] += molecule_charge_ptr[j] * G1 / eps_solute;
         }
     }
 }
@@ -230,6 +242,8 @@ double Particles::compute_solvation_energy(std::vector<double>& potential) const
     double eps = params_.phys_eps_;
     double kappa = params_.phys_kappa_;
     double solvation_energy = 0.;
+    std::size_t num_atoms = molecule_.num_atoms();
+    std::size_t num = num_;
     
     const double* __restrict__ particles_x_ptr = x_.data();
     const double* __restrict__ particles_y_ptr = y_.data();
@@ -246,8 +260,18 @@ double Particles::compute_solvation_energy(std::vector<double>& potential) const
     
     const double* __restrict__ potential_ptr = potential.data();
     
-    for (std::size_t i = 0; i < num_; ++i) {
-        for (std::size_t j = 0; j < molecule_.num_atoms(); ++j) {
+#ifdef OPENACC_ENABLED
+    #pragma acc parallel loop gang present(molecule_coords_ptr, molecule_charge_ptr, \
+                                      particles_x_ptr, particles_y_ptr, particles_z_ptr, \
+                                      particles_nx_ptr, particles_ny_ptr, particles_nz_ptr, \
+                                      particles_area_ptr, potential_ptr)
+#endif
+    for (std::size_t i = 0; i < num; ++i) {
+
+#ifdef OPENACC_ENABLED
+        #pragma acc loop vector
+#endif
+        for (std::size_t j = 0; j < num_atoms; ++j) {
         
             double x_dist = particles_x_ptr[i] - molecule_coords_ptr[3*j + 0];
             double y_dist = particles_y_ptr[i] - molecule_coords_ptr[3*j + 1];
@@ -270,7 +294,7 @@ double Particles::compute_solvation_energy(std::vector<double>& potential) const
             double L2 = G0 - Gk;
 
             solvation_energy += molecule_charge_ptr[j] * particles_area_ptr[i]
-                              * (L1 * potential_ptr[i] + L2 * potential_ptr[num_ + i]);
+                              * (L1 * potential_ptr[i] + L2 * potential_ptr[num + i]);
         }
     }
 
