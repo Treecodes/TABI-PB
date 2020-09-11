@@ -1,7 +1,9 @@
+#include <iterator>
 #include <vector>
 #include <string>
 #include <fstream>
 #include <sstream>
+#include <cmath>
 #include <cstddef>
 
 #include "params.h"
@@ -48,17 +50,25 @@ void Molecule::compute_coulombic_energy()
 {
     double coulombic_energy = 0.;
     double epsp = params_.phys_eps_solute_;
+    std::size_t num_atoms = num_atoms_;
     
     const double* __restrict__ molecule_coords_ptr = coords_.data();
     const double* __restrict__ molecule_charge_ptr = charge_.data();
 
-    for (std::size_t i = 0; i < num_atoms_; ++i) {
+#ifdef OPENACC_ENABLED
+    #pragma acc parallel loop gang present(molecule_coords_ptr, molecule_charge_ptr) \
+				   reduction(+:coulombic_energy)
+#endif
+    for (std::size_t i = 0; i < num_atoms; ++i) {
         double i_pos_x  = molecule_coords_ptr[3*i];
         double i_pos_y  = molecule_coords_ptr[3*i + 1];
         double i_pos_z  = molecule_coords_ptr[3*i + 2];
         double i_charge = molecule_charge_ptr[i];
         
-        for (std::size_t j = i+1; j < num_atoms_; ++j) {
+#ifdef OPENACC_ENABLED
+	#pragma acc loop vector reduction(+:coulombic_energy)
+#endif
+        for (std::size_t j = i+1; j < num_atoms; ++j) {
             double dist_x = i_pos_x - molecule_coords_ptr[3*j];
             double dist_y = i_pos_y - molecule_coords_ptr[3*j + 1];
             double dist_z = i_pos_z - molecule_coords_ptr[3*j + 2];
@@ -66,6 +76,7 @@ void Molecule::compute_coulombic_energy()
                               / std::sqrt(dist_x*dist_x + dist_y*dist_y + dist_z*dist_z);
         }
     }
+
     coulombic_energy_ = coulombic_energy;
 }
 

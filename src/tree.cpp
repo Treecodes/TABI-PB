@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <numeric>
 #include <iostream>
+#include <cmath>
 
 #include "tree.h"
 
@@ -15,7 +16,7 @@ Tree::Tree(class Particles& particles, const struct Params& params)
     max_depth_     = 0;
 
     // tree construction begins with a root on level 0, with no parent
-    Tree::construct(-1, 0, 0, particles_.num());
+    Tree::construct(0, 0, 0, particles_.num());
     particles_.reorder();
     
     leaves_.resize(num_nodes_);

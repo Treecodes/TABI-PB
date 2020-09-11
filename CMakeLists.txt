@@ -25,32 +25,18 @@ set(EXECUTABLE_INSTALL_PATH bin)
 ################################################
 file(MAKE_DIRECTORY build/bin)
 
-set(BLA_DEFINITIONS)
-set(BLA_STATIC ON)
+set(BLA_VENDOR Intel10_64lp)
+find_package(LAPACK REQUIRED)
 
-# user defined options for MKL
-option(MKL_Threading "Use MKL parallel" True)
-set(MKL_Library_Type "Single Dynamic Library" CACHE STRING "Choose the type of MKL library.")
-set_property(CACHE MKL_Library_Type PROPERTY STRINGS
-    "Single Dynamic Library" "Static" "Dynamic")
-set(MKL_Interface "lp64" CACHE STRING "for Intel(R)64 compatible arch: ilp64/lp64 or for ia32 arch: cdecl/stdcall")
-set_property(CACHE MKL_Interface PROPERTY STRINGS
-    "lp64" "ilp64" "cdecl" "stdcall")
+set(OPENACC_ACCEL_TARGET tesla)
+find_package(OpenACC)
 
-find_package(MKL REQUIRED)
+find_package(OpenMP)
 
-if (MKL_FOUND)
-  set(BLA_INCLUDE_DIR ${MKL_INCLUDE_DIR})
-  set(BLAS_LIBRARIES ${MKL_LIBRARIES})
-  set(BLA_DEFINITIONS USE_MKL)
-endif()
-
-message(STATUS "BLAS Libraries: ${BLAS_LIBRARIES}")
-set(LAPACK_LIBRARIES /opt/intel/mkl/lib/libmkl_rt.dylib)
-set(LAPACK_INCLUDE_PATH /opt/intel/mkl/include)
+#set(LAPACK_LIBRARIES /opt/intel/mkl/lib/libmkl_rt.dylib)
+#set(LAPACK_INCLUDE_PATH /opt/intel/mkl/include)
 
 
-# FFLAGS depend on the compiler
 get_filename_component (CXX_COMPILER_NAME ${CMAKE_CXX_COMPILER} NAME)
 
 set (CMAKE_CXX_FLAGS_RELEASE "-O3")

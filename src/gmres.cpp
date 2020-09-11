@@ -28,8 +28,9 @@
 	-lf2c -lm   (in that order)
  */
 
-#define max(a,b) ((a) >= (b) ? (a) : (b))
+#define MAX(a,b) ((a) >= (b) ? (a) : (b))
 
+#include <cmath>
 #include <cstdio>
 #include <mkl_cblas.h>
 
@@ -184,7 +185,7 @@ int Treecode::gmres_(long int n, const double *b, double *x, long int *restrt, d
 
     if (n < 0) {
 	*info = -1;
-    } else if (ldw < max(1,n)) {
+    } else if (ldw < MAX(1,n)) {
 	*info = -2;
     } else if (*iter <= 0) {
 	*info = -3;
@@ -298,7 +299,7 @@ L30:
 
     cblas_drot(c__1, &work[i + s * ldw], ldw, &work[i + 1 + s * ldw], 
 	    ldw, h[i + cs * ldh], h[i + sn * ldh]);
-    *resid = (d__1 = work[i + 1 + s * ldw], fabs(d__1)) / bnrm2;
+    *resid = (d__1 = work[i + 1 + s * ldw], std::fabs(d__1)) / bnrm2;
 
     std::printf("iteration no. = %ld, error = %e\n", *iter, *resid);
 

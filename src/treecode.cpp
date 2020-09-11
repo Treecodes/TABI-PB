@@ -1,11 +1,12 @@
-#include <cstring>
+#include <algorithm>
 #include <iostream>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 
 #include "constants.h"
 #include "treecode.h"
-
-#include <cstdio>
-#include <cstdlib>
 
 void Treecode::run_GMRES()
 {

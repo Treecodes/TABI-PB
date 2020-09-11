@@ -95,6 +95,12 @@ void Clusters::upward_pass()
         std::size_t node_interp_pts_start = node_idx * num_interp_pts_per_node_;
         std::size_t node_charges_start    = node_idx * num_charges_per_node_;
         
+#ifdef OPENACC_ENABLED
+#pragma acc parallel loop present(particles_x_ptr, particles_y_ptr, particles_z_ptr, \
+                                  sources_q_ptr, sources_q_dx_ptr, sources_q_dy_ptr, sources_q_dz_ptr, \
+                                  clusters_x_ptr, clusters_y_ptr, clusters_z_ptr, \
+                                  clusters_q_ptr, clusters_q_dx_ptr, clusters_q_dy_ptr, clusters_q_dz_ptr)
+#endif
         for (std::size_t i = particle_idxs[0]; i < particle_idxs[1]; ++i) {
         
             double denominator_x = 0.;
@@ -114,6 +120,9 @@ void Clusters::upward_pass()
             double qq_dy = sources_q_dy_ptr[i];
             double qq_dz = sources_q_dz_ptr[i];
             
+#ifdef OPENACC_ENABLED
+            #pragma acc loop
+#endif
             for (int j = 0; j < num_interp_pts_per_node_; ++j) {
             
                 double dist_x = xx - clusters_x_ptr[node_interp_pts_start + j];
@@ -134,25 +143,31 @@ void Clusters::upward_pass()
             }
             
             if (exact_idx_x > -1) {
-                std::memset(coeffs_x.data(), 0, num_interp_pts_per_node_ * sizeof(double));
+                for (int id = 0; id < coeffs_x.size(); ++id) coeffs_x[id] = 0.;
+                //std::memset(coeffs_x.data(), 0, num_interp_pts_per_node_ * sizeof(double));
                 coeffs_x[exact_idx_x] = 1.;
                 denominator_x = 1.;
             }
             
             if (exact_idx_y > -1) {
-                std::memset(coeffs_y.data(), 0, num_interp_pts_per_node_ * sizeof(double));
+                for (int id = 0; id < coeffs_y.size(); ++id) coeffs_y[id] = 0.;
+                //std::memset(coeffs_y.data(), 0, num_interp_pts_per_node_ * sizeof(double));
                 coeffs_y[exact_idx_y] = 1.;
                 denominator_y = 1.;
             }
             
             if (exact_idx_z > -1) {
-                std::memset(coeffs_z.data(), 0, num_interp_pts_per_node_ * sizeof(double));
+                for (int id = 0; id < coeffs_y.size(); ++id) coeffs_y[id] = 0.;
+                //std::memset(coeffs_z.data(), 0, num_interp_pts_per_node_ * sizeof(double));
                 coeffs_z[exact_idx_z] = 1.;
                 denominator_z = 1.;
             }
             
             double denominator = 1. / (denominator_x * denominator_y * denominator_z);
             
+#ifdef OPENACC_ENABLED
+            #pragma acc loop collapse(3)
+#endif
             for (int k1 = 0; k1 < num_interp_pts_per_node_; ++k1) {
                 for (int k2 = 0; k2 < num_interp_pts_per_node_; ++k2) {
                     for (int k3 = 0; k3 < num_interp_pts_per_node_; ++k3) {
