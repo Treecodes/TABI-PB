@@ -361,18 +361,37 @@ void Clusters::clear_potentials()
 void Clusters::copyin_to_device() const
 {
 #ifdef OPENACC_ENABLED
-
-    #pragma acc enter data create(interp_x_.data()[0:interp_x_.size()], \
-                                  interp_y_.data()[0:interp_y_.size()], \
-                                  interp_y_.data()[0:interp_y_.size()], \
-                                  interp_charge_   .data()[0:interp_charge_   .size()], \
-                                  interp_charge_dx_.data()[0:interp_charge_dx_.size()], \
-                                  interp_charge_dy_.data()[0:interp_charge_dy_.size()], \
-                                  interp_charge_dz_.data()[0:interp_charge_dz_.size()], \
-                                  interp_potential_   .data()[0:interp_potential_   .size()], \
-                                  interp_potential_dx_.data()[0:interp_potential_dx_.size()], \
-                                  interp_potential_dy_.data()[0:interp_potential_dy_.size()], \
-                                  interp_potential_dz_.data()[0:interp_potential_dz_.size()])
+    const double* x_ptr = interp_x_ptr.data();
+    const double* y_ptr = interp_y_ptr.data();
+    const double* z_ptr = interp_z_ptr.data();
+    
+    std::size_t x_num = interp_x_ptr.size();
+    std::size_t y_num = interp_y_ptr.size();
+    std::size_t z_num = interp_z_ptr.size();
+    
+    const double* q_ptr    = interp_charge_.data();
+    const double* q_dx_ptr = interp_charge_dx_.data();
+    const double* q_dy_ptr = interp_charge_dy_.data();
+    const double* q_dz_ptr = interp_charge_dz_.data();
+    
+    std::size_t q_num    = interp_charge_.size();
+    std::size_t q_dx_num = interp_charge_dx_.size();
+    std::size_t q_dy_num = interp_charge_dy_.size();
+    std::size_t q_dz_num = interp_charge_dz_.size();
+    
+    const double* p_ptr    = interp_potential_.data();
+    const double* p_dx_ptr = interp_potential_dx_.data();
+    const double* p_dy_ptr = interp_potential_dy_.data();
+    const double* p_dz_ptr = interp_potential_dz_.data();
+    
+    std::size_t p_num    = interp_potential_.size();
+    std::size_t p_dx_num = interp_potential_dx_.size();
+    std::size_t p_dy_num = interp_potential_dy_.size();
+    std::size_t p_dz_num = interp_potential_dz_.size();
+    
+    #pragma acc enter data create(x_ptr[0:x_num], y_ptr[0:y_num], z_ptr[0:z_num], \
+                q_ptr[0:q_num], q_dx_ptr[0:q_dx_num], q_dy_ptr[0:q_dy_num], q_dz_ptr[0:q_dz_num], \
+                p_ptr[0:p_num], p_dx_ptr[0:p_dx_num], p_dy_ptr[0:p_dy_num], p_dz_ptr[0:p_dz_num])
 #endif
 }
 
@@ -380,11 +399,37 @@ void Clusters::copyin_to_device() const
 void Clusters::delete_from_device() const
 {
 #ifdef OPENACC_ENABLED
-    #pragma acc exit data delete(interp_x_.data(), interp_y_.data(), interp_z_.data(), \
-                                 interp_charge_   .data(), interp_charge_dx_.data(), \
-                                 interp_charge_dy_.data(), interp_charge_dz_.data(), \
-                                 interp_potential_   .data(), interp_potential_dx_.data(), \
-                                 interp_potential_dy_.data(), interp_potential_dz_.data())
+    const double* x_ptr = interp_x_ptr.data();
+    const double* y_ptr = interp_y_ptr.data();
+    const double* z_ptr = interp_z_ptr.data();
+    
+    std::size_t x_num = interp_x_ptr.size();
+    std::size_t y_num = interp_y_ptr.size();
+    std::size_t z_num = interp_z_ptr.size();
+    
+    const double* q_ptr    = interp_charge_.data();
+    const double* q_dx_ptr = interp_charge_dx_.data();
+    const double* q_dy_ptr = interp_charge_dy_.data();
+    const double* q_dz_ptr = interp_charge_dz_.data();
+    
+    std::size_t q_num    = interp_charge_.size();
+    std::size_t q_dx_num = interp_charge_dx_.size();
+    std::size_t q_dy_num = interp_charge_dy_.size();
+    std::size_t q_dz_num = interp_charge_dz_.size();
+    
+    const double* p_ptr    = interp_potential_.data();
+    const double* p_dx_ptr = interp_potential_dx_.data();
+    const double* p_dy_ptr = interp_potential_dy_.data();
+    const double* p_dz_ptr = interp_potential_dz_.data();
+    
+    std::size_t p_num    = interp_potential_.size();
+    std::size_t p_dx_num = interp_potential_dx_.size();
+    std::size_t p_dy_num = interp_potential_dy_.size();
+    std::size_t p_dz_num = interp_potential_dz_.size();
+    
+    #pragma acc exit data delete(x_ptr[0:x_num], y_ptr[0:y_num], z_ptr[0:z_num], \
+                q_ptr[0:q_num], q_dx_ptr[0:q_dx_num], q_dy_ptr[0:q_dy_num], q_dz_ptr[0:q_dz_num], \
+                p_ptr[0:p_num], p_dx_ptr[0:p_dx_num], p_dy_ptr[0:p_dy_num], p_dz_ptr[0:p_dz_num])
 #endif
 }
 
