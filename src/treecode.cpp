@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <iostream>
+#include <iomanip>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -10,24 +11,25 @@
 
 void Treecode::run_GMRES()
 {
-    static long int info;
     long int restrt = 10;
     long int length = 2 * particles_.num();
     long int ldw    = length;
     long int ldh    = restrt + 1;
+    
     double resid    = 1e-4;
-    
-    long int iter = 100;
-    
-    std::vector<double> work(ldw * (restrt + 4));
-    std::vector<double> h   (ldw * (restrt + 2));
+    num_iter_       = 100;
     
     std::fill(potential_.begin(), potential_.end(), 0);
     
-    Treecode::gmres_(length, particles_.source_term_ptr(), potential_.data(),
-                     &restrt, work.data(), ldw, h.data(), ldh, &iter, &resid, &info);
-
-    num_iter_ = iter;
+    int err_code = Treecode::gmres_(length, particles_.source_term_ptr(), potential_.data(),
+                                    restrt, ldw, ldh, num_iter_, resid);
+    
+    if (err_code) {
+        std::cout << "GMRES error code " << err_code << ". Exiting.";
+        std::exit(1);
+    }
+    
+    std::cout << "GMRES completed. " << num_iter_ << " iterations, " << resid << " residual.";
 }
 
 
@@ -506,6 +508,7 @@ void Treecode::output()
     auto pot_normal_min = *pot_normal_min_max.first;
     auto pot_normal_max = *pot_normal_min_max.second;
         
+    std::cout << std::fixed << std::setprecision(6);
     std::cout << "\n\n*** OUTPUT FOR TABI-PB RUN ***";
     std::cout << "\n\n    Solvation energy = " << solvation_energy
                                                << " kJ/mol";

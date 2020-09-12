@@ -25,16 +25,16 @@ set(EXECUTABLE_INSTALL_PATH bin)
 ################################################
 file(MAKE_DIRECTORY build/bin)
 
-set(BLA_VENDOR Intel10_64lp)
-find_package(LAPACK REQUIRED)
+#set(BLA_VENDOR Intel10_64lp)
+#find_package(LAPACK REQUIRED)
 
 set(OPENACC_ACCEL_TARGET tesla)
 find_package(OpenACC)
 
 find_package(OpenMP)
 
-#set(LAPACK_LIBRARIES /opt/intel/mkl/lib/libmkl_rt.dylib)
-#set(LAPACK_INCLUDE_PATH /opt/intel/mkl/include)
+set(LAPACK_LIBRARIES /opt/intel/mkl/lib/libmkl_rt.dylib)
+set(LAPACK_INCLUDE_PATH /opt/intel/mkl/include)
 
 
 get_filename_component (CXX_COMPILER_NAME ${CMAKE_CXX_COMPILER} NAME)

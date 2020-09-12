@@ -19,9 +19,9 @@ private:
     
     long int num_iter_;
     
-    int gmres_(long int n, const double* b, double* x, long int* restrt,
-            double* work, long int ldw, double* h, long int ldh,
-            long int* iter, double* residual, long int* info);
+    int gmres_(long int n, const double* b, double* x,
+               long int restrt, long int ldw, long int ldh,
+               long int& iter, double& residual);
     
     void matrix_vector(double alpha, double* potential_old, double beta,  double* potential_new);
                        

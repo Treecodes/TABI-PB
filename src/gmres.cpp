@@ -36,13 +36,6 @@
 
 #include "treecode.h"
 
-/* Table of constant values */
-
-constexpr long int c__1  =  1;
-constexpr double   c_b7  = -1.;
-constexpr double   c_b8  =  1.;
-constexpr double   c_b20 =  0.;
-
 /*  -- Iterative template routine --
 *     Univ. of Tennessee and Oak Ridge National Laboratory
 *     October 1, 1993
@@ -152,286 +145,194 @@ constexpr double   c_b20 =  0.;
 *  ============================================================
 */
 
+static int update_(long int, long int, double *, double *, long int,
+                   double *, double *, double *, long int);
+static  int basis_(long int, long int, double *, double *, long int, double *);
 
 //*****************************************************************
-int Treecode::gmres_(long int n, const double *b, double *x, long int *restrt, double *work,
-                     long int ldw, double *h, long int ldh, long int *iter, double *resid,
-                     long int *info)
+int Treecode::gmres_(long int n, const double *b, double *x,
+                     long int restrt, long int ldw, long int ldh,
+                     long int& iter, double& resid)
 {
-    /* System generated locals */
-    long int work_offset, h_offset, i__1;
-    double d__1;
+    std::vector<double> work_vec(ldw * (restrt + 4));
+    std::vector<double> h_vec   (ldw * (restrt + 2));
+    
+    double* work = work_vec.data();
+    double* h    = h_vec.data();
 
-    /* Local variables */
-    static double bnrm2, rnorm, aa, bb, tol;
-    static long int i, k, r, s, v, w, y, maxit, cs, av, sn;
-    extern /* Subroutine */ int update_(long int *, long int, double *, double *, long int,
-                                        double *, double *, double *, long int);
-    extern /* Subroutine */ int basis_(long int *, long int, double *, double *, long int, double *);
-
-    /* Parameter adjustments */
-
-    h_offset = ldh + 1;
-    h -= h_offset;
-    work_offset = ldw + 1;
-    work -= work_offset;
-    --x;
-    --b;
-
-    /* Executable Statements */
-    *info = 0;
 
 /*     Test the input parameters. */
 
     if (n < 0) {
-	*info = -1;
+        return -1;
     } else if (ldw < MAX(1,n)) {
-	*info = -2;
-    } else if (*iter <= 0) {
-	*info = -3;
-    } else if (ldh < *restrt + 1) {
-	*info = -4;
-    }
-    if (*info != 0) {
-	return 0;
+        return -2;
+    } else if (iter <= 0) {
+        return -3;
+    } else if (ldh < restrt + 1) {
+        return -4;
     }
 
-    maxit = *iter;
-    tol = *resid;
+    long int maxit = iter;
+    double tol = resid;
 
-/*     Alias workspace columns. */
-
-    r = 1;
-    s = r + 1;
-    w = s + 1;
-    y = w;
-    av = y;
-    v = av + 1;
 
 /*     Store the Givens parameters in matrix H. */
-
-    cs = *restrt + 1;
-    sn = cs + 1;
-
 /*     Set initial residual (AV is temporary workspace here). */
 
-    cblas_dcopy(n, &b[1], c__1, &work[av * ldw + 1], c__1);
+    cblas_dcopy(n, b, 1, &work[2 * ldw], 1);
 
-    if (cblas_dnrm2(n, &x[1], c__1) != 0.) {
-/*        AV is temporary workspace here. */
+    if (cblas_dnrm2(n, x, 1) != 0.) {
+        cblas_dcopy(n, b, 1, &work[2 * ldw], 1);
+        Treecode::matrix_vector(-1., x, 1., &work[2 * ldw]);
+    }
 
-		cblas_dcopy(n, &b[1], c__1, &work[av * ldw + 1], c__1);
-		Treecode::matrix_vector(c_b7, &x[1], c_b8, &work[av * ldw + 1]);
-	}
+    Treecode::precondition(work, &work[2 * ldw]);
 
-    Treecode::precondition(&work[r * ldw + 1], &work[av * ldw + 1]);
-
-    bnrm2 = cblas_dnrm2(n, &b[1], c__1);
+    double bnrm2 = cblas_dnrm2(n, b, 1);
     if (bnrm2 == 0.) {
-	bnrm2 = 1.;
+        bnrm2 = 1.;
     }
-    if (cblas_dnrm2(n, &work[r * ldw + 1], c__1) / bnrm2 < tol) {
-	goto L70;
-    }
-
-    *iter = 0;
-
-L10:
-
-    i = 0;
-
-/*        Construct the first column of V. */
-
-    cblas_dcopy(n, &work[r * ldw + 1], c__1, &work[v * ldw + 1], c__1);
-    rnorm = cblas_dnrm2(n, &work[v * ldw + 1], c__1);
-    d__1 = 1. / rnorm;
-    cblas_dscal(n, d__1, &work[v * ldw + 1], c__1);
-
-/*        Initialize S to the elementary vector E1 scaled by RNORM. */
-
-    work[s * ldw + 1] = rnorm;
-    i__1 = n;
-    for (k = 2; k <= i__1; ++k) {
-	work[k + s * ldw] = 0.;
-/* L20: */
-    }
-
-L30:
-
-    ++i;
-    ++(*iter);
-
-    Treecode::matrix_vector(c_b8, &work[(v + i - 1) * ldw + 1], c_b20, &work[av * ldw + 1]);
     
-	Treecode::precondition(&work[w * ldw + 1], &work[av * ldw + 1]);
-
-/*           Construct I-th column of H orthnormal to the previous */
-/*           I-1 columns. */
-
-    basis_(&i, n, &h[i * ldh + 1], &work[v * ldw + 1], ldw, &work[w *
-	     ldw + 1]);
-
-/*           Apply Givens rotations to the I-th column of H. This */
-/*           "updating" of the QR factorization effectively reduces */
-/*           the Hessenberg matrix to upper triangular form during */
-/*           the RESTRT iterations. */
-
-    i__1 = i - 1;
-    for (k = 1; k <= i__1; ++k) {
-	cblas_drot(c__1, &h[k + i * ldh], ldh, &h[k + 1 + i * ldh], ldh, h[
-		k + cs * ldh], h[k + sn * ldh]);
-/* L40: */
+    if (cblas_dnrm2(n, work, 1) / bnrm2 < tol) {
+	    return 0;
     }
 
-/*           Construct the I-th rotation matrix, and apply it to H so that
- */
-/*           H(I+1,I) = 0. */
+    iter = 0;
 
-    aa = h[i + i * ldh];
-    bb = h[i + 1 + i * ldh];
-    cblas_drotg(&aa, &bb, &h[i + cs * ldh], &h[i + sn * ldh]);
-    cblas_drot(c__1, &h[i + i * ldh], ldh, &h[i + 1 + i * ldh], ldh, h[i + 
-	    cs * ldh], h[i + sn * ldh]);
+    while (true) {
 
-/*           Apply the I-th rotation matrix to [ S(I), S(I+1) ]'. This */
-/*           gives an approximation of the residual norm. If less than */
-/*           tolerance, update the approximation vector X and quit. */
+    /*        Construct the first column of V. */
 
-    cblas_drot(c__1, &work[i + s * ldw], ldw, &work[i + 1 + s * ldw], 
-	    ldw, h[i + cs * ldh], h[i + sn * ldh]);
-    *resid = (d__1 = work[i + 1 + s * ldw], std::fabs(d__1)) / bnrm2;
+        cblas_dcopy(n, work, 1, &work[3 * ldw], 1);
+        double rnorm = cblas_dnrm2(n, &work[3 * ldw], 1);
+        cblas_dscal(n, 1. / rnorm, &work[3 * ldw], 1);
 
-    std::printf("iteration no. = %ld, error = %e\n", *iter, *resid);
+    /*        Initialize S to the elementary vector E1 scaled by RNORM. */
 
-    if (*resid <= tol) {
-	update_(&i, n, &x[1], &h[h_offset], ldh, &work[y * ldw + 1], &
-		work[s * ldw + 1], &work[v * ldw + 1], ldw);
-	goto L70;
-    }
-    if (*iter == maxit) {
-	goto L50;
-    }
-    if (i < *restrt) {
-	goto L30;
-    }
+        work[ldw] = rnorm;
+        for (long int k = 1; k < n; ++k) {
+            work[k + ldw] = 0.;
+        }
 
-L50:
+        for (long int i = 0; i < restrt; ++i) {
+            ++iter;
 
-/*        Compute current solution vector X. */
+            Treecode::matrix_vector(1., &work[(3 + i) * ldw], 0., &work[2 * ldw]);
+            
+            Treecode::precondition(&work[2 * ldw], &work[2 * ldw]);
 
-    update_(restrt, n, &x[1], &h[h_offset], ldh, &work[y * ldw + 1], &
-	    work[s * ldw + 1], &work[v * ldw + 1], ldw);
+        /*           Construct I-th column of H orthnormal to the previous */
+        /*           I-1 columns. */
 
-/*        Compute residual vector R, find norm, then check for tolerance. 
-*/
-/*        (AV is temporary workspace here.) */
+            basis_(i+1, n, &h[i * ldh], &work[3 * ldw], ldw, &work[2 * ldw]);
 
-    cblas_dcopy(n, &b[1], c__1, &work[av * ldw + 1], c__1);
-    Treecode::matrix_vector(c_b7, &x[1], c_b8, &work[av * ldw + 1]);
-    Treecode::precondition(&work[r * ldw + 1], &work[av * ldw + 1]);
-    work[i + 1 + s * ldw] = cblas_dnrm2(n, &work[r * ldw + 1], c__1);
-    *resid = work[i + 1 + s * ldw] / bnrm2;
-    if (*resid <= tol) {
-	goto L70;
-    }
-    if (*iter == maxit) {
-	goto L60;
-    }
+        /*           Apply Givens rotations to the I-th column of H. This */
+        /*           "updating" of the QR factorization effectively reduces */
+        /*           the Hessenberg matrix to upper triangular form during */
+        /*           the RESTRT iterations. */
+
+            for (long int k = 0; k < i; ++k) {
+                cblas_drot(1, &h[k + i * ldh], ldh, &h[k + 1 + i * ldh],
+                           ldh, h[k + restrt * ldh], h[k + (restrt + 1) * ldh]);
+            }
+
+        /*           Construct the I-th rotation matrix, and apply it to H so that */
+        /*           H(I+1,I) = 0. */
+
+            double aa = h[i * (ldh + 1)];
+            double bb = h[i * (ldh + 1) + 1];
+            
+            cblas_drotg(&aa, &bb, &h[i + (restrt)     * ldh],
+                                  &h[i + (restrt + 1) * ldh]);
+                                  
+            cblas_drot(1,   &h[i * (ldh + 1)],
+                       ldh, &h[i * (ldh + 1) + 1],
+                       ldh,  h[i + (restrt)     * ldh],
+                             h[i + (restrt + 1) * ldh]);
+
+        /*           Apply the I-th rotation matrix to [ S(I), S(I+1) ]'. This */
+        /*           gives an approximation of the residual norm. If less than */
+        /*           tolerance, update the approximation vector X and quit. */
+
+            cblas_drot(1,   &work[i + ldw],
+                       ldw, &work[i + ldw + 1],
+                       ldw, h[i + (restrt)     * ldh],
+                            h[i + (restrt + 1) * ldh]);
+                            
+            resid = std::fabs(work[i + 1 + ldw]) / bnrm2;
+
+            std::printf("iteration no. = %ld, error = %e\n", iter, resid);
+
+            if (resid <= tol) {
+                update_(i+1, n, x, h, ldh, &work[2 * ldw], &work[ldw], &work[3 * ldw], ldw);
+                return 0;
+            }
+        }
+
+    /*        Compute current solution vector X. */
+
+        update_(restrt, n, x, h, ldh, &work[2 * ldw], &
+                work[ldw], &work[3 * ldw], ldw);
+
+    /*        Compute residual vector R, find norm, then check for tolerance. */
+
+        cblas_dcopy(n, b, 1, &work[2 * ldw], 1);
+        
+        Treecode::matrix_vector(-1., x, 1., &work[2 * ldw]);
+        Treecode::precondition(work, &work[2 * ldw]);
+        
+        work[restrt + ldw] = cblas_dnrm2(n, work, 1);
+        resid = work[restrt + ldw] / bnrm2;
+        
+        if (resid <= tol) {
+            return 0;
+        }
+        
+        if (iter == maxit) {
+            return 1;
+        }
 
 /*        Restart. */
-
-    goto L10;
-
-L60:
-
-/*     Iteration fails. */
-
-    *info = 1;
-    return 0;
-
-L70:
-
-/*     Iteration successful; return. */
-
-    return 0;
-
-/*     End of GMRES */
-
-} /* gmres_ */
+    }
+}
 
 
 /*     =============================================================== */
-/* Subroutine */ int update_(long int *i, long int n, double *x, double *h, long int ldh,
-                             double *y, double *s, double *v, long int ldv)
+static int update_(long int i, long int n, double *x, double *h, long int ldh,
+                   double *y, double *s, double *v, long int ldv)
 {
-    /* System generated locals */
-    long int h_offset, v_offset;
-
 /*     This routine updates the GMRES iterated solution approximation. */
-
-
-/*     .. Executable Statements .. */
 
 /*     Solve H*Y = S for upper triangualar H. */
 
-    /* Parameter adjustments */
-    v_offset = ldv + 1;
-    v -= v_offset;
-    --s;
-    --y;
-    h_offset = ldh + 1;
-    h -= h_offset;
-    --x;
-
-    /* Function Body */
-    cblas_dcopy(*i, &s[1], c__1, &y[1], c__1);
+    cblas_dcopy(i, s, 1, y, 1);
     cblas_dtrsv(CblasColMajor, CblasUpper, CblasNoTrans, CblasNonUnit, 
-                *i, &h[h_offset], ldh, &y[1], c__1);
+                i, h, ldh, y, 1);
 
 /*     Compute current solution vector X = X + V*Y. */
 
-    cblas_dgemv(CblasColMajor, CblasNoTrans, n, *i, c_b8, 
-                &v[v_offset], ldv, &y[1], c__1, c_b8, &x[1], c__1);
+    cblas_dgemv(CblasColMajor, CblasNoTrans, n, i, 1.,
+                v, ldv, y, 1, 1., x, 1);
 
-		return 0;
-
-} /* update_ */
+    return 0;
+}
 
 
 /*     ========================================================= */
-/* Subroutine */ int basis_(long int *i, long int n, double *h, double *v, long int ldv, double *w)
+static int basis_(long int i, long int n, double *h, double *v, long int ldv, double *w)
 {
-    /* System generated locals */
-    long int v_offset, i__1;
-    double d__1;
-
-    /* Local variables */
-    static long int k;
-
-
 /*     Construct the I-th column of the upper Hessenberg matrix H */
 /*     using the Gram-Schmidt process on V and W. */
 
-
-    /* Parameter adjustments */
-    --w;
-    v_offset = ldv + 1;
-    v -= v_offset;
-    --h;
-
-    /* Function Body */
-    i__1 = *i;
-    for (k = 1; k <= i__1; ++k) {
-	h[k] = cblas_ddot(n, &w[1], c__1, &v[k * ldv + 1], c__1);
-	d__1 = -h[k];
-	cblas_daxpy(n, d__1, &v[k * ldv + 1], c__1, &w[1], c__1);
-/* L10: */
+    for (long int k = 0; k < i; ++k) {
+        h[k] = cblas_ddot(n, w, 1, &v[k * ldv], 1);
+        cblas_daxpy(n, -h[k], &v[k * ldv], 1, w, 1);
     }
-    h[*i + 1] = cblas_dnrm2(n, &w[1], c__1);
-    cblas_dcopy(n, &w[1], c__1, &v[(*i + 1) * ldv + 1], c__1);
-    d__1 = 1. / h[*i + 1];
-    cblas_dscal(n, d__1, &v[(*i + 1) * ldv + 1], c__1);
+    
+    h[i] = cblas_dnrm2(n, w, 1);
+    cblas_dcopy(n, w, 1, &v[i * ldv], 1);
+    cblas_dscal(n, 1. / h[i], &v[i * ldv], 1);
 
     return 0;
-
 }
