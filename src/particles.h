@@ -45,7 +45,6 @@ private:
     std::vector<std::size_t> order_;
     
     void generate_particles(Params::Mesh, double, double);
-    void compute_source_term(double);
     
 public:
     Particles(const class Molecule&, const struct Params&);
@@ -87,6 +86,7 @@ public:
     const double* source_charge_dy_ptr() const { return source_charge_dy_.data(); };
     const double* source_charge_dz_ptr() const { return source_charge_dz_.data(); };
     
+    void compute_source_term();
     void copyin_to_device() const;
     void update_source_term_on_host() const;
     void delete_from_device() const;

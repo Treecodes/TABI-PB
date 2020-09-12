@@ -28,7 +28,6 @@ Particles::Particles(const class Molecule& mol, const struct Params& params)
     : molecule_(mol), params_(params)
 {
     Particles::generate_particles(params_.mesh_, params_.mesh_density_, params_.mesh_probe_radius_);
-    Particles::compute_source_term(params_.phys_eps_solute_);
     
     source_charge_.assign(num_, 0.);
     source_charge_dx_.assign(num_, 0.);
@@ -39,6 +38,8 @@ Particles::Particles(const class Molecule& mol, const struct Params& params)
     target_charge_dx_.assign(num_, 0.);
     target_charge_dy_.assign(num_, 0.);
     target_charge_dz_.assign(num_, 0.);
+    
+    source_term_.assign(num_ * 2, 0.);
     
     order_.resize(num_);
     std::iota(order_.begin(), order_.end(), 0);
@@ -177,12 +178,13 @@ void Particles::generate_particles(Params::Mesh mesh, double mesh_density, doubl
 
 
 
-void Particles::compute_source_term(double eps_solute)
+void Particles::compute_source_term()
 {
 /* this computes the source term where
  * S1=sum(qk*G0)/e1 S2=sim(qk*G0')/e1 */
 
-    source_term_.assign(2 * num_, 0.);
+    double eps_solute = params_.phys_eps_solute_;
+
     std::size_t num_atoms = molecule_.num_atoms();
     std::size_t num = num_;
     
@@ -234,6 +236,8 @@ void Particles::compute_source_term(double eps_solute)
             particles_source_term_ptr[num + i] += molecule_charge_ptr[j] * G1 / eps_solute;
         }
     }
+    
+    Particles::update_source_term_on_host();
 }
 
 
@@ -466,18 +470,41 @@ void Particles::compute_charges(const std::vector<double>& potential)
 }
 
 
-void Particles::compute_charges(const double* potential)
+void Particles::compute_charges(const double* __restrict__ potential_ptr)
 {
-    for (std::size_t i = 0; i < num_; ++i) {
-        target_charge_   [i] = constants::ONE_OVER_4PI;
-        target_charge_dx_[i] = constants::ONE_OVER_4PI * nx_[i];
-        target_charge_dy_[i] = constants::ONE_OVER_4PI * ny_[i];
-        target_charge_dz_[i] = constants::ONE_OVER_4PI * nz_[i];
+    std::size_t num = num_;
+
+    const double* __restrict__ nx_ptr = nx_.data();
+    const double* __restrict__ ny_ptr = ny_.data();
+    const double* __restrict__ nz_ptr = nz_.data();
+    const double* __restrict__ area_ptr = area_.data();
+
+    double* __restrict__ target_q_ptr    = target_charge_.data();
+    double* __restrict__ target_q_dx_ptr = target_charge_dx_.data();
+    double* __restrict__ target_q_dy_ptr = target_charge_dy_.data();
+    double* __restrict__ target_q_dz_ptr = target_charge_dz_.data();
+
+    double* __restrict__ source_q_ptr    = source_charge_.data();
+    double* __restrict__ source_q_dx_ptr = source_charge_dx_.data();
+    double* __restrict__ source_q_dy_ptr = source_charge_dy_.data();
+    double* __restrict__ source_q_dz_ptr = source_charge_dz_.data();
+
+#ifdef OPENACC_ENABLED
+    #pragma acc parallel loop present(nx_ptr, ny_ptr, nz_ptr, area_ptr, potential_ptr, \
+                target_q_ptr, target_q_dx_ptr, target_q_dy_ptr, target_q_dz_ptr, \
+                source_q_ptr, source_q_dx_ptr, source_q_dy_ptr, source_q_dz_ptr)
+
+#endif
+    for (std::size_t i = 0; i < num; ++i) {
+        target_q_ptr   [i] = constants::ONE_OVER_4PI;
+        target_q_dx_ptr[i] = constants::ONE_OVER_4PI * nx_ptr[i];
+        target_q_dy_ptr[i] = constants::ONE_OVER_4PI * ny_ptr[i];
+        target_q_dz_ptr[i] = constants::ONE_OVER_4PI * nz_ptr[i];
         
-        source_charge_   [i] =          area_[i] * potential[num_ + i];
-        source_charge_dx_[i] = nx_[i] * area_[i] * potential[i];
-        source_charge_dy_[i] = ny_[i] * area_[i] * potential[i];
-        source_charge_dz_[i] = nz_[i] * area_[i] * potential[i];
+        source_q_ptr   [i] =             area_ptr[i] * potential_ptr[num + i];
+        source_q_dx_ptr[i] = nx_ptr[i] * area_ptr[i] * potential_ptr[i];
+        source_q_dy_ptr[i] = ny_ptr[i] * area_ptr[i] * potential_ptr[i];
+        source_q_dz_ptr[i] = nz_ptr[i] * area_ptr[i] * potential_ptr[i];
     }
 }
 

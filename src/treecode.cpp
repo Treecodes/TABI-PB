@@ -9,6 +9,16 @@
 #include "constants.h"
 #include "treecode.h"
 
+Treecode::Treecode(class Particles& particles, class Clusters& clusters,
+         const class Tree& tree, const class InteractionList& interaction_list,
+         const class Molecule& molecule, const struct Params& params)
+        : particles_(particles), clusters_(clusters), tree_(tree),
+          interaction_list_(interaction_list), molecule_(molecule), params_(params)
+{
+    potential_.assign(2 * particles_.num(), 0.);
+    Treecode::copyin_potential_to_device();
+}
+          
 void Treecode::run_GMRES()
 {
     long int restrt = 10;
@@ -19,10 +29,22 @@ void Treecode::run_GMRES()
     double resid    = 1e-4;
     num_iter_       = 100;
     
-    std::fill(potential_.begin(), potential_.end(), 0);
+    std::vector<double> work_vec(ldw * (restrt + 4));
+    std::vector<double> h_vec   (ldh * (restrt + 2));
     
+    double* work = work_vec.data();
+    double* h    = h_vec.data();
+
+#ifdef OPENACC_ENABLED
+    #pragma acc enter data create(work[0:work_vec.size()], h[0:h_vec.size()])
+#endif
+
     int err_code = Treecode::gmres_(length, particles_.source_term_ptr(), potential_.data(),
-                                    restrt, ldw, ldh, num_iter_, resid);
+                                    restrt, work, ldw, h, ldh, num_iter_, resid);
+
+#ifdef OPENACC_ENABLED
+    #pragma acc exit data delete(work, h)
+#endif
     
     if (err_code) {
         std::cout << "GMRES error code " << err_code << ". Exiting.";
@@ -33,8 +55,8 @@ void Treecode::run_GMRES()
 }
 
 
-void Treecode::matrix_vector(double alpha, double* potential_old,
-                             double beta,  double* potential_new)
+void Treecode::matrix_vector(double alpha, const double* __restrict__ potential_old,
+                             double beta,        double* __restrict__ potential_new)
 {
     double potential_coeff_1 = 0.5 * (1. +      params_.phys_eps_);
     double potential_coeff_2 = 0.5 * (1. + 1. / params_.phys_eps_);
@@ -42,6 +64,11 @@ void Treecode::matrix_vector(double alpha, double* potential_old,
     auto* potential_temp = (double *)std::malloc(potential_.size() * sizeof(double));
     std::memcpy(potential_temp, potential_new, potential_.size() * sizeof(double));
     std::memset(potential_new, 0, potential_.size() * sizeof(double));
+    
+#ifdef OPENACC_ENABLED
+    #pragma acc update device(potential_old[0:potential_.size()], \
+                              potential_new[0:potential_.size()])
+#endif
     
     particles_.compute_charges(potential_old);
     clusters_.upward_pass();
@@ -67,6 +94,10 @@ void Treecode::matrix_vector(double alpha, double* potential_old,
     
     clusters_.downward_pass(potential_new);
     
+#ifdef OPENACC_ENABLED
+    #pragma acc update host(potential_new[0:potential_.size()])
+#endif
+    
     for (std::size_t i = 0; i < potential_.size() / 2; ++i)
         potential_new[i] = beta * potential_temp[i]
                 + alpha * (potential_coeff_1 * potential_old[i] - potential_new[i]);
@@ -89,7 +120,8 @@ void Treecode::precondition(double *z, double *r)
 }
 
 
-void Treecode::particle_particle_interact(double* potential, double* potential_old,
+void Treecode::particle_particle_interact(      double* __restrict__ potential,
+                                          const double* __restrict__ potential_old,
                                           std::array<std::size_t, 2> target_node_particle_idxs,
                                           std::array<std::size_t, 2> source_node_particle_idxs)
 {
@@ -115,6 +147,11 @@ void Treecode::particle_particle_interact(double* potential, double* potential_o
     
     std::size_t num_particles = particles_.num();
 
+#ifdef OPENACC_ENABLED
+    #pragma acc parallel loop present(particles_x_ptr,  particles_y_ptr,  particles_z_ptr, \
+                                      particles_nx_ptr, particles_ny_ptr, particles_nz_ptr, \
+                                      particles_area_ptr, potential, potential_old)
+#endif
     for (std::size_t j = target_node_particle_begin; j < target_node_particle_end; ++j) {
         
         double target_x = particles_x_ptr[j];
@@ -125,6 +162,9 @@ void Treecode::particle_particle_interact(double* potential, double* potential_o
         double target_ny = particles_ny_ptr[j];
         double target_nz = particles_nz_ptr[j];
     
+#ifdef OPENACC_ENABLED
+        #pragma acc loop
+#endif
         for (std::size_t k = source_node_particle_begin; k < source_node_particle_end; ++k) {
         
             double source_x = particles_x_ptr[k];
@@ -174,7 +214,7 @@ void Treecode::particle_particle_interact(double* potential, double* potential_o
 }
 
 
-void Treecode::particle_cluster_interact(double* potential, 
+void Treecode::particle_cluster_interact(double* __restrict__ potential,
                                          std::array<std::size_t, 2> target_node_particle_idxs,
                                          std::size_t source_node_idx)
 {
@@ -209,7 +249,13 @@ void Treecode::particle_cluster_interact(double* potential,
     const double* __restrict__ clusters_q_dy_ptr = clusters_.interp_charge_dy_ptr();
     const double* __restrict__ clusters_q_dz_ptr = clusters_.interp_charge_dz_ptr();
     
-    
+#ifdef OPENACC_ENABLED
+    #pragma acc parallel loop present(particles_x_ptr, particles_y_ptr, particles_z_ptr, \
+                    targets_q_ptr, targets_q_dx_ptr, targets_q_dy_ptr, targets_q_dz_ptr, \
+                    clusters_x_ptr, clusters_y_ptr, clusters_z_ptr, \
+                    clusters_q_ptr, clusters_q_dx_ptr, clusters_q_dy_ptr, clusters_q_dz_ptr, \
+                    potential)
+#endif
     for (std::size_t j = target_node_particle_begin; j < target_node_particle_end; ++j) {
 
         double target_x = particles_x_ptr[j];
@@ -221,6 +267,10 @@ void Treecode::particle_cluster_interact(double* potential,
         double pot_comp_dy = 0.;
         double pot_comp_dz = 0.;
         
+#ifdef OPENACC_ENABLED
+        #pragma acc loop collapse(3) reduction(+:pot_comp_,   pot_comp_dx, \
+                                                 pot_comp_dy, pot_comp_dz)
+#endif
         for (int k1 = 0; k1 < num_interp_pts_per_node; ++k1) {
         for (int k2 = 0; k2 < num_interp_pts_per_node; ++k2) {
         for (int k3 = 0; k3 < num_interp_pts_per_node; ++k3) {
@@ -278,7 +328,8 @@ void Treecode::particle_cluster_interact(double* potential,
 }
 
 
-void Treecode::cluster_particle_interact(double* potential, std::size_t target_node_idx,
+void Treecode::cluster_particle_interact(double* __restrict__ potential,
+                                         std::size_t target_node_idx,
                                          std::array<std::size_t, 2> source_node_particle_idxs)
 {
     int num_interp_pts_per_node = clusters_.num_interp_pts_per_node();
@@ -311,6 +362,13 @@ void Treecode::cluster_particle_interact(double* potential, std::size_t target_n
     const double* __restrict__ sources_q_dy_ptr  = particles_.source_charge_dy_ptr();
     const double* __restrict__ sources_q_dz_ptr  = particles_.source_charge_dz_ptr();
     
+#ifdef OPENACC_ENABLED
+    #pragma acc parallel loop collapse(3) present(clusters_x_ptr, clusters_y_ptr, clusters_z_ptr, \
+                    clusters_p_ptr, clusters_p_dx_ptr, clusters_p_dy_ptr, clusters_p_dz_ptr, \
+                    particles_x_ptr, particles_y_ptr, particles_z_ptr, \
+                    sources_q_ptr, sources_q_dx_ptr, sources_q_dy_ptr, sources_q_dz_ptr, \
+                    potential)
+#endif
     for (int j1 = 0; j1 < num_interp_pts_per_node; ++j1) {
     for (int j2 = 0; j2 < num_interp_pts_per_node; ++j2) {
     for (int j3 = 0; j3 < num_interp_pts_per_node; ++j3) {
@@ -328,6 +386,10 @@ void Treecode::cluster_particle_interact(double* potential, std::size_t target_n
         double pot_comp_dy = 0.;
         double pot_comp_dz = 0.;
     
+#ifdef OPENACC_ENABLED
+        #pragma acc loop reduction(+:pot_comp_,   pot_comp_dx, \
+                                     pot_comp_dy, pot_comp_dz)
+#endif
         for (std::size_t k = source_node_particle_begin; k < source_node_particle_end; ++k) {
 
             double dx = target_x - particles_x_ptr[k];
@@ -379,7 +441,8 @@ void Treecode::cluster_particle_interact(double* potential, std::size_t target_n
 }
 
 
-void Treecode::cluster_cluster_interact(double* potential, std::size_t target_node_idx, 
+void Treecode::cluster_cluster_interact(double* __restrict__ potential,
+                                        std::size_t target_node_idx,
                                         std::size_t source_node_idx)
 {
     int num_interp_pts_per_node = clusters_.num_interp_pts_per_node();
@@ -407,7 +470,13 @@ void Treecode::cluster_cluster_interact(double* potential, std::size_t target_no
     const double* __restrict__ clusters_q_dx_ptr = clusters_.interp_charge_dx_ptr();
     const double* __restrict__ clusters_q_dy_ptr = clusters_.interp_charge_dy_ptr();
     const double* __restrict__ clusters_q_dz_ptr = clusters_.interp_charge_dz_ptr();
-    
+
+#ifdef OPENACC_ENABLED
+    #pragma acc parallel loop collapse(3) present(clusters_x_ptr, clusters_y_ptr, clusters_z_ptr, \
+                    clusters_p_ptr, clusters_p_dx_ptr, clusters_p_dy_ptr, clusters_p_dz_ptr, \
+                    clusters_q_ptr, clusters_q_dx_ptr, clusters_q_dy_ptr, clusters_q_dz_ptr, \
+                    potential)
+#endif
     for (int j1 = 0; j1 < num_interp_pts_per_node; j1++) {
     for (int j2 = 0; j2 < num_interp_pts_per_node; j2++) {
     for (int j3 = 0; j3 < num_interp_pts_per_node; j3++) {
@@ -425,6 +494,10 @@ void Treecode::cluster_cluster_interact(double* potential, std::size_t target_no
         double pot_comp_dy = 0.;
         double pot_comp_dz = 0.;
     
+#ifdef OPENACC_ENABLED
+        #pragma acc loop reduction(+:pot_comp_,   pot_comp_dx, \
+                                     pot_comp_dy, pot_comp_dz)
+#endif
         for (int k1 = 0; k1 < num_interp_pts_per_node; k1++) {
         for (int k2 = 0; k2 < num_interp_pts_per_node; k2++) {
         for (int k3 = 0; k3 < num_interp_pts_per_node; k3++) {
@@ -486,9 +559,12 @@ void Treecode::cluster_cluster_interact(double* potential, std::size_t target_no
 
 void Treecode::output()
 {
+    Treecode::update_potential_on_device();
+    auto solvation_energy = constants::UNITS_PARA  * particles_.compute_solvation_energy(potential_);
+    Treecode::update_potential_on_host();
+    
     particles_.unorder(potential_);
     
-    auto solvation_energy = constants::UNITS_PARA  * particles_.compute_solvation_energy(potential_);
     auto coulombic_energy = constants::UNITS_COEFF * molecule_.coulombic_energy();
     auto free_energy      = solvation_energy + coulombic_energy;
 
@@ -540,7 +616,7 @@ void Treecode::output()
 void Treecode::copyin_potential_to_device() const
 {
 #ifdef OPENACC_ENABLED
-    #pragma acc enter data copyin(potential_.data[0:potential_.size()])
+    #pragma acc enter data copyin(potential_.data()[0:potential_.size()])
 #endif
 }
 
@@ -548,7 +624,7 @@ void Treecode::copyin_potential_to_device() const
 void Treecode::update_potential_on_device() const
 {
 #ifdef OPENACC_ENABLED
-    #pragma acc update device(potential_.data[0:potential_.size()])
+    #pragma acc update device(potential_.data()[0:potential_.size()])
 #endif
 }
 
@@ -556,7 +632,7 @@ void Treecode::update_potential_on_device() const
 void Treecode::update_potential_on_host() const
 {
 #ifdef OPENACC_ENABLED
-    #pragma acc update self(potential_.data[0:potential_.size()])
+    #pragma acc update self(potential_.data()[0:potential_.size()])
 #endif
 }
 
@@ -564,6 +640,6 @@ void Treecode::update_potential_on_host() const
 void Treecode::copyout_potential_to_host() const
 {
 #ifdef OPENACC_ENABLED
-    #pragma acc exit data copyout(potential_.data[0:potential_.size()])
+    #pragma acc exit data copyout(potential_.data()[0:potential_.size()])
 #endif
 }

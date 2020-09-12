@@ -3,31 +3,6 @@
  * Original file description below.
  */
 
-/*                                                                                           
- * This file is part of CLAPACK, the f2c'ed version of LAPACK                                
- * hosted at netlib.org.                                                                     
- *                                                                                           
- * For more information, see the LAPACK User's Guide:                                        
- *                                                                                           
-  @BOOK{laug,                                                                                
-        AUTHOR = {Anderson, E. and Bai, Z. and Bischof, C. and                               
-                  Blackford, S. and Demmel, J. and Dongarra, J. and                          
-                  Du Croz, J. and Greenbaum, A. and Hammarling, S. and                       
-                  McKenney, A. and Sorensen, D.},                                            
-        TITLE = {{LAPACK} Users' Guide},                                                     
-        EDITION = {Third},                                                                   
-        PUBLISHER = {Society for Industrial and Applied Mathematics},                        
-        YEAR = {1999},                                                                       
-        ADDRESS = {Philadelphia, PA},                                                        
-        ISBN = {0-89871-447-8 (paperback)}  }                                                
- *                                                                                           
- */ 
-
-/* GMRES.f -- translated by f2c (version of 20 August 1993  13:15:44).
-   You must link the resulting object file with the libraries:
-	-lf2c -lm   (in that order)
- */
-
 #define MAX(a,b) ((a) >= (b) ? (a) : (b))
 
 #include <cmath>
@@ -150,16 +125,10 @@ static int update_(long int, long int, double *, double *, long int,
 static  int basis_(long int, long int, double *, double *, long int, double *);
 
 //*****************************************************************
-int Treecode::gmres_(long int n, const double *b, double *x,
-                     long int restrt, long int ldw, long int ldh,
+int Treecode::gmres_(long int n, const double *b, double *x, long int restrt,
+                     double* work, long int ldw, double* h, long int ldh,
                      long int& iter, double& resid)
 {
-    std::vector<double> work_vec(ldw * (restrt + 4));
-    std::vector<double> h_vec   (ldh * (restrt + 2));
-    
-    double* work = work_vec.data();
-    double* h    = h_vec.data();
-
 
 /*     Test the input parameters. */
 

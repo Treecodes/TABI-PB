@@ -29,7 +29,6 @@ Molecule::Molecule(struct Params& params) : params_(params)
     }
     
     num_atoms_ = radius_.size();
-    Molecule::compute_coulombic_energy();
 }
 
 

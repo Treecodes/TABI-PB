@@ -20,8 +20,6 @@ private:
 
     double coulombic_energy_;
 
-    void compute_coulombic_energy();
-
 public:
     Molecule(struct Params&);
     ~Molecule() = default;
@@ -34,6 +32,7 @@ public:
     const double* charge_ptr() const { return charge_.data(); };
     const double* radius_ptr() const { return radius_.data(); };
     
+    void compute_coulombic_energy();
     void copyin_to_device() const;
     void delete_from_device() const;
 };

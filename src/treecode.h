@@ -19,34 +19,33 @@ private:
     
     long int num_iter_;
     
-    int gmres_(long int n, const double* b, double* x,
-               long int restrt, long int ldw, long int ldh,
+    int gmres_(long int n, const double* b, double* x, long int restrt,
+               double* work, long int ldw, double *h, long int ldh,
                long int& iter, double& residual);
     
-    void matrix_vector(double alpha, double* potential_old, double beta,  double* potential_new);
+    void matrix_vector(double alpha, const double* __restrict__ potential_old,
+                       double beta,        double* __restrict__ potential_new);
                        
     void precondition(double* z, double* r);
     
-    void particle_particle_interact(double* potential, double* potential_old,
+    void particle_particle_interact(double* __restrict__ potential,
+                              const double* __restrict__ potential_old,
             std::array<std::size_t, 2> target_node_particle_idxs,
             std::array<std::size_t, 2> source_node_particle_idxs);
     
-    void particle_cluster_interact(double* potential,
+    void particle_cluster_interact(double* __restrict__ potential,
             std::array<std::size_t, 2> target_node_particle_idxs, std::size_t source_node_idx);
                                    
-    void cluster_particle_interact(double* potential,
+    void cluster_particle_interact(double* __restrict__ potential,
             std::size_t target_node_idx, std::array<std::size_t, 2> source_node_particle_idxs);
             
-    void cluster_cluster_interact(double* potential,
+    void cluster_cluster_interact(double* __restrict__ potential,
             std::size_t target_node_idx, std::size_t source_node_idx);
     
 public:
     Treecode(class Particles& particles, class Clusters& clusters,
              const class Tree& tree, const class InteractionList& interaction_list,
-             const class Molecule& molecule, const struct Params& params)
-        : particles_(particles), clusters_(clusters), tree_(tree),
-          interaction_list_(interaction_list), molecule_(molecule), params_(params)
-          { potential_.resize(2 * particles_.num()); };
+             const class Molecule& molecule, const struct Params& params);
     ~Treecode() = default;
     
     void run_GMRES();

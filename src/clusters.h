@@ -34,8 +34,6 @@ private:
     std::vector<double> interp_potential_dy_;
     std::vector<double> interp_potential_dz_;
     
-    void compute_all_interp_pts();
-    
     
 public:
     Clusters(const class Particles& particles, const class Tree& tree, const struct Params& params);
@@ -65,6 +63,7 @@ public:
     double* interp_potential_dy_ptr() { return interp_potential_dy_.data(); };
     double* interp_potential_dz_ptr() { return interp_potential_dz_.data(); };
     
+    void compute_all_interp_pts();
     void copyin_to_device() const;
     void delete_from_device() const;
     
