@@ -361,6 +361,7 @@ void Clusters::clear_potentials()
 void Clusters::copyin_to_device() const
 {
 #ifdef OPENACC_ENABLED
+
     #pragma acc enter data create(interp_x_.data()[0:interp_x_.size()], \
                                   interp_y_.data()[0:interp_y_.size()], \
                                   interp_y_.data()[0:interp_y_.size()], \
@@ -383,7 +384,7 @@ void Clusters::delete_from_device() const
                                  interp_charge_   .data(), interp_charge_dx_.data(), \
                                  interp_charge_dy_.data(), interp_charge_dz_.data(), \
                                  interp_potential_   .data(), interp_potential_dx_.data(), \
-                                 interp_potential_dy_.data(), interp_potential_dz_.data(), \)
+                                 interp_potential_dy_.data(), interp_potential_dz_.data())
 #endif
 }
 

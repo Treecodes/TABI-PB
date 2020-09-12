@@ -83,8 +83,14 @@ void Molecule::compute_coulombic_energy()
 void Molecule::copyin_to_device() const
 {
 #ifdef OPENACC_ENABLED
-    #pragma acc enter data copyin(coords_.data()[0:coords_.size()], \
-                                  charge_.data()[0:coords_.size()])
+    const double* coords_ptr = coords_.data();
+    const double* charge_ptr = charge_.data();
+
+    std::size_t coords_num = coords_.size();
+    std::size_t charge_num = charge_.size();
+
+    #pragma acc enter data copyin(coords_ptr[0:coords_num], \
+                                  charge_ptr[0:charge_num])
 #endif
 }
 
@@ -92,6 +98,9 @@ void Molecule::copyin_to_device() const
 void Molecule::delete_from_device() const
 {
 #ifdef OPENACC_ENABLED
-    #pragma acc exit data delete(coords_.data(), charge_.data())
+    const double* coords_ptr = coords_.data();
+    const double* charge_ptr = charge_.data();
+
+    #pragma acc exit data delete(coords_ptr, charge_ptr)
 #endif
 }
