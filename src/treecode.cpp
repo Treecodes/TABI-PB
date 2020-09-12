@@ -39,6 +39,7 @@ void Treecode::run_GMRES()
     #pragma acc enter data create(work[0:work_vec.size()], h[0:h_vec.size()])
 #endif
 
+    std::cout << "About to call gmres_ ..." << std::endl;
     int err_code = Treecode::gmres_(length, particles_.source_term_ptr(), potential_.data(),
                                     restrt, work, ldw, h, ldh, num_iter_, resid);
 
@@ -64,15 +65,24 @@ void Treecode::matrix_vector(double alpha, const double* __restrict__ potential_
     auto* potential_temp = (double *)std::malloc(potential_.size() * sizeof(double));
     std::memcpy(potential_temp, potential_new, potential_.size() * sizeof(double));
     std::memset(potential_new, 0, potential_.size() * sizeof(double));
+
+    std::cout << "Inside matrix vector..." << std::endl;
     
 #ifdef OPENACC_ENABLED
     #pragma acc update device(potential_old[0:potential_.size()], \
                               potential_new[0:potential_.size()])
 #endif
     
+    std::cout << "Compute charges... " << std::endl;
     particles_.compute_charges(potential_old);
-    clusters_.upward_pass();
+
+    std::cout << "Clear cluster charges... " << std::endl;
+    clusters_.clear_charges();
+    std::cout << "Clear cluster potentials... " << std::endl;
     clusters_.clear_potentials();
+    std::cout << "upward pass... " << std::endl;
+    clusters_.upward_pass();
+    std::cout << "going over lists... " << std::endl;
 
     for (std::size_t target_node_idx = 0; target_node_idx < tree_.num_nodes(); ++target_node_idx) {
         
@@ -146,6 +156,8 @@ void Treecode::particle_particle_interact(      double* __restrict__ potential,
     const double* __restrict__ particles_area_ptr = particles_.area_ptr();
     
     std::size_t num_particles = particles_.num();
+
+    std::cout << "Inside particle particle interact... " << std::endl;
 
 #ifdef OPENACC_ENABLED
     #pragma acc parallel loop present(particles_x_ptr,  particles_y_ptr,  particles_z_ptr, \
@@ -495,8 +507,8 @@ void Treecode::cluster_cluster_interact(double* __restrict__ potential,
         double pot_comp_dz = 0.;
     
 #ifdef OPENACC_ENABLED
-        #pragma acc loop reduction(+:pot_comp_,   pot_comp_dx, \
-                                     pot_comp_dy, pot_comp_dz)
+        #pragma acc loop collapse(3) reduction(+:pot_comp_,   pot_comp_dx, \
+                                                 pot_comp_dy, pot_comp_dz)
 #endif
         for (int k1 = 0; k1 < num_interp_pts_per_node; k1++) {
         for (int k2 = 0; k2 < num_interp_pts_per_node; k2++) {
@@ -616,7 +628,9 @@ void Treecode::output()
 void Treecode::copyin_potential_to_device() const
 {
 #ifdef OPENACC_ENABLED
-    #pragma acc enter data copyin(potential_.data()[0:potential_.size()])
+    const double* potential_ptr = potential_.data();
+    std::size_t potential_num = potential_.size();
+    #pragma acc enter data copyin(potential_ptr[0:potential_num])
 #endif
 }
 
@@ -624,7 +638,9 @@ void Treecode::copyin_potential_to_device() const
 void Treecode::update_potential_on_device() const
 {
 #ifdef OPENACC_ENABLED
-    #pragma acc update device(potential_.data()[0:potential_.size()])
+    const double* potential_ptr = potential_.data();
+    std::size_t potential_num = potential_.size();
+    #pragma acc update device(potential_ptr[0:potential_num])
 #endif
 }
 
@@ -632,7 +648,9 @@ void Treecode::update_potential_on_device() const
 void Treecode::update_potential_on_host() const
 {
 #ifdef OPENACC_ENABLED
-    #pragma acc update self(potential_.data()[0:potential_.size()])
+    const double* potential_ptr = potential_.data();
+    std::size_t potential_num = potential_.size();
+    #pragma acc update self(potential_ptr[0:potential_num])
 #endif
 }
 
@@ -640,6 +658,8 @@ void Treecode::update_potential_on_host() const
 void Treecode::copyout_potential_to_host() const
 {
 #ifdef OPENACC_ENABLED
-    #pragma acc exit data copyout(potential_.data()[0:potential_.size()])
+    const double* potential_ptr = potential_.data();
+    std::size_t potential_num = potential_.size();
+    #pragma acc exit data copyout(potential_ptr[0:potential_num])
 #endif
 }

@@ -83,11 +83,18 @@ void Clusters::upward_pass()
     std::vector<double> coeffs_x(num_interp_pts_per_node_);
     std::vector<double> coeffs_y(num_interp_pts_per_node_);
     std::vector<double> coeffs_z(num_interp_pts_per_node_);
-    
-    std::memset(clusters_q_ptr,    0, num_charges_ * sizeof(double));
-    std::memset(clusters_q_dx_ptr, 0, num_charges_ * sizeof(double));
-    std::memset(clusters_q_dy_ptr, 0, num_charges_ * sizeof(double));
-    std::memset(clusters_q_dz_ptr, 0, num_charges_ * sizeof(double));
+
+    double* weights_ptr = weights.data();
+    double* coeffs_x_ptr = coeffs_x.data();
+    double* coeffs_y_ptr = coeffs_y.data();
+    double* coeffs_z_ptr = coeffs_z.data();
+
+    int weights_num = weights.size();
+    int coeffs_x_num = coeffs_x.size();
+    int coeffs_y_num = coeffs_y.size();
+    int coeffs_z_num = coeffs_z.size();
+
+    int num_interp_pts_per_node = num_interp_pts_per_node_;
     
     for (int i = 0; i < num_interp_pts_per_node_; ++i) {
         weights[i] = ((i % 2 == 0)? 1 : -1);
@@ -101,10 +108,13 @@ void Clusters::upward_pass()
         std::size_t node_charges_start    = node_idx * num_charges_per_node_;
         
 #ifdef OPENACC_ENABLED
+#pragma acc enter data copyin(weights_ptr[0:weights_num], coeffs_x_ptr[0:coeffs_x_num], \
+                              coeffs_y_ptr[0:coeffs_y_num], coeffs_z_ptr[0:coeffs_z_num])
 #pragma acc parallel loop present(particles_x_ptr, particles_y_ptr, particles_z_ptr, \
                                   sources_q_ptr, sources_q_dx_ptr, sources_q_dy_ptr, sources_q_dz_ptr, \
                                   clusters_x_ptr, clusters_y_ptr, clusters_z_ptr, \
-                                  clusters_q_ptr, clusters_q_dx_ptr, clusters_q_dy_ptr, clusters_q_dz_ptr)
+                                  clusters_q_ptr, clusters_q_dx_ptr, clusters_q_dy_ptr, clusters_q_dz_ptr, \
+                                  weights_ptr, coeffs_x_ptr, coeffs_y_ptr, coeffs_z_ptr)
 #endif
         for (std::size_t i = particle_idxs[0]; i < particle_idxs[1]; ++i) {
         
@@ -128,19 +138,19 @@ void Clusters::upward_pass()
 #ifdef OPENACC_ENABLED
             #pragma acc loop
 #endif
-            for (int j = 0; j < num_interp_pts_per_node_; ++j) {
+            for (int j = 0; j < num_interp_pts_per_node; ++j) {
             
                 double dist_x = xx - clusters_x_ptr[node_interp_pts_start + j];
                 double dist_y = yy - clusters_y_ptr[node_interp_pts_start + j];
                 double dist_z = zz - clusters_z_ptr[node_interp_pts_start + j];
 
-                coeffs_x[j] = weights[j] / dist_x;
-                coeffs_y[j] = weights[j] / dist_y;
-                coeffs_z[j] = weights[j] / dist_z;
+                coeffs_x_ptr[j] = weights_ptr[j] / dist_x;
+                coeffs_y_ptr[j] = weights_ptr[j] / dist_y;
+                coeffs_z_ptr[j] = weights_ptr[j] / dist_z;
                 
-                denominator_x += coeffs_x[j];
-                denominator_y += coeffs_y[j];
-                denominator_z += coeffs_z[j];
+                denominator_x += coeffs_x_ptr[j];
+                denominator_y += coeffs_y_ptr[j];
+                denominator_z += coeffs_z_ptr[j];
                 
                 if (std::abs(dist_x) < std::numeric_limits<double>::min()) exact_idx_x = j;
                 if (std::abs(dist_y) < std::numeric_limits<double>::min()) exact_idx_y = j;
@@ -148,23 +158,23 @@ void Clusters::upward_pass()
             }
             
             if (exact_idx_x > -1) {
-                for (int id = 0; id < coeffs_x.size(); ++id) coeffs_x[id] = 0.;
+                for (int id = 0; id < coeffs_x_num; ++id) coeffs_x_ptr[id] = 0.;
                 //std::memset(coeffs_x.data(), 0, num_interp_pts_per_node_ * sizeof(double));
-                coeffs_x[exact_idx_x] = 1.;
+                coeffs_x_ptr[exact_idx_x] = 1.;
                 denominator_x = 1.;
             }
             
             if (exact_idx_y > -1) {
-                for (int id = 0; id < coeffs_y.size(); ++id) coeffs_y[id] = 0.;
+                for (int id = 0; id < coeffs_y_num; ++id) coeffs_y_ptr[id] = 0.;
                 //std::memset(coeffs_y.data(), 0, num_interp_pts_per_node_ * sizeof(double));
-                coeffs_y[exact_idx_y] = 1.;
+                coeffs_y_ptr[exact_idx_y] = 1.;
                 denominator_y = 1.;
             }
             
             if (exact_idx_z > -1) {
-                for (int id = 0; id < coeffs_z.size(); ++id) coeffs_z[id] = 0.;
+                for (int id = 0; id < coeffs_z_num; ++id) coeffs_z_ptr[id] = 0.;
                 //std::memset(coeffs_z.data(), 0, num_interp_pts_per_node_ * sizeof(double));
-                coeffs_z[exact_idx_z] = 1.;
+                coeffs_z_ptr[exact_idx_z] = 1.;
                 denominator_z = 1.;
             }
             
@@ -173,15 +183,16 @@ void Clusters::upward_pass()
 #ifdef OPENACC_ENABLED
             #pragma acc loop collapse(3)
 #endif
-            for (int k1 = 0; k1 < num_interp_pts_per_node_; ++k1) {
-                for (int k2 = 0; k2 < num_interp_pts_per_node_; ++k2) {
-                    for (int k3 = 0; k3 < num_interp_pts_per_node_; ++k3) {
+            for (int k1 = 0; k1 < num_interp_pts_per_node; ++k1) {
+                for (int k2 = 0; k2 < num_interp_pts_per_node; ++k2) {
+                    for (int k3 = 0; k3 < num_interp_pts_per_node; ++k3) {
                     
                         std::size_t kk = node_charges_start
-                                       + k1 * num_interp_pts_per_node_ * num_interp_pts_per_node_
-                                       + k2 * num_interp_pts_per_node_ + k3;
+                                       + k1 * num_interp_pts_per_node * num_interp_pts_per_node
+                                       + k2 * num_interp_pts_per_node + k3;
                                        
-                        double charge_coeff = coeffs_x[k1] * coeffs_y[k2] * coeffs_z[k3] * denominator;
+                        double charge_coeff = coeffs_x_ptr[k1] * coeffs_y_ptr[k2]
+                                            * coeffs_z_ptr[k3] * denominator;
                                             
                         clusters_q_ptr   [kk] += charge_coeff * qq_;
                         clusters_q_dx_ptr[kk] += charge_coeff * qq_dx;
@@ -191,6 +202,10 @@ void Clusters::upward_pass()
                 }
             }
         }
+#ifdef OPENACC_ENABLED
+#pragma acc exit data delete(weights_ptr[0:weights_num], coeffs_x_ptr[0:coeffs_x_num], \
+                             coeffs_y_ptr[0:coeffs_y_num], coeffs_z_ptr[0:coeffs_z_num])
+#endif
     }
 }
 
@@ -277,19 +292,22 @@ void Clusters::downward_pass(double* __restrict__ potential)
             }
             
             if (exact_idx_x > -1) {
-                std::memset(coeffs_x.data(), 0, num_interp_pts_per_node_ * sizeof(double));
+                for (int id = 0; id < coeffs_x.size(); ++id) coeffs_x[id] = 0.;
+                //std::memset(coeffs_x.data(), 0, num_interp_pts_per_node_ * sizeof(double));
                 coeffs_x[exact_idx_x] = 1.;
                 denominator_x = 1.;
             }
             
             if (exact_idx_y > -1) {
-                std::memset(coeffs_y.data(), 0, num_interp_pts_per_node_ * sizeof(double));
+                for (int id = 0; id < coeffs_y.size(); ++id) coeffs_y[id] = 0.;
+                //std::memset(coeffs_y.data(), 0, num_interp_pts_per_node_ * sizeof(double));
                 coeffs_y[exact_idx_y] = 1.;
                 denominator_y = 1.;
             }
             
             if (exact_idx_z > -1) {
-                std::memset(coeffs_z.data(), 0, num_interp_pts_per_node_ * sizeof(double));
+                for (int id = 0; id < coeffs_z.size(); ++id) coeffs_z[id] = 0.;
+                //std::memset(coeffs_z.data(), 0, num_interp_pts_per_node_ * sizeof(double));
                 coeffs_z[exact_idx_z] = 1.;
                 denominator_z = 1.;
             }
@@ -332,6 +350,32 @@ void Clusters::downward_pass(double* __restrict__ potential)
 }
 
 
+void Clusters::clear_charges()
+{
+#ifdef OPENACC_ENABLED
+    std::size_t num_charges = num_charges_;
+    double* __restrict__ clusters_q_ptr    = interp_charge_.data();
+    double* __restrict__ clusters_q_dx_ptr = interp_charge_dx_.data();
+    double* __restrict__ clusters_q_dy_ptr = interp_charge_dy_.data();
+    double* __restrict__ clusters_q_dz_ptr = interp_charge_dz_.data();
+    
+    #pragma acc parallel loop present(clusters_q_ptr, clusters_q_dx_ptr, \
+                                      clusters_q_dy_ptr, clusters_q_dz_ptr)
+    for (std::size_t i = 0; i < num_charges; ++i) {
+        clusters_q_ptr[i] = 0.;
+        clusters_q_dx_ptr[i] = 0.;
+        clusters_q_dy_ptr[i] = 0.;
+        clusters_q_dz_ptr[i] = 0.;
+    }
+#else
+    std::fill(interp_charge_.begin(),    interp_charge_.end(),    0);
+    std::fill(interp_charge_dx_.begin(), interp_charge_dx_.end(), 0);
+    std::fill(interp_charge_dy_.begin(), interp_charge_dy_.end(), 0);
+    std::fill(interp_charge_dz_.begin(), interp_charge_dz_.end(), 0);
+#endif
+}
+
+
 void Clusters::clear_potentials()
 {
 #ifdef OPENACC_ENABLED
@@ -361,13 +405,13 @@ void Clusters::clear_potentials()
 void Clusters::copyin_to_device() const
 {
 #ifdef OPENACC_ENABLED
-    const double* x_ptr = interp_x_ptr.data();
-    const double* y_ptr = interp_y_ptr.data();
-    const double* z_ptr = interp_z_ptr.data();
+    const double* x_ptr = interp_x_.data();
+    const double* y_ptr = interp_y_.data();
+    const double* z_ptr = interp_z_.data();
     
-    std::size_t x_num = interp_x_ptr.size();
-    std::size_t y_num = interp_y_ptr.size();
-    std::size_t z_num = interp_z_ptr.size();
+    std::size_t x_num = interp_x_.size();
+    std::size_t y_num = interp_y_.size();
+    std::size_t z_num = interp_z_.size();
     
     const double* q_ptr    = interp_charge_.data();
     const double* q_dx_ptr = interp_charge_dx_.data();
@@ -399,13 +443,13 @@ void Clusters::copyin_to_device() const
 void Clusters::delete_from_device() const
 {
 #ifdef OPENACC_ENABLED
-    const double* x_ptr = interp_x_ptr.data();
-    const double* y_ptr = interp_y_ptr.data();
-    const double* z_ptr = interp_z_ptr.data();
+    const double* x_ptr = interp_x_.data();
+    const double* y_ptr = interp_y_.data();
+    const double* z_ptr = interp_z_.data();
     
-    std::size_t x_num = interp_x_ptr.size();
-    std::size_t y_num = interp_y_ptr.size();
-    std::size_t z_num = interp_z_ptr.size();
+    std::size_t x_num = interp_x_.size();
+    std::size_t y_num = interp_y_.size();
+    std::size_t z_num = interp_z_.size();
     
     const double* q_ptr    = interp_charge_.data();
     const double* q_dx_ptr = interp_charge_dx_.data();

@@ -42,6 +42,7 @@ public:
     void upward_pass();
     void downward_pass(double* potential);
     
+    void clear_charges();
     void clear_potentials();
     
     std::size_t num_interp_pts_per_node() const { return num_interp_pts_per_node_; };
