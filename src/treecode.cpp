@@ -26,9 +26,10 @@ void Treecode::run_GMRES()
     long int ldw    = length;
     long int ldh    = restrt + 1;
     
+    // These values are modified on return
     double resid    = 1e-4;
     num_iter_       = 100;
-    
+
     std::vector<double> work_vec(ldw * (restrt + 4));
     std::vector<double> h_vec   (ldh * (restrt + 2));
     
@@ -36,10 +37,11 @@ void Treecode::run_GMRES()
     double* h    = h_vec.data();
 
 #ifdef OPENACC_ENABLED
-    #pragma acc enter data create(work[0:work_vec.size()], h[0:h_vec.size()])
+    std::size_t work_vec_num = work_vec.size();
+    std::size_t h_vec_num    = h_vec.size();
+    #pragma acc enter data create(work[0:work_vec_num], h[0:h_vec_num])
 #endif
 
-    std::cout << "About to call gmres_ ..." << std::endl;
     int err_code = Treecode::gmres_(length, particles_.source_term_ptr(), potential_.data(),
                                     restrt, work, ldw, h, ldh, num_iter_, resid);
 
@@ -62,27 +64,21 @@ void Treecode::matrix_vector(double alpha, const double* __restrict__ potential_
     double potential_coeff_1 = 0.5 * (1. +      params_.phys_eps_);
     double potential_coeff_2 = 0.5 * (1. + 1. / params_.phys_eps_);
     
-    auto* potential_temp = (double *)std::malloc(potential_.size() * sizeof(double));
-    std::memcpy(potential_temp, potential_new, potential_.size() * sizeof(double));
-    std::memset(potential_new, 0, potential_.size() * sizeof(double));
+    std::size_t potential_num = potential_.size();
+    auto* potential_temp = (double *)std::malloc(potential_num * sizeof(double));
+    std::memcpy(potential_temp, potential_new, potential_num * sizeof(double));
+    std::memset(potential_new, 0, potential_num * sizeof(double));
 
-    std::cout << "Inside matrix vector..." << std::endl;
-    
 #ifdef OPENACC_ENABLED
-    #pragma acc update device(potential_old[0:potential_.size()], \
-                              potential_new[0:potential_.size()])
+    #pragma acc update device(potential_old[0:potential_num], \
+                              potential_new[0:potential_num])
 #endif
     
-    std::cout << "Compute charges... " << std::endl;
-    particles_.compute_charges(potential_old);
-
-    std::cout << "Clear cluster charges... " << std::endl;
     clusters_.clear_charges();
-    std::cout << "Clear cluster potentials... " << std::endl;
     clusters_.clear_potentials();
-    std::cout << "upward pass... " << std::endl;
+
+    particles_.compute_charges(potential_old);
     clusters_.upward_pass();
-    std::cout << "going over lists... " << std::endl;
 
     for (std::size_t target_node_idx = 0; target_node_idx < tree_.num_nodes(); ++target_node_idx) {
         
@@ -105,7 +101,7 @@ void Treecode::matrix_vector(double alpha, const double* __restrict__ potential_
     clusters_.downward_pass(potential_new);
     
 #ifdef OPENACC_ENABLED
-    #pragma acc update host(potential_new[0:potential_.size()])
+    #pragma acc update host(potential_new[0:potential_num])
 #endif
     
     for (std::size_t i = 0; i < potential_.size() / 2; ++i)
@@ -156,8 +152,6 @@ void Treecode::particle_particle_interact(      double* __restrict__ potential,
     const double* __restrict__ particles_area_ptr = particles_.area_ptr();
     
     std::size_t num_particles = particles_.num();
-
-    std::cout << "Inside particle particle interact... " << std::endl;
 
 #ifdef OPENACC_ENABLED
     #pragma acc parallel loop present(particles_x_ptr,  particles_y_ptr,  particles_z_ptr, \

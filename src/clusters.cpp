@@ -41,6 +41,7 @@ void Clusters::compute_all_interp_pts()
     double* __restrict__ clusters_z_ptr   = interp_z_.data();
     
     int degree = params_.tree_degree_;
+    int num_interp_pts_per_node = num_interp_pts_per_node_;
     for (std::size_t node_idx = 0; node_idx < tree_.num_nodes(); ++node_idx) {
     
         std::size_t node_start = node_idx * num_interp_pts_per_node_;
@@ -49,7 +50,7 @@ void Clusters::compute_all_interp_pts()
 #ifdef OPENACC_ENABLED
 #pragma acc parallel loop present(clusters_x_ptr, clusters_y_ptr, clusters_z_ptr)
 #endif
-        for (std::size_t i = 0; i < num_interp_pts_per_node_; ++i) {
+        for (std::size_t i = 0; i < num_interp_pts_per_node; ++i) {
             double tt = std::cos(i * constants::PI / degree);
             clusters_x_ptr[node_start + i] = node_bounds[0] + (tt + 1.) / 2. * (node_bounds[1] - node_bounds[0]);
             clusters_y_ptr[node_start + i] = node_bounds[2] + (tt + 1.) / 2. * (node_bounds[3] - node_bounds[2]);
@@ -136,7 +137,8 @@ void Clusters::upward_pass()
             double qq_dz = sources_q_dz_ptr[i];
             
 #ifdef OPENACC_ENABLED
-            #pragma acc loop
+            #pragma acc loop reduction(+:denominator_x,denominator_y,denominator_z) \
+                             reduction(max:exact_idx_x,exact_idx_y,exact_idx_z)
 #endif
             for (int j = 0; j < num_interp_pts_per_node; ++j) {
             
@@ -184,22 +186,22 @@ void Clusters::upward_pass()
             #pragma acc loop collapse(3)
 #endif
             for (int k1 = 0; k1 < num_interp_pts_per_node; ++k1) {
-                for (int k2 = 0; k2 < num_interp_pts_per_node; ++k2) {
-                    for (int k3 = 0; k3 < num_interp_pts_per_node; ++k3) {
+            for (int k2 = 0; k2 < num_interp_pts_per_node; ++k2) {
+            for (int k3 = 0; k3 < num_interp_pts_per_node; ++k3) {
                     
-                        std::size_t kk = node_charges_start
-                                       + k1 * num_interp_pts_per_node * num_interp_pts_per_node
-                                       + k2 * num_interp_pts_per_node + k3;
-                                       
-                        double charge_coeff = coeffs_x_ptr[k1] * coeffs_y_ptr[k2]
-                                            * coeffs_z_ptr[k3] * denominator;
-                                            
-                        clusters_q_ptr   [kk] += charge_coeff * qq_;
-                        clusters_q_dx_ptr[kk] += charge_coeff * qq_dx;
-                        clusters_q_dy_ptr[kk] += charge_coeff * qq_dy;
-                        clusters_q_dz_ptr[kk] += charge_coeff * qq_dz;
-                    }
-                }
+                std::size_t kk = node_charges_start
+                               + k1 * num_interp_pts_per_node * num_interp_pts_per_node
+                               + k2 * num_interp_pts_per_node + k3;
+                               
+                double charge_coeff = coeffs_x_ptr[k1] * coeffs_y_ptr[k2]
+                                    * coeffs_z_ptr[k3] * denominator;
+                                    
+                clusters_q_ptr   [kk] += charge_coeff * qq_;
+                clusters_q_dx_ptr[kk] += charge_coeff * qq_dx;
+                clusters_q_dy_ptr[kk] += charge_coeff * qq_dy;
+                clusters_q_dz_ptr[kk] += charge_coeff * qq_dz;
+            }
+            }
             }
         }
 #ifdef OPENACC_ENABLED
@@ -234,8 +236,19 @@ void Clusters::downward_pass(double* __restrict__ potential)
     std::vector<double> coeffs_x(num_interp_pts_per_node_);
     std::vector<double> coeffs_y(num_interp_pts_per_node_);
     std::vector<double> coeffs_z(num_interp_pts_per_node_);
+
+    double* weights_ptr = weights.data();
+    double* coeffs_x_ptr = coeffs_x.data();
+    double* coeffs_y_ptr = coeffs_y.data();
+    double* coeffs_z_ptr = coeffs_z.data();
+
+    int weights_num = weights.size();
+    int coeffs_x_num = coeffs_x.size();
+    int coeffs_y_num = coeffs_y.size();
+    int coeffs_z_num = coeffs_z.size();
     
     std::size_t num_particles = particles_.num();
+    int num_interp_pts_per_node = num_interp_pts_per_node_;
     
     for (int i = 0; i < num_interp_pts_per_node_; ++i) {
         weights[i] = ((i % 2 == 0)? 1 : -1);
@@ -249,11 +262,13 @@ void Clusters::downward_pass(double* __restrict__ potential)
         std::size_t node_potentials_start = node_idx * num_charges_per_node_;
 
 #ifdef OPENACC_ENABLED
+#pragma acc enter data copyin(weights_ptr[0:weights_num], coeffs_x_ptr[0:coeffs_x_num], \
+                              coeffs_y_ptr[0:coeffs_y_num], coeffs_z_ptr[0:coeffs_z_num])
 #pragma acc parallel loop present(particles_x_ptr, particles_y_ptr, particles_z_ptr, \
                                   targets_q_ptr, targets_q_dx_ptr, targets_q_dy_ptr, targets_q_dz_ptr, \
                                   clusters_x_ptr, clusters_y_ptr, clusters_z_ptr, \
                                   clusters_p_ptr, clusters_p_dx_ptr, clusters_p_dy_ptr, clusters_p_dz_ptr, \
-                                  potential)
+                                  potential, weights_ptr, coeffs_x_ptr, coeffs_y_ptr, coeffs_z_ptr)
 #endif
         for (std::size_t i = particle_idxs[0]; i < particle_idxs[1]; ++i) {
         
@@ -270,21 +285,22 @@ void Clusters::downward_pass(double* __restrict__ potential)
             double zz = particles_z_ptr[i];
             
 #ifdef OPENACC_ENABLED
-            #pragma acc loop
+            #pragma acc loop reduction(+:denominator_x,denominator_y,denominator_z) \
+                             reduction(max:exact_idx_x,exact_idx_y,exact_idx_z)
 #endif
-            for (int j = 0; j < num_interp_pts_per_node_; ++j) {
+            for (int j = 0; j < num_interp_pts_per_node; ++j) {
             
                 double dist_x = xx - clusters_x_ptr[node_interp_pts_start + j];
                 double dist_y = yy - clusters_y_ptr[node_interp_pts_start + j];
                 double dist_z = zz - clusters_z_ptr[node_interp_pts_start + j];
 
-                coeffs_x[j] = weights[j] / dist_x;
-                coeffs_y[j] = weights[j] / dist_y;
-                coeffs_z[j] = weights[j] / dist_z;
+                coeffs_x_ptr[j] = weights_ptr[j] / dist_x;
+                coeffs_y_ptr[j] = weights_ptr[j] / dist_y;
+                coeffs_z_ptr[j] = weights_ptr[j] / dist_z;
                 
-                denominator_x += coeffs_x[j];
-                denominator_y += coeffs_y[j];
-                denominator_z += coeffs_z[j];
+                denominator_x += coeffs_x_ptr[j];
+                denominator_y += coeffs_y_ptr[j];
+                denominator_z += coeffs_z_ptr[j];
                 
                 if (std::abs(dist_x) < std::numeric_limits<double>::min()) exact_idx_x = j;
                 if (std::abs(dist_y) < std::numeric_limits<double>::min()) exact_idx_y = j;
@@ -292,23 +308,23 @@ void Clusters::downward_pass(double* __restrict__ potential)
             }
             
             if (exact_idx_x > -1) {
-                for (int id = 0; id < coeffs_x.size(); ++id) coeffs_x[id] = 0.;
+                for (int id = 0; id < coeffs_x_num; ++id) coeffs_x_ptr[id] = 0.;
                 //std::memset(coeffs_x.data(), 0, num_interp_pts_per_node_ * sizeof(double));
-                coeffs_x[exact_idx_x] = 1.;
+                coeffs_x_ptr[exact_idx_x] = 1.;
                 denominator_x = 1.;
             }
             
             if (exact_idx_y > -1) {
-                for (int id = 0; id < coeffs_y.size(); ++id) coeffs_y[id] = 0.;
+                for (int id = 0; id < coeffs_y_num; ++id) coeffs_y_ptr[id] = 0.;
                 //std::memset(coeffs_y.data(), 0, num_interp_pts_per_node_ * sizeof(double));
-                coeffs_y[exact_idx_y] = 1.;
+                coeffs_y_ptr[exact_idx_y] = 1.;
                 denominator_y = 1.;
             }
             
             if (exact_idx_z > -1) {
-                for (int id = 0; id < coeffs_z.size(); ++id) coeffs_z[id] = 0.;
+                for (int id = 0; id < coeffs_z_num; ++id) coeffs_z_ptr[id] = 0.;
                 //std::memset(coeffs_z.data(), 0, num_interp_pts_per_node_ * sizeof(double));
-                coeffs_z[exact_idx_z] = 1.;
+                coeffs_z_ptr[exact_idx_z] = 1.;
                 denominator_z = 1.;
             }
             
@@ -322,15 +338,16 @@ void Clusters::downward_pass(double* __restrict__ potential)
             #pragma acc loop collapse(3) reduction(+:pot_comp_,  pot_comp_dx, \
                                                      pot_comp_dy,pot_comp_dz)
 #endif
-            for (int k1 = 0; k1 < num_interp_pts_per_node_; ++k1) {
-            for (int k2 = 0; k2 < num_interp_pts_per_node_; ++k2) {
-            for (int k3 = 0; k3 < num_interp_pts_per_node_; ++k3) {
+            for (int k1 = 0; k1 < num_interp_pts_per_node; ++k1) {
+            for (int k2 = 0; k2 < num_interp_pts_per_node; ++k2) {
+            for (int k3 = 0; k3 < num_interp_pts_per_node; ++k3) {
                     
                 std::size_t kk = node_potentials_start
-                               + k1 * num_interp_pts_per_node_ * num_interp_pts_per_node_
-                               + k2 * num_interp_pts_per_node_ + k3;
+                               + k1 * num_interp_pts_per_node * num_interp_pts_per_node
+                               + k2 * num_interp_pts_per_node + k3;
                                
-                double potential_coeff = coeffs_x[k1] * coeffs_y[k2] * coeffs_z[k3] * denominator;
+                double potential_coeff = coeffs_x_ptr[k1] * coeffs_y_ptr[k2] 
+                                       * coeffs_z_ptr[k3] * denominator;
                                     
                 pot_comp_   += potential_coeff * clusters_p_ptr   [kk];
                 pot_comp_dx += potential_coeff * clusters_p_dx_ptr[kk];
@@ -345,8 +362,11 @@ void Clusters::downward_pass(double* __restrict__ potential)
                                           + targets_q_dy_ptr[i] * pot_comp_dy
                                           + targets_q_dz_ptr[i] * pot_comp_dz;
         }
+#ifdef OPENACC_ENABLED
+#pragma acc exit data delete(weights_ptr[0:weights_num], coeffs_x_ptr[0:coeffs_x_num], \
+                             coeffs_y_ptr[0:coeffs_y_num], coeffs_z_ptr[0:coeffs_z_num])
+#endif
     }
-
 }
 
 
