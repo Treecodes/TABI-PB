@@ -55,8 +55,6 @@ void Molecule::compute_coulombic_energy()
     const double* __restrict__ molecule_coords_ptr = coords_.data();
     const double* __restrict__ molecule_charge_ptr = charge_.data();
 
-    std::cout << "Beginning to compute coul engy... " << std::endl;
-
 #ifdef OPENACC_ENABLED
     #pragma acc parallel loop gang present(molecule_coords_ptr, molecule_charge_ptr) \
 				   reduction(+:coulombic_energy)
@@ -79,7 +77,6 @@ void Molecule::compute_coulombic_energy()
         }
     }
 
-    std::cout << "Done computing coul engy... " << std::endl;
     coulombic_energy_ = coulombic_energy;
 }
 
@@ -92,8 +89,6 @@ void Molecule::copyin_to_device() const
 
     std::size_t coords_num = coords_.size();
     std::size_t charge_num = charge_.size();
-
-    std::cout << "copying to device, molecule... " << std::endl;
 
     #pragma acc enter data copyin(coords_ptr[0:coords_num], \
                                   charge_ptr[0:charge_num])

@@ -167,6 +167,9 @@ void Treecode::particle_particle_interact(      double* __restrict__ potential,
         double target_nx = particles_nx_ptr[j];
         double target_ny = particles_ny_ptr[j];
         double target_nz = particles_nz_ptr[j];
+        
+        double pot_temp_1 = 0.;
+        double pot_temp_2 = 0.;
     
 #ifdef OPENACC_ENABLED
         #pragma acc loop
@@ -212,10 +215,13 @@ void Treecode::particle_particle_interact(      double* __restrict__ potential,
                 double L3 = G4 - G3;
                 double L4 = cos_theta0 * tp1 * (1. - tp2 / eps);
                 
-                potential[j]                 += (L1 * potential_old_0 + L2 * potential_old_1) * source_area;
-                potential[j + num_particles] += (L3 * potential_old_0 + L4 * potential_old_1) * source_area;
+                pot_temp_1 += (L1 * potential_old_0 + L2 * potential_old_1) * source_area;
+                pot_temp_2 += (L3 * potential_old_0 + L4 * potential_old_1) * source_area;
             }
         }
+        
+        potential[j]                 += pot_temp_1;
+        potential[j + num_particles] += pot_temp_2;
     }
 }
 
