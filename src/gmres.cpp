@@ -155,7 +155,7 @@ int Treecode::gmres_(long int n, const double *b, double *x,
                      long int& iter, double& resid)
 {
     std::vector<double> work_vec(ldw * (restrt + 4));
-    std::vector<double> h_vec   (ldw * (restrt + 2));
+    std::vector<double> h_vec   (ldh * (restrt + 2));
     
     double* work = work_vec.data();
     double* h    = h_vec.data();
