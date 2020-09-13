@@ -7,9 +7,7 @@ add_executable(tabipb main.cpp
         clusters.cpp clusters.h
         interaction_list.cpp interaction_list.h
         treecode.cpp gmres.cpp treecode.h
-        constants.h
-        blas/drot.c blas/drotg.c blas/d_sign.c 
-        blas/dtrsv.c blas/dgemv.c blas/f2c.h blas/blas.h)
+        constants.h)
 
 target_compile_features(tabipb PRIVATE cxx_std_11)
 #target_link_libraries(tabipb PRIVATE OpenMP::OpenMP_CXX OpenACC::OpenACC_CXX -acc)

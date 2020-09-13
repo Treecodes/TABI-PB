@@ -1,8 +1,3 @@
-/*
- * Modified from original CLAPACK version to support MKL.
- * Original file description below.
- */
-
 #define MAX(a,b) ((a) >= (b) ? (a) : (b))
 
 #include <cmath>
@@ -78,12 +73,6 @@
 *          and A is a matrix. Vector x must remain unchanged.
 *          The solution is over-written on vector y.
 *
-*          The call is:
-*
-*             CALL MATVEC( ALPHA, X, BETA, Y )
-*
-*          The matrix is passed into the routine in a common block.
-*
 *  PSOLVE  (external subroutine)
 *          The user must provide a subroutine to perform the
 *          preconditioner solve routine for the linear system
@@ -93,13 +82,6 @@
 *          where x and b are vectors, and M a matrix. Vector b must
 *          remain unchanged.
 *          The solution is over-written on vector x.
-*
-*          The call is:
-*
-*             CALL PSOLVE( X, B )
-*
-*          The preconditioner is passed into the routine in a common
-*          block.
 *
 *  INFO    (output) INTEGER
 *
@@ -119,16 +101,19 @@
 *  ============================================================
 */
 
-#include "blas/blas.h"
-
 static double dnrm2_(long int n, const double* w);
 static void dscal_(long int n, double alpha, double* x);
-static double ddot_(long int n, const double* x, const double* y);
-static void daxpy_(long int n, double alpha, const double* x, double* y);
+static double ddot_(long int n, const double* __restrict__ x, const double* __restrict__ y);
+static void daxpy_(long int n, double alpha, const double* __restrict__ x, double* __restrict__ y);
+static void drot_(double& dx, double& dy, double c, double s);
+static void drotg_(double da, double db, double& c, double& s);
+static void dtrsv_(long int n, const double* __restrict__ a, long int lda, double* __restrict__ x);
+static void dgemv_(long int m, long int n, const double* __restrict__ a, long int lda,
+                   const double* __restrict__ x, double* __restrict__ y);
 
-static int update_(long int, long int, double *, double *, long int,
-                   double *, double *, double *, long int);
-static  int basis_(long int, long int, double *, double *, long int, double *);
+static void update_(long int i, long int n, double* x, const double* h, long int ldh,
+                    double* y, const double* s, const double* v, long int ldv);
+static void basis_(long int i, long int n, double* h, double* v, long int ldv, double* w);
 
 //*****************************************************************
 int Treecode::gmres_(long int n, const double *b, double *x, long int restrt,
@@ -155,13 +140,10 @@ int Treecode::gmres_(long int n, const double *b, double *x, long int restrt,
 /*     Store the Givens parameters in matrix H. */
 /*     Set initial residual (AV is temporary workspace here). */
 
-    //cblas_dcopy(n, b, 1, &work[2 * ldw], 1);
     for (long int idx = 0; idx < n; ++idx) work[2 * ldw + idx] = b[idx];
 
-    //if (cblas_dnrm2(n, x, 1) != 0.) {
     if (dnrm2_(n, x) != 0.) {
     
-        //cblas_dcopy(n, b, 1, &work[2 * ldw], 1);
         for (long int idx = 0; idx < n; ++idx) work[2 * ldw + idx] = b[idx];
         
         Treecode::matrix_vector(-1., x, 1., &work[2 * ldw]);
@@ -169,13 +151,11 @@ int Treecode::gmres_(long int n, const double *b, double *x, long int restrt,
 
     Treecode::precondition(work, &work[2 * ldw]);
 
-    //double bnrm2 = cblas_dnrm2(n, b, 1);
     double bnrm2 = dnrm2_(n, b);
     if (bnrm2 == 0.) {
         bnrm2 = 1.;
     }
     
-    //if (cblas_dnrm2(n, work, 1) / bnrm2 < tol) {
     if (dnrm2_(n, work) / bnrm2 < tol) {
         return 0;
     }
@@ -186,13 +166,10 @@ int Treecode::gmres_(long int n, const double *b, double *x, long int restrt,
 
     /*        Construct the first column of V. */
 
-        //cblas_dcopy(n, work, 1, &work[3 * ldw], 1);
         for (long int idx = 0; idx < n; ++idx) work[3 * ldw + idx] = work[idx];
         
-        //double rnorm = cblas_dnrm2(n, &work[3 * ldw], 1);
         double rnorm = dnrm2_(n, &work[3 * ldw]);
         
-        //cblas_dscal(n, 1. / rnorm, &work[3 * ldw], 1);
         dscal_(n, 1. / rnorm, &work[3 * ldw]);
 
     /*        Initialize S to the elementary vector E1 scaled by RNORM. */
@@ -218,47 +195,25 @@ int Treecode::gmres_(long int n, const double *b, double *x, long int restrt,
         /*           the RESTRT iterations. */
 
             for (long int k = 0; k < i; ++k) {
-//                cblas_drot(1, &h[k + i * ldh], ldh, &h[k + 1 + i * ldh],
-//                           ldh, h[k + restrt * ldh], h[k + (restrt + 1) * ldh]);
-                drot_(1, &h[k + i * ldh], ldh, &h[k + 1 + i * ldh],
-                      ldh, h[k + restrt * ldh], h[k + (restrt + 1) * ldh]);
+                drot_(h[k + i * ldh],      h[k + 1 + i * ldh],
+                      h[k + restrt * ldh], h[k + (restrt + 1) * ldh]);
             }
 
         /*           Construct the I-th rotation matrix, and apply it to H so that */
         /*           H(I+1,I) = 0. */
-
-            double aa = h[i * (ldh + 1)];
-            double bb = h[i * (ldh + 1) + 1];
-            
-//            cblas_drotg(&aa, &bb, &h[i + (restrt)     * ldh],
-//                                  &h[i + (restrt + 1) * ldh]);
                                   
-            drotg_(&aa, &bb, &h[i + (restrt)     * ldh],
-                                  &h[i + (restrt + 1) * ldh]);
-                                  
-//            cblas_drot(1,   &h[i * (ldh + 1)],
-//                       ldh, &h[i * (ldh + 1) + 1],
-//                       ldh,  h[i + (restrt)     * ldh],
-//                             h[i + (restrt + 1) * ldh]);
+            drotg_(h[i * (ldh + 1)],      h[i * (ldh + 1) + 1],
+                   h[i + (restrt) * ldh], h[i + (restrt + 1) * ldh]);
                              
-            drot_(1,   &h[i * (ldh + 1)],
-                       ldh, &h[i * (ldh + 1) + 1],
-                       ldh,  h[i + (restrt)     * ldh],
-                             h[i + (restrt + 1) * ldh]);
+            drot_ (h[i * (ldh + 1)],      h[i * (ldh + 1) + 1],
+                   h[i + (restrt) * ldh], h[i + (restrt + 1) * ldh]);
 
         /*           Apply the I-th rotation matrix to [ S(I), S(I+1) ]'. This */
         /*           gives an approximation of the residual norm. If less than */
         /*           tolerance, update the approximation vector X and quit. */
-
-//            cblas_drot(1,   &work[i + ldw],
-//                       ldw, &work[i + ldw + 1],
-//                       ldw, h[i + (restrt)     * ldh],
-//                            h[i + (restrt + 1) * ldh]);
                             
-            drot_(1,   &work[i + ldw],
-                       ldw, &work[i + ldw + 1],
-                       ldw, h[i + (restrt)     * ldh],
-                            h[i + (restrt + 1) * ldh]);
+            drot_(work[i + ldw], work[i + ldw + 1],
+                  h[i + (restrt) * ldh], h[i + (restrt + 1) * ldh]);
                             
             resid = std::fabs(work[i + 1 + ldw]) / bnrm2;
 
@@ -277,13 +232,11 @@ int Treecode::gmres_(long int n, const double *b, double *x, long int restrt,
 
     /*        Compute residual vector R, find norm, then check for tolerance. */
 
-        //cblas_dcopy(n, b, 1, &work[2 * ldw], 1);
         for (long int idx = 0; idx < n; ++idx) work[2 * ldw + idx] = b[idx];
         
         Treecode::matrix_vector(-1., x, 1., &work[2 * ldw]);
         Treecode::precondition(work, &work[2 * ldw]);
         
-        //work[restrt + ldw] = cblas_dnrm2(n, work, 1);
         work[restrt + ldw] = dnrm2_(n, work);
         resid = work[restrt + ldw] / bnrm2;
         
@@ -301,59 +254,34 @@ int Treecode::gmres_(long int n, const double *b, double *x, long int restrt,
 
 
 /*     =============================================================== */
-static int update_(long int i, long int n, double *x, double *h, long int ldh,
-                   double *y, double *s, double *v, long int ldv)
+static void update_(long int i, long int n, double* x, const double* h, long int ldh,
+                    double* y, const double* s, const double* v, long int ldv)
 {
 /*     This routine updates the GMRES iterated solution approximation. */
-
 /*     Solve H*Y = S for upper triangualar H. */
-
-    //cblas_dcopy(i, s, 1, y, 1);
-    for (long int idx = 0; idx < i; ++idx) y[idx] = s[idx];
-    
-//    cblas_dtrsv(CblasColMajor, CblasUpper, CblasNoTrans, CblasNonUnit,
-//                i, h, ldh, y, 1);
-                
-    char uplo[] = {'U'};
-    char trans[] = {'N'};
-    char diag[] = {'N'};
-    
-    dtrsv_(uplo, trans, diag, i, h, ldh, y, 1);
-
 /*     Compute current solution vector X = X + V*Y. */
 
-//    cblas_dgemv(CblasColMajor, CblasNoTrans, n, i, 1.,
-//                v, ldv, y, 1, 1., x, 1);
-                
-    dgemv_(trans, n, i, 1., v, ldv, y, 1, 1., x, 1);
-
-    return 0;
+    for (long int idx = 0; idx < i; ++idx) y[idx] = s[idx];
+    
+    dtrsv_(i, h, ldh, y);
+    dgemv_(n, i, v, ldv, y, x);
 }
 
 
 /*     ========================================================= */
-static int basis_(long int i, long int n, double *h, double *v, long int ldv, double *w)
+static void basis_(long int i, long int n, double* h, double* v, long int ldv, double* w)
 {
 /*     Construct the I-th column of the upper Hessenberg matrix H */
 /*     using the Gram-Schmidt process on V and W. */
 
     for (long int k = 0; k < i; ++k) {
-        //h[k] = cblas_ddot(n, w, 1, &v[k * ldv], 1);
         h[k] = ddot_(n, w, &v[k * ldv]);
-        //cblas_daxpy(n, -h[k], &v[k * ldv], 1, w, 1);
         daxpy_(n, -h[k], &v[k * ldv], w);
     }
-    
-    //h[i] = cblas_dnrm2(n, w, 1);
     h[i] = dnrm2_(n, w);
     
-    //cblas_dcopy(n, w, 1, &v[i * ldv], 1);
     for (long int idx = 0; idx < n; ++idx) v[i * ldv + idx] = w[idx];
-    
-    //cblas_dscal(n, 1. / h[i], &v[i * ldv], 1);
     dscal_(n, 1. / h[i], &v[i * ldv]);
-        
-    return 0;
 }
 
 
@@ -374,7 +302,8 @@ static void dscal_(long int n, double alpha, double* x)
     }
 }
 
-static double ddot_(long int n, const double* x, const double* y)
+static double ddot_(long int n, const double* __restrict__ x,
+                    const double* __restrict__ y)
 {
     double ddot = 0.;
     for (long int idx = 0; idx < n; ++idx) {
@@ -384,9 +313,77 @@ static double ddot_(long int n, const double* x, const double* y)
 }
 
 
-static void daxpy_(long int n, double alpha, const double* x, double* y)
+static void daxpy_(long int n, double alpha, const double* __restrict__ x,
+                   double* __restrict__ y)
 {
     for (long int idx = 0; idx < n; ++idx) {
         y[idx] += alpha * x[idx];
+    }
+}
+
+
+static void drot_(double& dx, double& dy, double c, double s)
+{
+/*  applies a plane rotation. */
+    double dtemp = c * dx + s * dy;
+    dy = c * dy - s * dx;
+    dx = dtemp;
+}
+
+
+static void drotg_(double da, double db, double& c, double& s)
+{
+/*  construct givens plane rotation. */
+
+    double roe = db;
+    if (std::abs(da) > std::abs(db)) roe = da;
+    double scale = std::abs(da) + std::abs(db);
+    
+    if (scale != 0.) {
+        double d__1 = da / scale;
+        double d__2 = db / scale;
+        
+        double r = scale * std::sqrt(d__1 * d__1 + d__2 * d__2)
+                * (roe >= 0. ? 1. : -1.);
+
+        c = da / r;
+        s = db / r;
+        
+    } else {
+        c = 1.;
+        s = 0.;
+    }
+}
+
+
+static void dtrsv_(long int n, const double* __restrict__ a, long int lda,
+                   double* __restrict__ x)
+{
+/*  solve A*x = b, where A is upper triangular */
+
+    for (long int j = n - 1; j >= 0; --j) {
+        if (x[j] != 0.) {
+            x[j] /= a[j + j*lda];
+            double temp = x[j];
+            for (long int i = j - 1; i >= 0; --i) {
+                x[i] -= temp * a[i + j*lda];
+            }
+        }
+    }
+}
+
+
+static void dgemv_(long int m, long int n, const double* __restrict__ a, long int lda,
+                   const double* __restrict__ x, double* __restrict__ y)
+{
+/*  Form  y = A*x + y */
+
+    for (long int j = 0; j < n; ++j) {
+        if (x[j] != 0.) {
+            double temp = x[j];
+            for (long int i = 0; i < m; ++i) {
+                y[i] += temp * a[i + j*lda];
+            }
+        }
     }
 }

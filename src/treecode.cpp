@@ -27,7 +27,7 @@ void Treecode::run_GMRES()
     long int ldh    = restrt + 1;
     
     // These values are modified on return
-    double resid    = 1e-4;
+    double resid    = 1e-7;
     num_iter_       = 100;
 
     std::vector<double> work_vec(ldw * (restrt + 4));
