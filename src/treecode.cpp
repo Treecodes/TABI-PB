@@ -16,7 +16,6 @@ Treecode::Treecode(class Particles& particles, class Clusters& clusters,
           interaction_list_(interaction_list), molecule_(molecule), params_(params)
 {
     potential_.assign(2 * particles_.num(), 0.);
-    Treecode::copyin_potential_to_device();
 }
           
 void Treecode::run_GMRES()
@@ -27,7 +26,7 @@ void Treecode::run_GMRES()
     long int ldh    = restrt + 1;
     
     // These values are modified on return
-    double resid    = 1e-7;
+    double resid    = 1e-4;
     num_iter_       = 100;
 
     std::vector<double> work_vec(ldw * (restrt + 4));
@@ -36,19 +35,9 @@ void Treecode::run_GMRES()
     double* work = work_vec.data();
     double* h    = h_vec.data();
 
-#ifdef OPENACC_ENABLED
-    std::size_t work_vec_num = work_vec.size();
-    std::size_t h_vec_num    = h_vec.size();
-    #pragma acc enter data create(work[0:work_vec_num], h[0:h_vec_num])
-#endif
-
     int err_code = Treecode::gmres_(length, particles_.source_term_ptr(), potential_.data(),
                                     restrt, work, ldw, h, ldh, num_iter_, resid);
 
-#ifdef OPENACC_ENABLED
-    #pragma acc exit data delete(work, h)
-#endif
-    
     if (err_code) {
         std::cout << "GMRES error code " << err_code << ". Exiting.";
         std::exit(1);
@@ -61,6 +50,8 @@ void Treecode::run_GMRES()
 void Treecode::matrix_vector(double alpha, const double* __restrict__ potential_old,
                              double beta,        double* __restrict__ potential_new)
 {
+    std::cout << "Entering matrix vector..." << std::endl;
+
     double potential_coeff_1 = 0.5 * (1. +      params_.phys_eps_);
     double potential_coeff_2 = 0.5 * (1. + 1. / params_.phys_eps_);
     
@@ -70,15 +61,21 @@ void Treecode::matrix_vector(double alpha, const double* __restrict__ potential_
     std::memset(potential_new, 0, potential_num * sizeof(double));
 
 #ifdef OPENACC_ENABLED
-    #pragma acc update device(potential_old[0:potential_num], \
+    #pragma acc enter data copyin(potential_old[0:potential_num], \
                               potential_new[0:potential_num])
 #endif
-    
+
+    std::cout << "Clear charges..." << std::endl;
     clusters_.clear_charges();
+    std::cout << "Clear potentials..." << std::endl;
     clusters_.clear_potentials();
 
+    std::cout << "Compute charges..." << std::endl;
     particles_.compute_charges(potential_old);
-    clusters_.upward_pass();
+    std::cout << "Upward pass..." << std::endl;
+    //clusters_.upward_pass();
+
+    std::cout << "Running interactions..." << std::endl;
 
     for (std::size_t target_node_idx = 0; target_node_idx < tree_.num_nodes(); ++target_node_idx) {
         
@@ -98,10 +95,13 @@ void Treecode::matrix_vector(double alpha, const double* __restrict__ potential_
             Treecode::cluster_cluster_interact(potential_new, target_node_idx, source_node_idx);
     }
     
-    clusters_.downward_pass(potential_new);
-    
+    std::cout << "Downward pass..." << std::endl;
+    //clusters_.downward_pass(potential_new);
+    std::cout << "Computing potential..." << std::endl;
+
 #ifdef OPENACC_ENABLED
-    #pragma acc update host(potential_new[0:potential_num])
+    #pragma acc exit data copyout(potential_old[0:potential_num], \
+                              potential_new[0:potential_num])
 #endif
     
     for (std::size_t i = 0; i < potential_.size() / 2; ++i)
@@ -170,9 +170,9 @@ void Treecode::particle_particle_interact(      double* __restrict__ potential,
         
         double pot_temp_1 = 0.;
         double pot_temp_2 = 0.;
-    
+
 #ifdef OPENACC_ENABLED
-        #pragma acc loop
+        #pragma acc loop reduction(+:pot_temp_1,pot_temp_2)
 #endif
         for (std::size_t k = source_node_particle_begin; k < source_node_particle_end; ++k) {
         
@@ -220,7 +220,13 @@ void Treecode::particle_particle_interact(      double* __restrict__ potential,
             }
         }
         
+#ifdef OPENACC_ENABLED
+        #pragma acc atomic
+#endif
         potential[j]                 += pot_temp_1;
+#ifdef OPENACC_ENABLED
+        #pragma acc atomic
+#endif
         potential[j + num_particles] += pot_temp_2;
     }
 }

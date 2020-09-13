@@ -209,8 +209,11 @@ void Particles::compute_source_term()
 #endif
     for (std::size_t i = 0; i < num; ++i) {
 
+        double source_term_1 = 0.;
+        double source_term_2 = 0.;
+
 #ifdef OPENACC_ENABLED
-        #pragma acc loop vector
+        #pragma acc loop vector reduction(+:source_term_1,source_term_2)
 #endif
         for (std::size_t j = 0; j < num_atoms; ++j) {
 
@@ -232,9 +235,17 @@ void Particles::compute_source_term()
             double G1 = cos_theta * G0 / dist;
 
   /* update source term */
-            particles_source_term_ptr[i]       += molecule_charge_ptr[j] * G0 / eps_solute;
-            particles_source_term_ptr[num + i] += molecule_charge_ptr[j] * G1 / eps_solute;
+            source_term_1 += molecule_charge_ptr[j] * G0 / eps_solute;
+            source_term_2 += molecule_charge_ptr[j] * G1 / eps_solute;
         }
+#ifdef OPENACC_ENABLED
+#pragma acc atomic
+#endif
+        particles_source_term_ptr[i]       += source_term_1;
+#ifdef OPENACC_ENABLED
+#pragma acc atomic
+#endif
+        particles_source_term_ptr[num + i] += source_term_2;
     }
     
     Particles::update_source_term_on_host();
@@ -263,12 +274,14 @@ double Particles::compute_solvation_energy(std::vector<double>& potential) const
     const double* __restrict__ molecule_charge_ptr = molecule_.charge_ptr();
     
     const double* __restrict__ potential_ptr = potential.data();
+    std::size_t potential_num = potential.size();
     
 #ifdef OPENACC_ENABLED
+    #pragma acc enter data copyin(potential_ptr[0:potential_num])
     #pragma acc parallel loop gang present(molecule_coords_ptr, molecule_charge_ptr, \
                                       particles_x_ptr, particles_y_ptr, particles_z_ptr, \
                                       particles_nx_ptr, particles_ny_ptr, particles_nz_ptr, \
-                                      particles_area_ptr, potential_ptr)
+                                      particles_area_ptr)
 #endif
     for (std::size_t i = 0; i < num; ++i) {
 
@@ -301,6 +314,9 @@ double Particles::compute_solvation_energy(std::vector<double>& potential) const
                               * (L1 * potential_ptr[i] + L2 * potential_ptr[num + i]);
         }
     }
+#ifdef OPENACC_ENABLED
+    #pragma acc exit data delete(potential_ptr[0:potential_num])
+#endif
 
     return solvation_energy;
 }
