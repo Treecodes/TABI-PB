@@ -1,7 +1,5 @@
-#define MAX(a,b) ((a) >= (b) ? (a) : (b))
-
+#include <iostream>
 #include <cmath>
-#include <cstdio>
 
 #include "treecode.h"
 
@@ -80,22 +78,13 @@
 *               M*x = b,
 *
 *          where x and b are vectors, and M a matrix. Vector b must
-*          remain unchanged.
-*          The solution is over-written on vector x.
+*          remain unchanged. The solution is over-written on vector x.
 *
 *  INFO    (output) INTEGER
 *
 *          =  0: Successful exit. Iterated approximate solution returned.
 *
-*          >  0: Convergence to tolerance not achieved. This will be
-*                set to the number of iterations performed.
-*
-*          <  0: Illegal input parameter.
-*
-*                   -1: matrix dimension N < 0
-*                   -2: LDW < N
-*                   -3: Maximum number of iterations ITER <= 0.
-*                   -4: LDH < RESTRT
+*          >  0: Convergence to tolerance not achieved.
 *
 *  BLAS CALLS:   DAXPY, DCOPY, DDOT, DNRM2, DROT, DROTG, DSCAL
 *  ============================================================
@@ -120,22 +109,8 @@ int Treecode::gmres_(long int n, const double *b, double *x, long int restrt,
                      double* work, long int ldw, double* h, long int ldh,
                      long int& iter, double& resid)
 {
-
-/*     Test the input parameters. */
-
-    if (n < 0) {
-        return -1;
-    } else if (ldw < MAX(1,n)) {
-        return -2;
-    } else if (iter <= 0) {
-        return -3;
-    } else if (ldh < restrt + 1) {
-        return -4;
-    }
-
     long int maxit = iter;
     double tol = resid;
-
 
 /*     Store the Givens parameters in matrix H. */
 /*     Set initial residual (AV is temporary workspace here). */
@@ -145,16 +120,13 @@ int Treecode::gmres_(long int n, const double *b, double *x, long int restrt,
     if (dnrm2_(n, x) != 0.) {
     
         for (long int idx = 0; idx < n; ++idx) work[2 * ldw + idx] = b[idx];
-        
         Treecode::matrix_vector(-1., x, 1., &work[2 * ldw]);
     }
 
     Treecode::precondition(work, &work[2 * ldw]);
 
     double bnrm2 = dnrm2_(n, b);
-    if (bnrm2 == 0.) {
-        bnrm2 = 1.;
-    }
+    if (bnrm2 == 0.) bnrm2 = 1.;
     
     if (dnrm2_(n, work) / bnrm2 < tol) {
         return 0;
@@ -169,7 +141,6 @@ int Treecode::gmres_(long int n, const double *b, double *x, long int restrt,
         for (long int idx = 0; idx < n; ++idx) work[3 * ldw + idx] = work[idx];
         
         double rnorm = dnrm2_(n, &work[3 * ldw]);
-        
         dscal_(n, 1. / rnorm, &work[3 * ldw]);
 
     /*        Initialize S to the elementary vector E1 scaled by RNORM. */
@@ -181,7 +152,6 @@ int Treecode::gmres_(long int n, const double *b, double *x, long int restrt,
             ++iter;
 
             Treecode::matrix_vector(1., &work[(3 + i) * ldw], 0., &work[2 * ldw]);
-            
             Treecode::precondition(&work[2 * ldw], &work[2 * ldw]);
 
         /*           Construct I-th column of H orthnormal to the previous */
@@ -216,8 +186,8 @@ int Treecode::gmres_(long int n, const double *b, double *x, long int restrt,
                   h[i + (restrt) * ldh], h[i + (restrt + 1) * ldh]);
                             
             resid = std::fabs(work[i + 1 + ldw]) / bnrm2;
-
-            std::printf("iteration no. = %ld, error = %e\n", iter, resid);
+            std::cout << "GMRES iteration " << std::setw(3) << iter
+                      << ": error = " << std::scientific << resid << std::endl;
 
             if (resid <= tol) {
                 update_(i+1, n, x, h, ldh, &work[2 * ldw], &work[ldw], &work[3 * ldw], ldw);
@@ -247,9 +217,7 @@ int Treecode::gmres_(long int n, const double *b, double *x, long int restrt,
         if (iter == maxit) {
             return 1;
         }
-
-/*        Restart. */
-    }
+    } /* Restart. */
 }
 
 
