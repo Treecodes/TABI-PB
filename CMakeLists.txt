@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.1...3.14)
-project(TABI-PB VERSION 3.0 LANGUAGES CXX)
+project(TABI-PB VERSION 3.0 LANGUAGES CXX C)
 
 #set(CMAKE_VERBOSE_MAKEFILE ON)
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
@@ -30,11 +30,10 @@ file(MAKE_DIRECTORY build/bin)
 
 set(OPENACC_ACCEL_TARGET tesla)
 find_package(OpenACC)
-
 find_package(OpenMP)
 
-set(LAPACK_LIBRARIES /opt/intel/mkl/lib/libmkl_rt.dylib)
-set(LAPACK_INCLUDE_PATH /opt/intel/mkl/include)
+#set(LAPACK_LIBRARIES /opt/intel/mkl/lib/libmkl_rt.dylib)
+#set(LAPACK_INCLUDE_PATH /opt/intel/mkl/include)
 
 
 get_filename_component (CXX_COMPILER_NAME ${CMAKE_CXX_COMPILER} NAME)

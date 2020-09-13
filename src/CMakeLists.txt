@@ -7,10 +7,12 @@ add_executable(tabipb main.cpp
         clusters.cpp clusters.h
         interaction_list.cpp interaction_list.h
         treecode.cpp gmres.cpp treecode.h
-        constants.h)
+        constants.h
+        blas/drot.c blas/drotg.c blas/d_sign.c 
+        blas/dtrsv.c blas/dgemv.c blas/f2c.h blas/blas.h)
 
-target_link_libraries(tabipb PRIVATE ${LAPACK_LIBRARIES})
-include_directories(SYSTEM ${LAPACK_INCLUDE_PATH})
+#target_link_libraries(tabipb PRIVATE ${LAPACK_LIBRARIES})
+#include_directories(SYSTEM ${LAPACK_INCLUDE_PATH})
 
 target_compile_features(tabipb PRIVATE cxx_std_11)
 #target_link_libraries(tabipb PRIVATE LAPACK::LAPACK)

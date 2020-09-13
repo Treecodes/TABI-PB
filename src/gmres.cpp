@@ -7,7 +7,6 @@
 
 #include <cmath>
 #include <cstdio>
-#include <mkl_cblas.h>
 
 #include "treecode.h"
 
@@ -120,6 +119,13 @@
 *  ============================================================
 */
 
+#include "blas/blas.h"
+
+static double dnrm2_(long int n, const double* w);
+static void dscal_(long int n, double alpha, double* x);
+static double ddot_(long int n, const double* x, const double* y);
+static void daxpy_(long int n, double alpha, const double* x, double* y);
+
 static int update_(long int, long int, double *, double *, long int,
                    double *, double *, double *, long int);
 static  int basis_(long int, long int, double *, double *, long int, double *);
@@ -149,22 +155,29 @@ int Treecode::gmres_(long int n, const double *b, double *x, long int restrt,
 /*     Store the Givens parameters in matrix H. */
 /*     Set initial residual (AV is temporary workspace here). */
 
-    cblas_dcopy(n, b, 1, &work[2 * ldw], 1);
+    //cblas_dcopy(n, b, 1, &work[2 * ldw], 1);
+    for (long int idx = 0; idx < n; ++idx) work[2 * ldw + idx] = b[idx];
 
-    if (cblas_dnrm2(n, x, 1) != 0.) {
-        cblas_dcopy(n, b, 1, &work[2 * ldw], 1);
+    //if (cblas_dnrm2(n, x, 1) != 0.) {
+    if (dnrm2_(n, x) != 0.) {
+    
+        //cblas_dcopy(n, b, 1, &work[2 * ldw], 1);
+        for (long int idx = 0; idx < n; ++idx) work[2 * ldw + idx] = b[idx];
+        
         Treecode::matrix_vector(-1., x, 1., &work[2 * ldw]);
     }
 
     Treecode::precondition(work, &work[2 * ldw]);
 
-    double bnrm2 = cblas_dnrm2(n, b, 1);
+    //double bnrm2 = cblas_dnrm2(n, b, 1);
+    double bnrm2 = dnrm2_(n, b);
     if (bnrm2 == 0.) {
         bnrm2 = 1.;
     }
     
-    if (cblas_dnrm2(n, work, 1) / bnrm2 < tol) {
-	    return 0;
+    //if (cblas_dnrm2(n, work, 1) / bnrm2 < tol) {
+    if (dnrm2_(n, work) / bnrm2 < tol) {
+        return 0;
     }
 
     iter = 0;
@@ -173,16 +186,19 @@ int Treecode::gmres_(long int n, const double *b, double *x, long int restrt,
 
     /*        Construct the first column of V. */
 
-        cblas_dcopy(n, work, 1, &work[3 * ldw], 1);
-        double rnorm = cblas_dnrm2(n, &work[3 * ldw], 1);
-        cblas_dscal(n, 1. / rnorm, &work[3 * ldw], 1);
+        //cblas_dcopy(n, work, 1, &work[3 * ldw], 1);
+        for (long int idx = 0; idx < n; ++idx) work[3 * ldw + idx] = work[idx];
+        
+        //double rnorm = cblas_dnrm2(n, &work[3 * ldw], 1);
+        double rnorm = dnrm2_(n, &work[3 * ldw]);
+        
+        //cblas_dscal(n, 1. / rnorm, &work[3 * ldw], 1);
+        dscal_(n, 1. / rnorm, &work[3 * ldw]);
 
     /*        Initialize S to the elementary vector E1 scaled by RNORM. */
 
         work[ldw] = rnorm;
-        for (long int k = 1; k < n; ++k) {
-            work[k + ldw] = 0.;
-        }
+        for (long int k = 1; k < n; ++k) work[k + ldw] = 0.;
 
         for (long int i = 0; i < restrt; ++i) {
             ++iter;
@@ -202,8 +218,10 @@ int Treecode::gmres_(long int n, const double *b, double *x, long int restrt,
         /*           the RESTRT iterations. */
 
             for (long int k = 0; k < i; ++k) {
-                cblas_drot(1, &h[k + i * ldh], ldh, &h[k + 1 + i * ldh],
-                           ldh, h[k + restrt * ldh], h[k + (restrt + 1) * ldh]);
+//                cblas_drot(1, &h[k + i * ldh], ldh, &h[k + 1 + i * ldh],
+//                           ldh, h[k + restrt * ldh], h[k + (restrt + 1) * ldh]);
+                drot_(1, &h[k + i * ldh], ldh, &h[k + 1 + i * ldh],
+                      ldh, h[k + restrt * ldh], h[k + (restrt + 1) * ldh]);
             }
 
         /*           Construct the I-th rotation matrix, and apply it to H so that */
@@ -212,10 +230,18 @@ int Treecode::gmres_(long int n, const double *b, double *x, long int restrt,
             double aa = h[i * (ldh + 1)];
             double bb = h[i * (ldh + 1) + 1];
             
-            cblas_drotg(&aa, &bb, &h[i + (restrt)     * ldh],
+//            cblas_drotg(&aa, &bb, &h[i + (restrt)     * ldh],
+//                                  &h[i + (restrt + 1) * ldh]);
+                                  
+            drotg_(&aa, &bb, &h[i + (restrt)     * ldh],
                                   &h[i + (restrt + 1) * ldh]);
                                   
-            cblas_drot(1,   &h[i * (ldh + 1)],
+//            cblas_drot(1,   &h[i * (ldh + 1)],
+//                       ldh, &h[i * (ldh + 1) + 1],
+//                       ldh,  h[i + (restrt)     * ldh],
+//                             h[i + (restrt + 1) * ldh]);
+                             
+            drot_(1,   &h[i * (ldh + 1)],
                        ldh, &h[i * (ldh + 1) + 1],
                        ldh,  h[i + (restrt)     * ldh],
                              h[i + (restrt + 1) * ldh]);
@@ -224,7 +250,12 @@ int Treecode::gmres_(long int n, const double *b, double *x, long int restrt,
         /*           gives an approximation of the residual norm. If less than */
         /*           tolerance, update the approximation vector X and quit. */
 
-            cblas_drot(1,   &work[i + ldw],
+//            cblas_drot(1,   &work[i + ldw],
+//                       ldw, &work[i + ldw + 1],
+//                       ldw, h[i + (restrt)     * ldh],
+//                            h[i + (restrt + 1) * ldh]);
+                            
+            drot_(1,   &work[i + ldw],
                        ldw, &work[i + ldw + 1],
                        ldw, h[i + (restrt)     * ldh],
                             h[i + (restrt + 1) * ldh]);
@@ -246,12 +277,14 @@ int Treecode::gmres_(long int n, const double *b, double *x, long int restrt,
 
     /*        Compute residual vector R, find norm, then check for tolerance. */
 
-        cblas_dcopy(n, b, 1, &work[2 * ldw], 1);
+        //cblas_dcopy(n, b, 1, &work[2 * ldw], 1);
+        for (long int idx = 0; idx < n; ++idx) work[2 * ldw + idx] = b[idx];
         
         Treecode::matrix_vector(-1., x, 1., &work[2 * ldw]);
         Treecode::precondition(work, &work[2 * ldw]);
         
-        work[restrt + ldw] = cblas_dnrm2(n, work, 1);
+        //work[restrt + ldw] = cblas_dnrm2(n, work, 1);
+        work[restrt + ldw] = dnrm2_(n, work);
         resid = work[restrt + ldw] / bnrm2;
         
         if (resid <= tol) {
@@ -275,14 +308,24 @@ static int update_(long int i, long int n, double *x, double *h, long int ldh,
 
 /*     Solve H*Y = S for upper triangualar H. */
 
-    cblas_dcopy(i, s, 1, y, 1);
-    cblas_dtrsv(CblasColMajor, CblasUpper, CblasNoTrans, CblasNonUnit, 
-                i, h, ldh, y, 1);
+    //cblas_dcopy(i, s, 1, y, 1);
+    for (long int idx = 0; idx < i; ++idx) y[idx] = s[idx];
+    
+//    cblas_dtrsv(CblasColMajor, CblasUpper, CblasNoTrans, CblasNonUnit,
+//                i, h, ldh, y, 1);
+                
+    char uplo[] = {'U'};
+    char trans[] = {'N'};
+    char diag[] = {'N'};
+    
+    dtrsv_(uplo, trans, diag, i, h, ldh, y, 1);
 
 /*     Compute current solution vector X = X + V*Y. */
 
-    cblas_dgemv(CblasColMajor, CblasNoTrans, n, i, 1.,
-                v, ldv, y, 1, 1., x, 1);
+//    cblas_dgemv(CblasColMajor, CblasNoTrans, n, i, 1.,
+//                v, ldv, y, 1, 1., x, 1);
+                
+    dgemv_(trans, n, i, 1., v, ldv, y, 1, 1., x, 1);
 
     return 0;
 }
@@ -295,13 +338,55 @@ static int basis_(long int i, long int n, double *h, double *v, long int ldv, do
 /*     using the Gram-Schmidt process on V and W. */
 
     for (long int k = 0; k < i; ++k) {
-        h[k] = cblas_ddot(n, w, 1, &v[k * ldv], 1);
-        cblas_daxpy(n, -h[k], &v[k * ldv], 1, w, 1);
+        //h[k] = cblas_ddot(n, w, 1, &v[k * ldv], 1);
+        h[k] = ddot_(n, w, &v[k * ldv]);
+        //cblas_daxpy(n, -h[k], &v[k * ldv], 1, w, 1);
+        daxpy_(n, -h[k], &v[k * ldv], w);
     }
     
-    h[i] = cblas_dnrm2(n, w, 1);
-    cblas_dcopy(n, w, 1, &v[i * ldv], 1);
-    cblas_dscal(n, 1. / h[i], &v[i * ldv], 1);
-
+    //h[i] = cblas_dnrm2(n, w, 1);
+    h[i] = dnrm2_(n, w);
+    
+    //cblas_dcopy(n, w, 1, &v[i * ldv], 1);
+    for (long int idx = 0; idx < n; ++idx) v[i * ldv + idx] = w[idx];
+    
+    //cblas_dscal(n, 1. / h[i], &v[i * ldv], 1);
+    dscal_(n, 1. / h[i], &v[i * ldv]);
+        
     return 0;
+}
+
+
+static double dnrm2_(long int n, const double* x)
+{
+    double norm = 0.;
+    for (long int idx = 0; idx < n; ++idx) {
+        norm += x[idx] * x[idx];
+    }
+    return std::sqrt(norm);
+}
+
+
+static void dscal_(long int n, double alpha, double* x)
+{
+    for (long int idx = 0; idx < n; ++idx) {
+        x[idx] *= alpha;
+    }
+}
+
+static double ddot_(long int n, const double* x, const double* y)
+{
+    double ddot = 0.;
+    for (long int idx = 0; idx < n; ++idx) {
+        ddot += x[idx] * y[idx];
+    }
+    return ddot;
+}
+
+
+static void daxpy_(long int n, double alpha, const double* x, double* y)
+{
+    for (long int idx = 0; idx < n; ++idx) {
+        y[idx] += alpha * x[idx];
+    }
 }
