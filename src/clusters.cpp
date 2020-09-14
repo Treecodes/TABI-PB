@@ -81,151 +81,175 @@ void Clusters::upward_pass()
     const double* __restrict__ sources_q_dz_ptr = particles_.source_charge_dz_ptr();
         
     std::vector<double> weights (num_interp_pts_per_node_);
-    std::vector<double> coeffs_x(num_interp_pts_per_node_);
-    std::vector<double> coeffs_y(num_interp_pts_per_node_);
-    std::vector<double> coeffs_z(num_interp_pts_per_node_);
-
     double* weights_ptr = weights.data();
-    double* coeffs_x_ptr = coeffs_x.data();
-    double* coeffs_y_ptr = coeffs_y.data();
-    double* coeffs_z_ptr = coeffs_z.data();
-
     int weights_num = weights.size();
-    int coeffs_x_num = coeffs_x.size();
-    int coeffs_y_num = coeffs_y.size();
-    int coeffs_z_num = coeffs_z.size();
+    
+    for (int i = 0; i < weights_num; ++i) {
+        weights[i] = ((i % 2 == 0)? 1 : -1);
+        if (i == 0 || i == weights_num-1) weights[i] = ((i % 2 == 0)? 1 : -1) * 0.5;
+    }
 
     int num_interp_pts_per_node = num_interp_pts_per_node_;
     
-    for (int i = 0; i < num_interp_pts_per_node_; ++i) {
-        weights[i] = ((i % 2 == 0)? 1 : -1);
-        if (i == 0 || i == num_interp_pts_per_node_-1) weights[i] = ((i % 2 == 0)? 1 : -1) * 0.5;
-    }
+#ifdef OPENACC_ENABLED
+    #pragma acc enter data copyin(weights_ptr[0:weights_num])
+#endif
     
     for (std::size_t node_idx = 0; node_idx < tree_.num_nodes(); ++node_idx) {
         
         auto particle_idxs = tree_.node_particle_idxs(node_idx);
+        
         std::size_t node_interp_pts_start = node_idx * num_interp_pts_per_node_;
         std::size_t node_charges_start    = node_idx * num_charges_per_node_;
         
         std::size_t particle_start = particle_idxs[0];
         std::size_t particle_end   = particle_idxs[1];
+        std::size_t num_particles  = particle_idxs[1] - particle_idxs[0];
+        
+        std::vector<int> exact_idx_x(num_particles);
+        std::vector<int> exact_idx_y(num_particles);
+        std::vector<int> exact_idx_z(num_particles);
+        std::vector<double> denominator(num_particles);
+        
+        int* exact_idx_x_ptr = exact_idx_x.data();
+        int* exact_idx_y_ptr = exact_idx_y.data();
+        int* exact_idx_z_ptr = exact_idx_z.data();
+        double* denominator_ptr = denominator.data();
         
 #ifdef OPENACC_ENABLED
-#pragma acc enter data copyin(weights_ptr[0:weights_num], coeffs_x_ptr[0:coeffs_x_num], \
-                              coeffs_y_ptr[0:coeffs_y_num], coeffs_z_ptr[0:coeffs_z_num])
-#pragma acc parallel loop present(particles_x_ptr, particles_y_ptr, particles_z_ptr, \
-                                  sources_q_ptr, sources_q_dx_ptr, sources_q_dy_ptr, sources_q_dz_ptr, \
-                                  clusters_x_ptr, clusters_y_ptr, clusters_z_ptr, \
-                                  clusters_q_ptr, clusters_q_dx_ptr, clusters_q_dy_ptr, clusters_q_dz_ptr, \
-                                  weights_ptr, coeffs_x_ptr, coeffs_y_ptr, coeffs_z_ptr)
+#pragma acc parallel present(particles_x_ptr, particles_y_ptr, particles_z_ptr, \
+                             sources_q_ptr, sources_q_dx_ptr, sources_q_dy_ptr, sources_q_dz_ptr, \
+                             clusters_x_ptr, clusters_y_ptr, clusters_z_ptr, \
+                             clusters_q_ptr, clusters_q_dx_ptr, clusters_q_dy_ptr, clusters_q_dz_ptr, \
+                             weights_ptr) \
+                     create(exact_idx_x_ptr[0:num_particles], exact_idx_y_ptr[0:num_particles], \
+                            exact_idx_z_ptr[0:num_particles], denominator_ptr[0:num_particles])
 #endif
-        for (std::size_t i = particle_start; i < particle_end; ++i) {
+        {
+
+#ifdef OPENACC_ENABLED
+        #pragma acc loop vector(32) independent
+#endif
+        for (std::size_t i = 0; i < num_particles; ++i) {
+            exact_idx_x_ptr[i] = -1;
+            exact_idx_y_ptr[i] = -1;
+            exact_idx_z_ptr[i] = -1;
+        }
+
+#ifdef OPENACC_ENABLED
+        #pragma acc loop
+#endif
+        for (std::size_t i = 0; i < num_particles; ++i) {
         
             double denominator_x = 0.;
             double denominator_y = 0.;
             double denominator_z = 0.;
             
-            int exact_idx_x = -1;
-            int exact_idx_y = -1;
-            int exact_idx_z = -1;
-            
-            double xx    = particles_x_ptr[i];
-            double yy    = particles_y_ptr[i];
-            double zz    = particles_z_ptr[i];
-            
-            double qq_   = sources_q_ptr   [i];
-            double qq_dx = sources_q_dx_ptr[i];
-            double qq_dy = sources_q_dy_ptr[i];
-            double qq_dz = sources_q_dz_ptr[i];
+            double xx    = particles_x_ptr[particle_start + i];
+            double yy    = particles_y_ptr[particle_start + i];
+            double zz    = particles_z_ptr[particle_start + i];
             
 #ifdef OPENACC_ENABLED
             #pragma acc loop reduction(+:denominator_x,denominator_y,denominator_z) \
-                             reduction(max:exact_idx_x,exact_idx_y,exact_idx_z)
+                             reduction(max:exact_idx_x_ptr[i],exact_idx_y_ptr[i],exact_idx_z_ptr[i])
 #endif
             for (int j = 0; j < num_interp_pts_per_node; ++j) {
             
                 double dist_x = xx - clusters_x_ptr[node_interp_pts_start + j];
                 double dist_y = yy - clusters_y_ptr[node_interp_pts_start + j];
                 double dist_z = zz - clusters_z_ptr[node_interp_pts_start + j];
-
-                coeffs_x_ptr[j] = weights_ptr[j] / dist_x;
-                coeffs_y_ptr[j] = weights_ptr[j] / dist_y;
-                coeffs_z_ptr[j] = weights_ptr[j] / dist_z;
                 
-                denominator_x += coeffs_x_ptr[j];
-                denominator_y += coeffs_y_ptr[j];
-                denominator_z += coeffs_z_ptr[j];
+                denominator_x += weights_ptr[j] / dist_x;
+                denominator_y += weights_ptr[j] / dist_y;
+                denominator_z += weights_ptr[j] / dist_z;
                 
-                if (std::abs(dist_x) < std::numeric_limits<double>::min()) exact_idx_x = j;
-                if (std::abs(dist_y) < std::numeric_limits<double>::min()) exact_idx_y = j;
-                if (std::abs(dist_z) < std::numeric_limits<double>::min()) exact_idx_z = j;
+                if (std::abs(dist_x) < std::numeric_limits<double>::min()) exact_idx_x_ptr[i] = j;
+                if (std::abs(dist_y) < std::numeric_limits<double>::min()) exact_idx_y_ptr[i] = j;
+                if (std::abs(dist_z) < std::numeric_limits<double>::min()) exact_idx_z_ptr[i] = j;
             }
             
-            if (exact_idx_x > -1) {
-                for (int id = 0; id < coeffs_x_num; ++id) coeffs_x_ptr[id] = 0.;
-                coeffs_x_ptr[exact_idx_x] = 1.;
-                denominator_x = 1.;
-            }
-            
-            if (exact_idx_y > -1) {
-                for (int id = 0; id < coeffs_y_num; ++id) coeffs_y_ptr[id] = 0.;
-                coeffs_y_ptr[exact_idx_y] = 1.;
-                denominator_y = 1.;
-            }
-            
-            if (exact_idx_z > -1) {
-                for (int id = 0; id < coeffs_z_num; ++id) coeffs_z_ptr[id] = 0.;
-                coeffs_z_ptr[exact_idx_z] = 1.;
-                denominator_z = 1.;
-            }
-            
-            double denominator = 1. / (denominator_x * denominator_y * denominator_z);
-            
-#ifdef OPENACC_ENABLED
-            #pragma acc loop collapse(3)
-#endif
-            for (int k1 = 0; k1 < num_interp_pts_per_node; ++k1) {
-            for (int k2 = 0; k2 < num_interp_pts_per_node; ++k2) {
-            for (int k3 = 0; k3 < num_interp_pts_per_node; ++k3) {
-                    
-                std::size_t kk = node_charges_start
-                               + k1 * num_interp_pts_per_node * num_interp_pts_per_node
-                               + k2 * num_interp_pts_per_node + k3;
-                               
-                double charge_coeff = coeffs_x_ptr[k1] * coeffs_y_ptr[k2]
-                                    * coeffs_z_ptr[k3] * denominator;
-                                    
-                double q_temp    = charge_coeff * qq_;
-                double q_dx_temp = charge_coeff * qq_dx;
-                double q_dy_temp = charge_coeff * qq_dy;
-                double q_dz_temp = charge_coeff * qq_dz;
-                
-#ifdef OPENACC_ENABLED
-            #pragma acc atomic update
-#endif
-                clusters_q_ptr   [kk] += q_temp;
-#ifdef OPENACC_ENABLED
-            #pragma acc atomic update
-#endif
-                clusters_q_dx_ptr[kk] += q_dx_temp;
-#ifdef OPENACC_ENABLED
-            #pragma acc atomic update
-#endif
-                clusters_q_dy_ptr[kk] += q_dy_temp;
-#ifdef OPENACC_ENABLED
-            #pragma acc atomic update
-#endif
-                clusters_q_dz_ptr[kk] += q_dz_temp;
-            }
-            }
-            }
+            denominator_ptr[i] = 1.0;
+            if (exact_idx_x_ptr[i] == -1) denominator_ptr[i] /= denominator_x;
+            if (exact_idx_y_ptr[i] == -1) denominator_ptr[i] /= denominator_y;
+            if (exact_idx_z_ptr[i] == -1) denominator_ptr[i] /= denominator_z;
         }
+
+
 #ifdef OPENACC_ENABLED
-#pragma acc exit data delete(weights_ptr[0:weights_num], coeffs_x_ptr[0:coeffs_x_num], \
-                             coeffs_y_ptr[0:coeffs_y_num], coeffs_z_ptr[0:coeffs_z_num])
+        #pragma acc loop
 #endif
-    }
+        for (int k1 = 0; k1 < num_interp_pts_per_node; ++k1) {
+        for (int k2 = 0; k2 < num_interp_pts_per_node; ++k2) {
+        for (int k3 = 0; k3 < num_interp_pts_per_node; ++k3) {
+        
+            std::size_t kk = node_charges_start
+                   + k1 * num_interp_pts_per_node * num_interp_pts_per_node
+                   + k2 * num_interp_pts_per_node + k3;
+                   
+            double cx = clusters_x_ptr[node_interp_pts_start + k1];
+            double w1 = weights_ptr[k1];
+
+            double cy = clusters_y_ptr[node_interp_pts_start + k2];
+            double w2 = weights_ptr[k2];
+            
+            double cz = clusters_z_ptr[node_interp_pts_start + k3];
+            double w3 = weights_ptr[k3];
+            
+            double q_temp    = 0.;
+            double q_dx_temp = 0.;
+            double q_dy_temp = 0.;
+            double q_dz_temp = 0.;
+            
+#ifdef OPENACC_ENABLED
+            #pragma acc loop vector(32) reduction(+:q_temp,q_dx_temp,q_dy_temp,q_dz_temp)
+#endif
+            for (int i = 0; i < num_particles; i++) {  // loop over source points
+            
+                double dist_x = particles_x_ptr[particle_start + i] - cx;
+                double dist_y = particles_y_ptr[particle_start + i] - cy;
+                double dist_z = particles_z_ptr[particle_start + i] - cz;
+                
+                double numerator = 1.;
+
+                // If exact_idx[i] == -1, then no issues.
+                // If exact_idx[i] != -1, then we want to zero out terms EXCEPT when exactInd=k1.
+                if (exact_idx_x[i] == -1) {
+                    numerator *= w1 / dist_x;
+                } else {
+                    if (exact_idx_x[i] != k1) numerator *= 0.;
+                }
+
+                if (exact_idx_y[i] == -1) {
+                    numerator *= w2 / dist_y;
+                } else {
+                    if (exact_idx_y[i] != k2) numerator *= 0.;
+                }
+
+                if (exact_idx_z[i] == -1) {
+                    numerator *= w3 / dist_z;
+                } else {
+                    if (exact_idx_z[i] != k3) numerator *= 0.;
+                }
+
+                q_temp    += sources_q_ptr   [particle_start + i] * numerator * denominator_ptr[i];
+                q_dx_temp += sources_q_dx_ptr[particle_start + i] * numerator * denominator_ptr[i];
+                q_dy_temp += sources_q_dy_ptr[particle_start + i] * numerator * denominator_ptr[i];
+                q_dz_temp += sources_q_dz_ptr[particle_start + i] * numerator * denominator_ptr[i];
+            }
+            
+            clusters_q_ptr   [kk] += q_temp;
+            clusters_q_dx_ptr[kk] += q_dx_temp;
+            clusters_q_dy_ptr[kk] += q_dy_temp;
+            clusters_q_dz_ptr[kk] += q_dz_temp;
+        }
+        }
+        }
+        
+        } // end parallel region
+    } // end loop over nodes
+#ifdef OPENACC_ENABLED
+    #pragma acc exit data delete(weights_ptr[0:weights_num])
+#endif
 }
 
 
@@ -250,27 +274,20 @@ void Clusters::downward_pass(double* __restrict__ potential)
     const double* __restrict__ targets_q_dz_ptr  = particles_.target_charge_dz_ptr();
     
     std::vector<double> weights (num_interp_pts_per_node_);
-    std::vector<double> coeffs_x(num_interp_pts_per_node_);
-    std::vector<double> coeffs_y(num_interp_pts_per_node_);
-    std::vector<double> coeffs_z(num_interp_pts_per_node_);
-
     double* weights_ptr = weights.data();
-    double* coeffs_x_ptr = coeffs_x.data();
-    double* coeffs_y_ptr = coeffs_y.data();
-    double* coeffs_z_ptr = coeffs_z.data();
-
     int weights_num = weights.size();
-    int coeffs_x_num = coeffs_x.size();
-    int coeffs_y_num = coeffs_y.size();
-    int coeffs_z_num = coeffs_z.size();
     
-    std::size_t num_particles = particles_.num();
+    for (int i = 0; i < weights_num; ++i) {
+        weights[i] = ((i % 2 == 0)? 1 : -1);
+        if (i == 0 || i == weights_num-1) weights[i] = ((i % 2 == 0)? 1 : -1) * 0.5;
+    }
+    
+    std::size_t potential_offset = particles_.num();
     int num_interp_pts_per_node = num_interp_pts_per_node_;
     
-    for (int i = 0; i < num_interp_pts_per_node_; ++i) {
-        weights[i] = ((i % 2 == 0)? 1 : -1);
-        if (i == 0 || i == num_interp_pts_per_node_-1) weights[i] = ((i % 2 == 0)? 1 : -1) * 0.5;
-    }
+#ifdef OPENACC_ENABLED
+#pragma acc enter data copyin(weights_ptr[0:weights_num])
+#endif
     
     for (std::size_t node_idx = 0; node_idx < tree_.num_nodes(); ++node_idx) {
         
@@ -280,17 +297,16 @@ void Clusters::downward_pass(double* __restrict__ potential)
         
         std::size_t particle_start = particle_idxs[0];
         std::size_t particle_end   = particle_idxs[1];
+        std::size_t num_particles  = particle_idxs[1] - particle_idxs[0];
 
 #ifdef OPENACC_ENABLED
-#pragma acc enter data copyin(weights_ptr[0:weights_num], coeffs_x_ptr[0:coeffs_x_num], \
-                              coeffs_y_ptr[0:coeffs_y_num], coeffs_z_ptr[0:coeffs_z_num])
 #pragma acc parallel loop present(particles_x_ptr, particles_y_ptr, particles_z_ptr, \
                                   targets_q_ptr, targets_q_dx_ptr, targets_q_dy_ptr, targets_q_dz_ptr, \
                                   clusters_x_ptr, clusters_y_ptr, clusters_z_ptr, \
                                   clusters_p_ptr, clusters_p_dx_ptr, clusters_p_dy_ptr, clusters_p_dz_ptr, \
-                                  potential, weights_ptr, coeffs_x_ptr, coeffs_y_ptr, coeffs_z_ptr)
+                                  potential, weights_ptr)
 #endif
-        for (std::size_t i = particle_start; i < particle_end; ++i) {
+        for (std::size_t i = 0; i < num_particles; ++i) {
         
             double denominator_x = 0.;
             double denominator_y = 0.;
@@ -300,9 +316,9 @@ void Clusters::downward_pass(double* __restrict__ potential)
             int exact_idx_y = -1;
             int exact_idx_z = -1;
             
-            double xx = particles_x_ptr[i];
-            double yy = particles_y_ptr[i];
-            double zz = particles_z_ptr[i];
+            double xx = particles_x_ptr[particle_start + i];
+            double yy = particles_y_ptr[particle_start + i];
+            double zz = particles_z_ptr[particle_start + i];
             
 #ifdef OPENACC_ENABLED
             #pragma acc loop reduction(+:denominator_x,denominator_y,denominator_z) \
@@ -313,39 +329,21 @@ void Clusters::downward_pass(double* __restrict__ potential)
                 double dist_x = xx - clusters_x_ptr[node_interp_pts_start + j];
                 double dist_y = yy - clusters_y_ptr[node_interp_pts_start + j];
                 double dist_z = zz - clusters_z_ptr[node_interp_pts_start + j];
-
-                coeffs_x_ptr[j] = weights_ptr[j] / dist_x;
-                coeffs_y_ptr[j] = weights_ptr[j] / dist_y;
-                coeffs_z_ptr[j] = weights_ptr[j] / dist_z;
                 
-                denominator_x += coeffs_x_ptr[j];
-                denominator_y += coeffs_y_ptr[j];
-                denominator_z += coeffs_z_ptr[j];
+                denominator_x += weights_ptr[j] / dist_x;
+                denominator_y += weights_ptr[j] / dist_y;
+                denominator_z += weights_ptr[j] / dist_z;
                 
                 if (std::abs(dist_x) < std::numeric_limits<double>::min()) exact_idx_x = j;
                 if (std::abs(dist_y) < std::numeric_limits<double>::min()) exact_idx_y = j;
                 if (std::abs(dist_z) < std::numeric_limits<double>::min()) exact_idx_z = j;
             }
             
-            if (exact_idx_x > -1) {
-                for (int id = 0; id < coeffs_x_num; ++id) coeffs_x_ptr[id] = 0.;
-                coeffs_x_ptr[exact_idx_x] = 1.;
-                denominator_x = 1.;
-            }
-            
-            if (exact_idx_y > -1) {
-                for (int id = 0; id < coeffs_y_num; ++id) coeffs_y_ptr[id] = 0.;
-                coeffs_y_ptr[exact_idx_y] = 1.;
-                denominator_y = 1.;
-            }
-            
-            if (exact_idx_z > -1) {
-                for (int id = 0; id < coeffs_z_num; ++id) coeffs_z_ptr[id] = 0.;
-                coeffs_z_ptr[exact_idx_z] = 1.;
-                denominator_z = 1.;
-            }
-            
-            double denominator = 1. / (denominator_x * denominator_y * denominator_z);
+            double denominator = 1.;
+            if (exact_idx_x == -1) denominator /= denominator_x;
+            if (exact_idx_y == -1) denominator /= denominator_y;
+            if (exact_idx_z == -1) denominator /= denominator_z;
+
             double pot_comp_   = 0.;
             double pot_comp_dx = 0.;
             double pot_comp_dy = 0.;
@@ -363,36 +361,57 @@ void Clusters::downward_pass(double* __restrict__ potential)
                                + k1 * num_interp_pts_per_node * num_interp_pts_per_node
                                + k2 * num_interp_pts_per_node + k3;
                                
-                double potential_coeff = coeffs_x_ptr[k1] * coeffs_y_ptr[k2] 
-                                       * coeffs_z_ptr[k3] * denominator;
-                                    
-                pot_comp_   += potential_coeff * clusters_p_ptr   [kk];
-                pot_comp_dx += potential_coeff * clusters_p_dx_ptr[kk];
-                pot_comp_dy += potential_coeff * clusters_p_dy_ptr[kk];
-                pot_comp_dz += potential_coeff * clusters_p_dz_ptr[kk];
+                double dist_x = xx - clusters_x_ptr[node_interp_pts_start + k1];
+                double dist_y = yy - clusters_y_ptr[node_interp_pts_start + k2];
+                double dist_z = zz - clusters_z_ptr[node_interp_pts_start + k3];
+                
+                double numerator = 1.;
+
+                // If exact_idx == -1, then no issues.
+                // If exact_idx != -1, then we want to zero out terms EXCEPT when exactInd=k1.
+                if (exact_idx_x == -1) {
+                    numerator *= weights_ptr[k1] / dist_x;
+                } else {
+                    if (exact_idx_x != k1) numerator *= 0.;
+                }
+
+                if (exact_idx_y == -1) {
+                    numerator *= weights_ptr[k2] / dist_y;
+                } else {
+                    if (exact_idx_y != k2) numerator *= 0.;
+                }
+
+                if (exact_idx_z == -1) {
+                    numerator *= weights_ptr[k3] / dist_z;
+                } else {
+                    if (exact_idx_z != k3) numerator *= 0.;
+                }
+
+                pot_comp_   += numerator * denominator * clusters_p_ptr   [kk];
+                pot_comp_dx += numerator * denominator * clusters_p_dx_ptr[kk];
+                pot_comp_dy += numerator * denominator * clusters_p_dy_ptr[kk];
+                pot_comp_dz += numerator * denominator * clusters_p_dz_ptr[kk];
             }
             }
             }
-            double pot_temp_1 = targets_q_ptr[i]    * pot_comp_;
-            double pot_temp_2 = targets_q_dx_ptr[i] * pot_comp_dx
-                              + targets_q_dy_ptr[i] * pot_comp_dy
-                              + targets_q_dz_ptr[i] * pot_comp_dz;
+            
+            double pot_temp_1 = targets_q_ptr   [particle_start + i] * pot_comp_;
+            double pot_temp_2 = targets_q_dx_ptr[particle_start + i] * pot_comp_dx
+                              + targets_q_dy_ptr[particle_start + i] * pot_comp_dy
+                              + targets_q_dz_ptr[particle_start + i] * pot_comp_dz;
 #ifdef OPENACC_ENABLED
             #pragma acc atomic update
 #endif
-            potential[i]                 += targets_q_ptr[i]    * pot_comp_;
+            potential[particle_start + i]                    += pot_temp_1;
 #ifdef OPENACC_ENABLED
             #pragma acc atomic update
 #endif
-            potential[i + num_particles] += targets_q_dx_ptr[i] * pot_comp_dx
-                                          + targets_q_dy_ptr[i] * pot_comp_dy
-                                          + targets_q_dz_ptr[i] * pot_comp_dz;
+            potential[particle_start + i + potential_offset] += pot_temp_2;
         }
+    } //end loop over nodes
 #ifdef OPENACC_ENABLED
-#pragma acc exit data delete(weights_ptr[0:weights_num], coeffs_x_ptr[0:coeffs_x_num], \
-                             coeffs_y_ptr[0:coeffs_y_num], coeffs_z_ptr[0:coeffs_z_num])
+    #pragma acc exit data delete(weights_ptr[0:weights_num])
 #endif
-    }
 }
 
 
