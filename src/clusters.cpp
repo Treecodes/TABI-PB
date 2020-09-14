@@ -108,6 +108,9 @@ void Clusters::upward_pass()
         std::size_t node_interp_pts_start = node_idx * num_interp_pts_per_node_;
         std::size_t node_charges_start    = node_idx * num_charges_per_node_;
         
+        std::size_t particle_start = particle_idxs[0];
+        std::size_t particle_end   = particle_idxs[1];
+        
 #ifdef OPENACC_ENABLED
 #pragma acc enter data copyin(weights_ptr[0:weights_num], coeffs_x_ptr[0:coeffs_x_num], \
                               coeffs_y_ptr[0:coeffs_y_num], coeffs_z_ptr[0:coeffs_z_num])
@@ -117,7 +120,7 @@ void Clusters::upward_pass()
                                   clusters_q_ptr, clusters_q_dx_ptr, clusters_q_dy_ptr, clusters_q_dz_ptr, \
                                   weights_ptr, coeffs_x_ptr, coeffs_y_ptr, coeffs_z_ptr)
 #endif
-        for (std::size_t i = particle_idxs[0]; i < particle_idxs[1]; ++i) {
+        for (std::size_t i = particle_start; i < particle_end; ++i) {
         
             double denominator_x = 0.;
             double denominator_y = 0.;
@@ -161,21 +164,18 @@ void Clusters::upward_pass()
             
             if (exact_idx_x > -1) {
                 for (int id = 0; id < coeffs_x_num; ++id) coeffs_x_ptr[id] = 0.;
-                //std::memset(coeffs_x.data(), 0, num_interp_pts_per_node_ * sizeof(double));
                 coeffs_x_ptr[exact_idx_x] = 1.;
                 denominator_x = 1.;
             }
             
             if (exact_idx_y > -1) {
                 for (int id = 0; id < coeffs_y_num; ++id) coeffs_y_ptr[id] = 0.;
-                //std::memset(coeffs_y.data(), 0, num_interp_pts_per_node_ * sizeof(double));
                 coeffs_y_ptr[exact_idx_y] = 1.;
                 denominator_y = 1.;
             }
             
             if (exact_idx_z > -1) {
                 for (int id = 0; id < coeffs_z_num; ++id) coeffs_z_ptr[id] = 0.;
-                //std::memset(coeffs_z.data(), 0, num_interp_pts_per_node_ * sizeof(double));
                 coeffs_z_ptr[exact_idx_z] = 1.;
                 denominator_z = 1.;
             }
@@ -196,10 +196,27 @@ void Clusters::upward_pass()
                 double charge_coeff = coeffs_x_ptr[k1] * coeffs_y_ptr[k2]
                                     * coeffs_z_ptr[k3] * denominator;
                                     
-                clusters_q_ptr   [kk] += charge_coeff * qq_;
-                clusters_q_dx_ptr[kk] += charge_coeff * qq_dx;
-                clusters_q_dy_ptr[kk] += charge_coeff * qq_dy;
-                clusters_q_dz_ptr[kk] += charge_coeff * qq_dz;
+                double q_temp    = charge_coeff * qq_;
+                double q_dx_temp = charge_coeff * qq_dx;
+                double q_dy_temp = charge_coeff * qq_dy;
+                double q_dz_temp = charge_coeff * qq_dz;
+                
+#ifdef OPENACC_ENABLED
+            #pragma acc atomic update
+#endif
+                clusters_q_ptr   [kk] += q_temp;
+#ifdef OPENACC_ENABLED
+            #pragma acc atomic update
+#endif
+                clusters_q_dx_ptr[kk] += q_dx_temp;
+#ifdef OPENACC_ENABLED
+            #pragma acc atomic update
+#endif
+                clusters_q_dy_ptr[kk] += q_dy_temp;
+#ifdef OPENACC_ENABLED
+            #pragma acc atomic update
+#endif
+                clusters_q_dz_ptr[kk] += q_dz_temp;
             }
             }
             }
@@ -260,6 +277,9 @@ void Clusters::downward_pass(double* __restrict__ potential)
         auto particle_idxs = tree_.node_particle_idxs(node_idx);
         std::size_t node_interp_pts_start = node_idx * num_interp_pts_per_node_;
         std::size_t node_potentials_start = node_idx * num_charges_per_node_;
+        
+        std::size_t particle_start = particle_idxs[0];
+        std::size_t particle_end   = particle_idxs[1];
 
 #ifdef OPENACC_ENABLED
 #pragma acc enter data copyin(weights_ptr[0:weights_num], coeffs_x_ptr[0:coeffs_x_num], \
@@ -270,7 +290,7 @@ void Clusters::downward_pass(double* __restrict__ potential)
                                   clusters_p_ptr, clusters_p_dx_ptr, clusters_p_dy_ptr, clusters_p_dz_ptr, \
                                   potential, weights_ptr, coeffs_x_ptr, coeffs_y_ptr, coeffs_z_ptr)
 #endif
-        for (std::size_t i = particle_idxs[0]; i < particle_idxs[1]; ++i) {
+        for (std::size_t i = particle_start; i < particle_end; ++i) {
         
             double denominator_x = 0.;
             double denominator_y = 0.;
@@ -309,21 +329,18 @@ void Clusters::downward_pass(double* __restrict__ potential)
             
             if (exact_idx_x > -1) {
                 for (int id = 0; id < coeffs_x_num; ++id) coeffs_x_ptr[id] = 0.;
-                //std::memset(coeffs_x.data(), 0, num_interp_pts_per_node_ * sizeof(double));
                 coeffs_x_ptr[exact_idx_x] = 1.;
                 denominator_x = 1.;
             }
             
             if (exact_idx_y > -1) {
                 for (int id = 0; id < coeffs_y_num; ++id) coeffs_y_ptr[id] = 0.;
-                //std::memset(coeffs_y.data(), 0, num_interp_pts_per_node_ * sizeof(double));
                 coeffs_y_ptr[exact_idx_y] = 1.;
                 denominator_y = 1.;
             }
             
             if (exact_idx_z > -1) {
                 for (int id = 0; id < coeffs_z_num; ++id) coeffs_z_ptr[id] = 0.;
-                //std::memset(coeffs_z.data(), 0, num_interp_pts_per_node_ * sizeof(double));
                 coeffs_z_ptr[exact_idx_z] = 1.;
                 denominator_z = 1.;
             }
@@ -356,8 +373,17 @@ void Clusters::downward_pass(double* __restrict__ potential)
             }
             }
             }
-            
+            double pot_temp_1 = targets_q_ptr[i]    * pot_comp_;
+            double pot_temp_2 = targets_q_dx_ptr[i] * pot_comp_dx
+                              + targets_q_dy_ptr[i] * pot_comp_dy
+                              + targets_q_dz_ptr[i] * pot_comp_dz;
+#ifdef OPENACC_ENABLED
+            #pragma acc atomic update
+#endif
             potential[i]                 += targets_q_ptr[i]    * pot_comp_;
+#ifdef OPENACC_ENABLED
+            #pragma acc atomic update
+#endif
             potential[i + num_particles] += targets_q_dx_ptr[i] * pot_comp_dx
                                           + targets_q_dy_ptr[i] * pot_comp_dy
                                           + targets_q_dz_ptr[i] * pot_comp_dz;
