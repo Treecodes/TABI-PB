@@ -10,9 +10,9 @@ add_executable(tabipb main.cpp
         constants.h)
 
 target_compile_features(tabipb PRIVATE cxx_std_11)
-#target_link_libraries(tabipb PRIVATE OpenMP::OpenMP_CXX OpenACC::OpenACC_CXX -acc)
-#target_compile_definitions(tabipb PRIVATE OPENACC_ENABLED)
-#target_compile_options(tabipb PRIVATE -Minfo=accel)
+target_link_libraries(tabipb PRIVATE OpenMP::OpenMP_CXX OpenACC::OpenACC_CXX -acc)
+target_compile_definitions(tabipb PRIVATE OPENACC_ENABLED)
+target_compile_options(tabipb PRIVATE -Minfo=accel)
 
 #Math linking is unnecessary for Windows
 if(NOT WIN32)
