@@ -96,7 +96,7 @@ void Treecode::matrix_vector(double alpha, const double* __restrict__ potential_
     }
     
     std::cout << "Downward pass..." << std::endl;
-    clusters_.downward_pass(potential_new);
+    //clusters_.downward_pass(potential_new);
     std::cout << "Computing potential..." << std::endl;
 
 #ifdef OPENACC_ENABLED

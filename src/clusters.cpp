@@ -380,13 +380,11 @@ void Clusters::downward_pass(double* __restrict__ potential)
 #ifdef OPENACC_ENABLED
             #pragma acc atomic update
 #endif
-            potential[i]                 += targets_q_ptr[i]    * pot_comp_;
+            potential[i]                 += pot_temp_1;
 #ifdef OPENACC_ENABLED
             #pragma acc atomic update
 #endif
-            potential[i + num_particles] += targets_q_dx_ptr[i] * pot_comp_dx
-                                          + targets_q_dy_ptr[i] * pot_comp_dy
-                                          + targets_q_dz_ptr[i] * pot_comp_dz;
+            potential[i + num_particles] += pot_temp_2;
         }
 #ifdef OPENACC_ENABLED
 #pragma acc exit data delete(weights_ptr[0:weights_num], coeffs_x_ptr[0:coeffs_x_num], \
