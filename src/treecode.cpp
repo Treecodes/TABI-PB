@@ -50,8 +50,6 @@ void Treecode::run_GMRES()
 void Treecode::matrix_vector(double alpha, const double* __restrict__ potential_old,
                              double beta,        double* __restrict__ potential_new)
 {
-    std::cout << "Entering matrix vector..." << std::endl;
-
     double potential_coeff_1 = 0.5 * (1. +      params_.phys_eps_);
     double potential_coeff_2 = 0.5 * (1. + 1. / params_.phys_eps_);
     
@@ -65,17 +63,11 @@ void Treecode::matrix_vector(double alpha, const double* __restrict__ potential_
                               potential_new[0:potential_num])
 #endif
 
-    std::cout << "Clear charges..." << std::endl;
     clusters_.clear_charges();
-    std::cout << "Clear potentials..." << std::endl;
     clusters_.clear_potentials();
 
-    std::cout << "Compute charges..." << std::endl;
     particles_.compute_charges(potential_old);
-    std::cout << "Upward pass..." << std::endl;
     clusters_.upward_pass();
-
-    std::cout << "Running interactions..." << std::endl;
 
     for (std::size_t target_node_idx = 0; target_node_idx < tree_.num_nodes(); ++target_node_idx) {
         
@@ -95,9 +87,7 @@ void Treecode::matrix_vector(double alpha, const double* __restrict__ potential_
             Treecode::cluster_cluster_interact(potential_new, target_node_idx, source_node_idx);
     }
     
-    std::cout << "Downward pass..." << std::endl;
     clusters_.downward_pass(potential_new);
-    std::cout << "Computing potential..." << std::endl;
 
 #ifdef OPENACC_ENABLED
     #pragma acc exit data copyout(potential_old[0:potential_num], \

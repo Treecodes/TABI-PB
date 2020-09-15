@@ -117,13 +117,13 @@ void Clusters::upward_pass()
         double* denominator_ptr = denominator.data();
         
 #ifdef OPENACC_ENABLED
-#pragma acc parallel present(particles_x_ptr, particles_y_ptr, particles_z_ptr, \
-                             sources_q_ptr, sources_q_dx_ptr, sources_q_dy_ptr, sources_q_dz_ptr, \
-                             clusters_x_ptr, clusters_y_ptr, clusters_z_ptr, \
-                             clusters_q_ptr, clusters_q_dx_ptr, clusters_q_dy_ptr, clusters_q_dz_ptr, \
-                             weights_ptr) \
-                     create(exact_idx_x_ptr[0:num_particles], exact_idx_y_ptr[0:num_particles], \
-                            exact_idx_z_ptr[0:num_particles], denominator_ptr[0:num_particles])
+#pragma acc kernels present(particles_x_ptr, particles_y_ptr, particles_z_ptr, \
+                         sources_q_ptr, sources_q_dx_ptr, sources_q_dy_ptr, sources_q_dz_ptr, \
+                         clusters_x_ptr, clusters_y_ptr, clusters_z_ptr, \
+                         clusters_q_ptr, clusters_q_dx_ptr, clusters_q_dy_ptr, clusters_q_dz_ptr, \
+                         weights_ptr) \
+                  create(exact_idx_x_ptr[0:num_particles], exact_idx_y_ptr[0:num_particles], \
+                         exact_idx_z_ptr[0:num_particles], denominator_ptr[0:num_particles])
 #endif
         {
 
@@ -137,7 +137,7 @@ void Clusters::upward_pass()
         }
 
 #ifdef OPENACC_ENABLED
-        #pragma acc loop
+        #pragma acc loop independent
 #endif
         for (std::size_t i = 0; i < num_particles; ++i) {
         
@@ -148,10 +148,10 @@ void Clusters::upward_pass()
             double xx    = particles_x_ptr[particle_start + i];
             double yy    = particles_y_ptr[particle_start + i];
             double zz    = particles_z_ptr[particle_start + i];
-            
+
 #ifdef OPENACC_ENABLED
-            #pragma acc loop reduction(+:denominator_x,denominator_y,denominator_z) \
-                             reduction(max:exact_idx_x_ptr[i],exact_idx_y_ptr[i],exact_idx_z_ptr[i])
+            #pragma acc loop reduction(+:denominator_x,denominator_y,denominator_z)
+           //                  reduction(max:exact_idx_x_ptr[i],exact_idx_y_ptr[i],exact_idx_z_ptr[i])
 #endif
             for (int j = 0; j < num_interp_pts_per_node; ++j) {
             
@@ -174,9 +174,8 @@ void Clusters::upward_pass()
             if (exact_idx_z_ptr[i] == -1) denominator_ptr[i] /= denominator_z;
         }
 
-
 #ifdef OPENACC_ENABLED
-        #pragma acc loop
+        #pragma acc loop collapse(3) independent
 #endif
         for (int k1 = 0; k1 < num_interp_pts_per_node; ++k1) {
         for (int k2 = 0; k2 < num_interp_pts_per_node; ++k2) {
@@ -201,7 +200,7 @@ void Clusters::upward_pass()
             double q_dz_temp = 0.;
             
 #ifdef OPENACC_ENABLED
-            #pragma acc loop vector(32) reduction(+:q_temp,q_dx_temp,q_dy_temp,q_dz_temp)
+            #pragma acc loop reduction(+:q_temp,q_dx_temp,q_dy_temp,q_dz_temp)
 #endif
             for (int i = 0; i < num_particles; i++) {  // loop over source points
             
@@ -213,22 +212,22 @@ void Clusters::upward_pass()
 
                 // If exact_idx[i] == -1, then no issues.
                 // If exact_idx[i] != -1, then we want to zero out terms EXCEPT when exactInd=k1.
-                if (exact_idx_x[i] == -1) {
+                if (exact_idx_x_ptr[i] == -1) {
                     numerator *= w1 / dist_x;
                 } else {
-                    if (exact_idx_x[i] != k1) numerator *= 0.;
+                    if (exact_idx_x_ptr[i] != k1) numerator *= 0.;
                 }
 
-                if (exact_idx_y[i] == -1) {
+                if (exact_idx_y_ptr[i] == -1) {
                     numerator *= w2 / dist_y;
                 } else {
-                    if (exact_idx_y[i] != k2) numerator *= 0.;
+                    if (exact_idx_y_ptr[i] != k2) numerator *= 0.;
                 }
 
-                if (exact_idx_z[i] == -1) {
+                if (exact_idx_z_ptr[i] == -1) {
                     numerator *= w3 / dist_z;
                 } else {
-                    if (exact_idx_z[i] != k3) numerator *= 0.;
+                    if (exact_idx_z_ptr[i] != k3) numerator *= 0.;
                 }
 
                 q_temp    += sources_q_ptr   [particle_start + i] * numerator * denominator_ptr[i];
