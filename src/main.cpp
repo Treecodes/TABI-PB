@@ -14,7 +14,10 @@
 int main(int argc, char* argv[])
 {
     // set the parameter struct, which is read in from file provided as argv
-    if (argc < 2) { std::cout << "No input file set." << std::endl; std::exit(1); }
+    if (argc < 2) { 
+        std::cout << "No input file set. Exiting." << std::endl; 
+        std::exit(1);
+    }
     struct Params params(argv[1]);
     
     //construct the biomolecule from the provided pqr file
@@ -45,9 +48,12 @@ int main(int argc, char* argv[])
     class Treecode treecode(particles, clusters, 
                             tree, interaction_list, molecule, params);
     
-    treecode.copyin_potential_to_device();
     treecode.run_GMRES();
     treecode.output();
+
+    molecule.delete_from_device();
+    particles.delete_from_device();
+    clusters.delete_from_device();
 
     return 0;
 }

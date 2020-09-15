@@ -4,8 +4,6 @@
 #include <cstddef>
 #include <cstring>
 
-#include <iostream>
-
 #include "constants.h"
 #include "clusters.h"
 
@@ -149,9 +147,10 @@ void Clusters::upward_pass()
             double yy    = particles_y_ptr[particle_start + i];
             double zz    = particles_z_ptr[particle_start + i];
 
+            // because there's a reduction over exact_idx[i], this loop carries a 
+            // backward dependence and won't actually parallelize
 #ifdef OPENACC_ENABLED
             #pragma acc loop reduction(+:denominator_x,denominator_y,denominator_z)
-           //                  reduction(max:exact_idx_x_ptr[i],exact_idx_y_ptr[i],exact_idx_z_ptr[i])
 #endif
             for (int j = 0; j < num_interp_pts_per_node; ++j) {
             

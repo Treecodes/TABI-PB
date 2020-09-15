@@ -567,9 +567,7 @@ void Treecode::cluster_cluster_interact(double* __restrict__ potential,
 
 void Treecode::output()
 {
-    Treecode::update_potential_on_device();
     auto solvation_energy = constants::UNITS_PARA  * particles_.compute_solvation_energy(potential_);
-    Treecode::update_potential_on_host();
     
     particles_.unorder(potential_);
     
@@ -618,44 +616,4 @@ void Treecode::output()
     }
     
     if (params_.output_vtk_) particles_.output_VTK(potential_);
-}
-
-
-void Treecode::copyin_potential_to_device() const
-{
-#ifdef OPENACC_ENABLED
-    const double* potential_ptr = potential_.data();
-    std::size_t potential_num = potential_.size();
-    #pragma acc enter data copyin(potential_ptr[0:potential_num])
-#endif
-}
-
-
-void Treecode::update_potential_on_device() const
-{
-#ifdef OPENACC_ENABLED
-    const double* potential_ptr = potential_.data();
-    std::size_t potential_num = potential_.size();
-    #pragma acc update device(potential_ptr[0:potential_num])
-#endif
-}
-
-
-void Treecode::update_potential_on_host() const
-{
-#ifdef OPENACC_ENABLED
-    const double* potential_ptr = potential_.data();
-    std::size_t potential_num = potential_.size();
-    #pragma acc update self(potential_ptr[0:potential_num])
-#endif
-}
-
-
-void Treecode::copyout_potential_to_host() const
-{
-#ifdef OPENACC_ENABLED
-    const double* potential_ptr = potential_.data();
-    std::size_t potential_num = potential_.size();
-    #pragma acc exit data copyout(potential_ptr[0:potential_num])
-#endif
 }
