@@ -89,5 +89,6 @@ if (ENABLE_TABIPB_APBS)
   
     set(TABIPB_LIBNAME TABIPBlib)
     add_library(${TABIPB_LIBNAME} ${LIBFILES})
+    target_compile_features(${TABIPB_LIBNAME} PRIVATE cxx_std_11)
 
 endif()
