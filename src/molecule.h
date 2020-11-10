@@ -8,6 +8,10 @@
 
 #include "params.h"
 
+#ifdef TABIPB_APBS
+    #include "generic/valist.h"
+#endif
+
 class Molecule {
 
 private:
@@ -23,6 +27,10 @@ private:
 public:
     Molecule(struct Params&);
     ~Molecule() = default;
+    
+#ifdef TABIPB_APBS
+    Molecule(Valist*, struct Params&);
+#endif
     
     void build_xyzr_file() const;
     

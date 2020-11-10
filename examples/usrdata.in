@@ -1,4 +1,4 @@
-mol               1aie.pqr
+mol               1a63.pqr
 mesh              SES
 sdens             1
 srad              1.4
@@ -6,7 +6,7 @@ pdie              1
 sdie              80
 bulk              0.30
 temp              300
-tree_degree       3
+tree_degree       2
 tree_max_per_leaf 50
 tree_theta        0.8
 precondition      OFF
