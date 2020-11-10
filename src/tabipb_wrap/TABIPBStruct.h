@@ -1,8 +1,6 @@
 #ifndef H_TABIPB_STRUCT_H
 #define H_TABIPB_STRUCT_H
 
-#include "TABIPBstruct.h"
-
 typedef struct _TABIPBInput {
 
     int mesh_flag_;

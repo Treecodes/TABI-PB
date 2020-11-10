@@ -1,10 +1,10 @@
-#include "params.h"
-#include "molecule.h"
-#include "particles.h"
-#include "tree.h"
-#include "interaction_list.h"
-#include "clusters.h"
-#include "treecode.h"
+#include "../params.h"
+#include "../molecule.h"
+#include "../particles.h"
+#include "../tree.h"
+#include "../interaction_list.h"
+#include "../clusters.h"
+#include "../treecode.h"
 
 #include "TABIPBWrap.h"
 
