@@ -46,9 +46,9 @@ void Clusters::compute_all_interp_pts()
         auto node_bounds = tree_.node_particle_bounds(node_idx);
 
 #ifdef OPENACC_ENABLED
-#pragma acc parallel loop present(clusters_x_ptr, clusters_y_ptr, clusters_z_ptr)
+        #pragma acc parallel loop present(clusters_x_ptr, clusters_y_ptr, clusters_z_ptr)
 #endif
-        for (std::size_t i = 0; i < num_interp_pts_per_node; ++i) {
+        for (int i = 0; i < num_interp_pts_per_node; ++i) {
             double tt = std::cos(i * constants::PI / degree);
             clusters_x_ptr[node_start + i] = node_bounds[0] + (tt + 1.) / 2. * (node_bounds[1] - node_bounds[0]);
             clusters_y_ptr[node_start + i] = node_bounds[2] + (tt + 1.) / 2. * (node_bounds[3] - node_bounds[2]);
@@ -101,7 +101,6 @@ void Clusters::upward_pass()
         std::size_t node_charges_start    = node_idx * num_charges_per_node_;
         
         std::size_t particle_start = particle_idxs[0];
-        std::size_t particle_end   = particle_idxs[1];
         std::size_t num_particles  = particle_idxs[1] - particle_idxs[0];
         
         std::vector<int> exact_idx_x(num_particles);
@@ -201,7 +200,7 @@ void Clusters::upward_pass()
 #ifdef OPENACC_ENABLED
             #pragma acc loop reduction(+:q_temp,q_dx_temp,q_dy_temp,q_dz_temp)
 #endif
-            for (int i = 0; i < num_particles; i++) {  // loop over source points
+            for (std::size_t i = 0; i < num_particles; i++) {  // loop over source points
             
                 double dist_x = particles_x_ptr[particle_start + i] - cx;
                 double dist_y = particles_y_ptr[particle_start + i] - cy;
@@ -294,7 +293,6 @@ void Clusters::downward_pass(double* __restrict__ potential)
         std::size_t node_potentials_start = node_idx * num_charges_per_node_;
         
         std::size_t particle_start = particle_idxs[0];
-        std::size_t particle_end   = particle_idxs[1];
         std::size_t num_particles  = particle_idxs[1] - particle_idxs[0];
 
 #ifdef OPENACC_ENABLED

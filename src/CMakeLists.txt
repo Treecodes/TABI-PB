@@ -10,6 +10,10 @@ add_executable(tabipb main.cpp
         constants.h)
 
 target_compile_features(tabipb PRIVATE cxx_std_11)
+target_compile_options(tabipb PRIVATE 
+                       $<$<CONFIG:RELEASE>:-O3>
+                       $<$<CONFIG:DEBUG>:-O0 -Wall>)
+
 if (ENABLE_OPENACC)
     target_link_libraries(tabipb PRIVATE OpenACC::OpenACC_CXX -acc)
     target_compile_definitions(tabipb PRIVATE OPENACC_ENABLED)
@@ -42,24 +46,9 @@ if (ENABLE_TABIPB_APBS)
         ../../../externals/fetk/maloc/src/base
         ../../../externals/fetk/maloc/src/vsys
         ../../../externals/fetk/maloc/src/vsh
-        ../../../externals/fetk/maloc/src/psh
-        )
+        ../../../externals/fetk/maloc/src/psh)
   
     option(BUILD_SHARED_LIBS "Build shared libraries." OFF)
-  
-    # FFLAGS depend on the compiler
-    get_filename_component (C_COMPILER_NAME ${CMAKE_C_COMPILER} NAME)
-  
-    if (C_COMPILER_NAME MATCHES "gcc.*")
-      set (CMAKE_C_FLAGS_RELEASE "-c -O3")
-      set (CMAKE_C_FLAGS_DEBUG   "")
-    elseif (C_COMPILER_NAME MATCHES "icc.*")
-      set (CMAKE_C_FLAGS_RELEASE "-fast -c")
-      set (CMAKE_C_FLAGS_DEBUG   "")
-    else ()
-      message ("CMAKE_C_COMPILER full path: " ${CMAKE_C_COMPILER})
-      message ("C compiler: " ${C_COMPILER_NAME})
-    endif ()
   
     set(LIBFILES
         params.cpp params.h molecule.cpp molecule.h
@@ -73,5 +62,8 @@ if (ENABLE_TABIPB_APBS)
     set(TABIPB_LIBNAME TABIPBlib)
     add_library(${TABIPB_LIBNAME} ${LIBFILES})
     target_compile_features(${TABIPB_LIBNAME} PRIVATE cxx_std_11)
+    target_compile_options(${TABIPB_LIBNAME} PRIVATE 
+                           $<$<CONFIG:RELEASE>:-O3>
+                           $<$<CONFIG:DEBUG>:-O0 -Wall>)
 
 endif ()

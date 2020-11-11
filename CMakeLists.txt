@@ -86,15 +86,6 @@ endif ()
 
 
 ################################################################################
-# Setting compiler flags
-################################################################################
-get_filename_component(CXX_COMPILER_NAME ${CMAKE_CXX_COMPILER} NAME)
-
-set(CMAKE_CXX_FLAGS_RELEASE "-O3")
-set(CMAKE_CXX_FLAGS_DEBUG   "-Wall")
-
-
-################################################################################
 # Setting up src builds
 ################################################################################
 add_subdirectory(src)
