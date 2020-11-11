@@ -6,7 +6,6 @@ This TABI-PB repo serves as a submodule to APBS, and also works as a standalone 
 
 REFERENCE: W.H. Geng and R. Krasny, A treecode-accelerated boundary integral Poisson-Boltzmann solver for continuum electrostatics of solvated biomolecules, J. Comput. Phys. 247, 62-87 (2013)
 
-This material is based upon work supported under NSF Grant DMS-0915057, DMS-1418966, DMS-1418957. Any opinions, findings, and conclusions or recommendations expressed in this material are those of the authors and do not necessarily reflect the views of the NSF.
 
 ## Build Instructions
 To build as an independent executable:
@@ -20,3 +19,6 @@ This creates a tabipb executable located at TABI-PB/build/bin/tabipb. To run an 
 cd example/
 ./../build/bin/tabipb
 ```
+
+## Disclaimer
+This material is based upon work supported under NSF Grant DMS-0915057, DMS-1418966, DMS-1418957. Any opinions, findings, and conclusions or recommendations expressed in this material are those of the authors and do not necessarily reflect the views of the NSF.
