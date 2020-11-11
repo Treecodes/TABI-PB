@@ -12,6 +12,7 @@ add_executable(tabipb main.cpp
 target_compile_features(tabipb PRIVATE cxx_std_11)
 target_compile_options(tabipb PRIVATE 
                        $<$<CONFIG:RELEASE>:-O3>
+                       $<$<CONFIG:RELWITHDEBINFO>:-O3>
                        $<$<CONFIG:DEBUG>:-O0 -Wall>)
 
 if (ENABLE_OPENACC)
@@ -64,6 +65,7 @@ if (ENABLE_TABIPB_APBS)
     target_compile_features(${TABIPB_LIBNAME} PRIVATE cxx_std_11)
     target_compile_options(${TABIPB_LIBNAME} PRIVATE 
                            $<$<CONFIG:RELEASE>:-O3>
+                           $<$<CONFIG:RELWITHDEBINFO>:-O3>
                            $<$<CONFIG:DEBUG>:-O0 -Wall>)
 
 endif ()
