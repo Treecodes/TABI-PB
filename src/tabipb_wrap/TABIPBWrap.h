@@ -12,7 +12,7 @@ extern "C" {
 #endif
 
 #ifdef TABIPB_APBS
-int runTABIPBWrapAPBS(TABIPBInput tabipbIn, Valist* APBSMolecule);
+TABIPBOutput runTABIPBWrapAPBS(TABIPBInput tabipbIn, Valist* APBSMolecule);
 #endif
 
 #ifdef __cplusplus
