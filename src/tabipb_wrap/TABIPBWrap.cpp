@@ -34,5 +34,5 @@ struct TABIPBOutput runTABIPBWrapAPBS(struct TABIPBInput tabipbIn, Valist* APBSM
     treecode.run_GMRES();
     auto energies = treecode.output();
 
-    return struct TABIPBOutput{energies[0], energies[1], energies[2]};
+    return TABIPBOutput{energies[0], energies[1], energies[2]};
 }
