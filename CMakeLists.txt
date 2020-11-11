@@ -59,18 +59,14 @@ endif ()
 ################################################################################
 option(GET_NanoShaper "Put NanoShaper executable in the build directory" OFF)
 
-set(MESH_ROOT_URL_PATH "https://github.com/lwwilson1/mesh_routines/releases/download/v1.6")
-
-if (ENABLE_TABIPB_APBS)
-    set(EXECUTABLE_OUTPUT_PATH ${APBS_BINARY_DIR}/bin)
-else ()
-    set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR}/bin)
-endif ()
-
 if (GET_NanoShaper)
+    set(MESH_ROOT_URL_PATH "https://github.com/lwwilson1/mesh_routines/releases/download/v1.6")
+    set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR}/bin)
+
     set(NANOSHAPER_FULL_URL_PATH)
     set(NANOSHAPER_RAW_BINARY_NAME "NanoShaper")
     message(STATUS "Copying NanoShaper executable")
+
     if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")      # Mac OS X specific code
         set(NANOSHAPER_FULL_URL_PATH "${MESH_ROOT_URL_PATH}/NanoShaper_OSX")
     elseif (${CMAKE_SYSTEM_NAME} MATCHES "Linux")   # Linux specific code
@@ -82,8 +78,7 @@ if (GET_NanoShaper)
 
     if (NOT EXISTS "${EXECUTABLE_OUTPUT_PATH}/${NANOSHAPER_RAW_BINARY_NAME}")
         file(DOWNLOAD ${NANOSHAPER_FULL_URL_PATH} ${EXECUTABLE_OUTPUT_PATH}/${NANOSHAPER_RAW_BINARY_NAME})
-        message(STATUS "NanoShaper download: ${NANOSHAPER_FULL_URL_PATH} \
-                       ${EXECUTABLE_OUTPUT_PATH}/${NANOSHAPER_RAW_BINARY_NAME}")
+        message(STATUS "NanoShaper download: ${NANOSHAPER_FULL_URL_PATH} ${EXECUTABLE_OUTPUT_PATH}/${NANOSHAPER_RAW_BINARY_NAME}")
     endif ()
 
     install(PROGRAMS ${EXECUTABLE_OUTPUT_PATH}/${NANOSHAPER_RAW_BINARY_NAME} DESTINATION bin)
