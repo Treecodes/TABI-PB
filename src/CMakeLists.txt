@@ -36,14 +36,14 @@ install (TARGETS tabipb DESTINATION bin)
 option(ENABLE_TABIPB_APBS "TABIPB APBS" OFF)
 if (ENABLE_TABIPB_APBS)
     add_definitions(-DTABIPB_APBS)
-#include_directories(
-#         ../../../src/
-#         ../../../tools/windows/configuration\ headers/
-#         ../../../externals/fetk/maloc/src/base
-#         ../../../externals/fetk/maloc/src/vsys
-#         ../../../externals/fetk/maloc/src/vsh
-#         ../../../externals/fetk/maloc/src/psh
-#         )
+    include_directories(
+        ../../../src/
+        ../../../build/src/
+        ../../../externals/fetk/maloc/src/base
+        ../../../externals/fetk/maloc/src/vsys
+        ../../../externals/fetk/maloc/src/vsh
+        ../../../externals/fetk/maloc/src/psh
+        )
   
     option(BUILD_SHARED_LIBS "Build shared libraries." OFF)
   
