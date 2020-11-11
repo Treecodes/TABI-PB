@@ -14,16 +14,16 @@ if (ENABLE_OPENACC)
     target_link_libraries(tabipb PRIVATE OpenACC::OpenACC_CXX -acc)
     target_compile_definitions(tabipb PRIVATE OPENACC_ENABLED)
     target_compile_options(tabipb PRIVATE -Minfo=accel)
-endif()
+endif ()
 
 if (ENABLE_OPENMP)
     target_link_libraries(tabipb PRIVATE OpenMP::OpenMP_CXX)
-endif()
+endif ()
 
 #Math linking is unnecessary for Windows
-if(NOT WIN32)
+if (NOT WIN32)
     target_link_libraries(tabipb PRIVATE m)
-endif()
+endif ()
 
 install (TARGETS tabipb DESTINATION bin)
 
@@ -33,7 +33,7 @@ install (TARGETS tabipb DESTINATION bin)
 ###### For APBS 
 ################################################
 
-option(ENABLE_TABIPB_APBS "TABIPB APBS" OFF)
+#option(ENABLE_TABIPB_APBS "TABIPB APBS" OFF)
 if (ENABLE_TABIPB_APBS)
     add_definitions(-DTABIPB_APBS)
     include_directories(
@@ -74,4 +74,4 @@ if (ENABLE_TABIPB_APBS)
     add_library(${TABIPB_LIBNAME} ${LIBFILES})
     target_compile_features(${TABIPB_LIBNAME} PRIVATE cxx_std_11)
 
-endif()
+endif ()
