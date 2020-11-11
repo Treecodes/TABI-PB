@@ -1,7 +1,7 @@
 #ifndef H_TABIPB_STRUCT_H
 #define H_TABIPB_STRUCT_H
 
-typedef struct _TABIPBInput {
+struct TABIPBInput {
 
     int mesh_flag_;
     double mesh_density_;
@@ -21,14 +21,14 @@ typedef struct _TABIPBInput {
     
     int output_data_;
 
-} TABIPBInput;
+};
 
-typedef struct _TABIPBOutput {
+struct TABIPBOutput {
 
     double solvation_energy_;
     double coulombic_energy_;
     double free_energy_;
 
-} TABIPBOutput;
+};
 
 #endif

@@ -8,7 +8,7 @@
 
 #include "TABIPBWrap.h"
 
-TABIPBOutput runTABIPBWrapAPBS(TABIPBInput tabipbIn, Valist* APBSMolecule)
+struct TABIPBOutput runTABIPBWrapAPBS(struct TABIPBInput tabipbIn, Valist* APBSMolecule)
 {
 
     struct Params params(tabipbIn);
@@ -34,5 +34,5 @@ TABIPBOutput runTABIPBWrapAPBS(TABIPBInput tabipbIn, Valist* APBSMolecule)
     treecode.run_GMRES();
     auto energies = treecode.output();
 
-    return TABIPBOutput{energies[0], energies[1], energies[2]};
+    return struct TABIPBOutput{energies[0], energies[1], energies[2]};
 }

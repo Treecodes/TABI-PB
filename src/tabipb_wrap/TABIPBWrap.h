@@ -8,7 +8,7 @@
 extern "C" {
 #endif
 
-TABIPBOutput runTABIPBWrapAPBS(TABIPBInput tabipbIn, Valist* APBSMolecule);
+struct TABIPBOutput runTABIPBWrapAPBS(struct TABIPBInput tabipbIn, Valist* APBSMolecule);
 
 #ifdef __cplusplus
 }
