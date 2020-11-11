@@ -23,4 +23,12 @@ typedef struct _TABIPBInput {
 
 } TABIPBInput;
 
+typedef struct _TABIPBOutput {
+
+    double solvation_energy_;
+    double coulombic_energy_;
+    double free_energy_;
+
+} TABIPBOutput;
+
 #endif

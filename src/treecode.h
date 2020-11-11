@@ -49,7 +49,7 @@ public:
     ~Treecode() = default;
     
     void run_GMRES();
-    void output();
+    std::array<double, 3> output();
 };
 
 #endif /* H_TABIPB_TREECODE_STRUCT_H */
