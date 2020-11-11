@@ -20,15 +20,3 @@ This creates a tabipb executable located at TABI-PB/build/bin/tabipb. To run an 
 cd example/
 ./../build/bin/tabipb
 ```
-
-## Building TABI-PB on APBS_Sphinx
-
-This is similar to the APBS Geoflow build. To invoke TABI-PB on Sphinx, you need to use the flag `-DENABLE_TABIPB_SPHINX=ON` when you run cmake. Command:
-
-1. `cd APBS_SPHINX/plugins/TABIPB/src`
-2. `mkdir build; cd build`
-3. `cmake -DENABLE_TABIPB_SPHINX=ON ..`
-4. `make`
-5. `cp tabipb_sph.so ../..`
-
-
