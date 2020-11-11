@@ -36,23 +36,16 @@ install (TARGETS tabipb DESTINATION bin)
 option(ENABLE_TABIPB_APBS "TABIPB APBS" OFF)
 if (ENABLE_TABIPB_APBS)
     add_definitions(-DTABIPB_APBS)
-    include_directories(
-          ../../../src/
-          ../../../tools/windows/configuration\ headers/
-          ../../../externals/fetk/maloc/src/base
-          ../../../externals/fetk/maloc/src/vsys
-          ../../../externals/fetk/maloc/src/vsh
-          ../../../externals/fetk/maloc/src/psh
-          )
+#include_directories(
+#         ../../../src/
+#         ../../../tools/windows/configuration\ headers/
+#         ../../../externals/fetk/maloc/src/base
+#         ../../../externals/fetk/maloc/src/vsys
+#         ../../../externals/fetk/maloc/src/vsh
+#         ../../../externals/fetk/maloc/src/psh
+#         )
   
     option(BUILD_SHARED_LIBS "Build shared libraries." OFF)
-  
-    # make sure that the default is a RELEASE
-    if (NOT CMAKE_BUILD_TYPE)
-      set (CMAKE_BUILD_TYPE RELEASE CACHE STRING
-          "Choose the type of build, options are: None Debug Release."
-          FORCE)
-    endif (NOT CMAKE_BUILD_TYPE)
   
     # FFLAGS depend on the compiler
     get_filename_component (C_COMPILER_NAME ${CMAKE_C_COMPILER} NAME)
@@ -76,16 +69,6 @@ if (ENABLE_TABIPB_APBS)
         tabipb_wrap/TABIPBWrap.cpp tabipb_wrap/TABIPBWrap.h
         tabipb_wrap/TABIPBStruct.h tabipb_wrap/params_apbs_ctor.cpp
         tabipb_wrap/molecule_apbs_ctor.cpp)
-  
-    message(***** ${CMAKE_INSTALL_PREFIX} *****)
-  
-    if(NOT DEFINED ${CMAKE_INSTALL_PREFIX})
-      set(CMAKE_INSTALL_PREFIX ${CMAKE_BINARY_DIR})
-    endif()
-  
-    if(NOT DEFINED CMAKE_INSTALL_LIBDIR)
-      set(CMAKE_INSTALL_LIBDIR ${CMAKE_INSTALL_PREFIX}/lib)
-    endif()
   
     set(TABIPB_LIBNAME TABIPBlib)
     add_library(${TABIPB_LIBNAME} ${LIBFILES})
