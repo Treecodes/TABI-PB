@@ -565,7 +565,7 @@ void Treecode::cluster_cluster_interact(double* __restrict__ potential,
 }
 
 
-void Treecode::output()
+std::array<double, 3> Treecode::output()
 {
     auto solvation_energy = constants::UNITS_PARA  * particles_.compute_solvation_energy(potential_);
     
@@ -616,4 +616,6 @@ void Treecode::output()
     }
     
     if (params_.output_vtk_) particles_.output_VTK(potential_);
+
+    return std::array<double, 3> {solvation_energy, coulombic_energy, free_energy};
 }

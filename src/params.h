@@ -5,6 +5,9 @@
 #include <fstream>
 #include <unordered_map>
 
+#ifdef TABIPB_APBS
+    #include "tabipb_wrap/TABIPBStruct.h"
+#endif
 
 struct Params {
 
@@ -52,6 +55,10 @@ struct Params {
     
     Params(char* paramfile);
     ~Params() = default;
+    
+#ifdef TABIPB_APBS
+    Params(TABIPBInput tabipbIn);
+#endif
 };
 
 #endif /* H_TABIPB_PARAMS_STRUCT_H */

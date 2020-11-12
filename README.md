@@ -1,34 +1,50 @@
 # TABI-PB
-TABI-PB (treecode-accelerated boundary integral) solves the linear Poisson-Boltzmann equation. The solver employs a well-conditioned boundary integral formulation for the electrostatic potential and its normal derivative on the molecular surface, which is triangulated and the integral equations are discretized by centroid collocation. The linear system is solved by GMRES iteration and the matrix-vector product is carried out by a Cartesian terraced which reduces the cost from O(N^2) to O(N\*logN), where N is the number elements.
+TABI-PB (treecode-accelerated boundary integral) solves the linear Poisson-Boltzmann equation. The solver employs a well-conditioned boundary integral formulation for the electrostatic potential and its normal derivative on a triangulated molecular surface, and the integral equations are discretized by nodepatch method. The linear system is solved by GMRES iteration, and the matrix-vector product is carried out by a barycentric Lagrange interpolation dual tree traversal (BLDTT) fast summation method which reduces the cost from O(N^2) to O(N), where N is the number elements. This solver also includes NVIDIA GPU support using OpenACC with the PGI/ NVIDIA HPC compilers.
 
-This TABI-PB repo serves as a submodule to APBS, and also works as a standalone distribution. For more information on building APBS, [visit this repository](https://github.com/Electrostatics/apbs-pdb2pqr/tree/master/apbs).
+This TABI-PB repo serves as a submodule to APBS, and also works as a standalone distribution. For more information on building APBS, [visit this repository](https://apbs.readthedocs.io/en/latest/).
+
+   Authors:  
+   - Leighton W. Wilson  (lwwilson@umich.edu) 
+   - Robert Krasny  (krasny@umich.edu) 
+   - Weihua Geng  (wgeng@smu.edu)
+   - Jiahui Chen  (chenj159@msu.edu)
 
 
-REFERENCE: W.H. Geng and R. Krasny, A treecode-accelerated boundary integral Poisson-Boltzmann solver for continuum electrostatics of solvated biomolecules, J. Comput. Phys. 247, 62-87 (2013)
+## References
+Please refer to the following references for more background:
 
-This material is based upon work supported under NSF Grant DMS-0915057, DMS-1418966, DMS-1418957. Any opinions, findings, and conclusions or recommendations expressed in this material are those of the authors and do not necessarily reflect the views of the NSF.
+  - E. Jurrus, D. Engel, K. Star, K. Monson, J. Brandi, L. E. Felberg, D. H. Brookes, L. Wilson, J. Chen, K. Liles, M. Chen, P. Li, D. W. Gohara, T. Dolinsky, R. Konecny, D. R. Koes, J. E. Nielsen, T. Head- Gordon, W. Geng, R. Krasny, G. W. Wei, M. J. Holst, J. A. McCammon, and N. A. Baker, Improvements to the APBS biomolecular solvation software suite, _Protein Sci._ __27__ (2017), 112-128.
+   
+  - W.H. Geng and R. Krasny, A treecode-accelerated boundary integral Poisson-Boltzmann solver for continuum electrostatics of solvated biomolecules, _J. Comput. Phys._ __247__ (2013), 62-87.
+
 
 ## Build Instructions
-To build as an independent executable:
+
+This project uses CMake to manage and configure its build system. In principle, 
+building an independent `tabipb` executable is as simple as executing the following 
+from the top level directory of TABI-PB:
+
+    mkdir build; cd build; export CC=<CXX compiler>; cmake ..; make
+
+This creates a `tabipb` executable located at `TABI-PB/build/bin/tabipb`.
+Compiling the GPU version requires that a PGI/ NVIDIA HPC C++ compiler be used, 
+and that `cmake` be invoked with the flag `-DENABLE_OPENACC=ON`.
+
+`tabipb` relies on NanoShaper to triangulate the molecular surface. To get a NanoShaper
+executable appropriate for your system, invoke `cmake` with the flag `-DGET_NanoShaper=ON`.
+
+## Examples
+
+To run an example, navigate to the examples directory, and run `tabipb` with the 
+example input file:
 ```
-mkdir build; cd build
-cmake ..
-make
-```
-This creates a tabipb executable located at TABI-PB/build/bin/tabipb. To run an example, navigate to the examples directory, and run ../build/bin/tabipb:
-```
-cd example/
-./../build/bin/tabipb
+cd examples/
+../build/bin/tabipb usrdata.in
 ```
 
-## Building TABI-PB on APBS_Sphinx
-
-This is similar to the APBS Geoflow build. To invoke TABI-PB on Sphinx, you need to use the flag `-DENABLE_TABIPB_SPHINX=ON` when you run cmake. Command:
-
-1. `cd APBS_SPHINX/plugins/TABIPB/src`
-2. `mkdir build; cd build`
-3. `cmake -DENABLE_TABIPB_SPHINX=ON ..`
-4. `make`
-5. `cp tabipb_sph.so ../..`
+## License
+Copyright © 2013-2020, The Regents of the University of Michigan. Released under the [3-Clause BSD License](LICENSE.md).
 
 
+## Disclaimer
+This material is based upon work supported under NSF Grant DMS-0915057, DMS-1418966, DMS-1418957, and by the Extreme Science and Engineering Discovery Environment (XSEDE) under grants ACI-1548562 and ASC-190062. Any opinions, findings, and conclusions or recommendations expressed in this material are those of the authors and do not necessarily reflect the views of the NSF.
