@@ -1,9 +1,12 @@
 TABI-PB -- Treecode-Accelerated Boundary Integral Poisson--Boltzmann Solver
 
-Leighton Wilson, University of Michigan
-Robert Krasny, University of Michigan
-Weihua Geng, Southern Methodist University
-Jiahui Chen, Michigan State University
+  Leighton Wilson, University of Michigan
+  
+  Robert Krasny, University of Michigan
+  
+  Weihua Geng, Southern Methodist University
+  
+  Jiahui Chen, Michigan State University
 
 Additional contributing authors listed in the code documentation.
 
