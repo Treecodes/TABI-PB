@@ -13,7 +13,7 @@ This TABI-PB repo serves as a submodule to APBS, and also works as a standalone 
 ## References
 Please refer to the following references for more background:
 
-  - E. Jurrus, D. Engel, K. Star, K. Monson, J. Brandi, L. E. Felberg, D. H. Brookes, L. Wilson, J. Chen, K. Liles, M. Chen, P. Li, D. W. Gohara, T. Dolinsky, R. Konecny, D. R. Koes, J. E. Nielsen, T. Head- Gordon, W. Geng, R. Krasny, G. W. Wei, M. J. Holst, J. A. McCammon, and N. A. Baker, Improvements to the APBS biomolecular solvation software suite, _Protein Sci._ __27__ (2017), 112–128.
+  - E. Jurrus, D. Engel, K. Star, K. Monson, J. Brandi, L. E. Felberg, D. H. Brookes, L. Wilson, J. Chen, K. Liles, M. Chen, P. Li, D. W. Gohara, T. Dolinsky, R. Konecny, D. R. Koes, J. E. Nielsen, T. Head- Gordon, W. Geng, R. Krasny, G. W. Wei, M. J. Holst, J. A. McCammon, and N. A. Baker, Improvements to the APBS biomolecular solvation software suite, _Protein Sci._ __27__ (2017), 112-128.
    
   - W.H. Geng and R. Krasny, A treecode-accelerated boundary integral Poisson-Boltzmann solver for continuum electrostatics of solvated biomolecules, _J. Comput. Phys._ __247__ (2013), 62-87.
 
