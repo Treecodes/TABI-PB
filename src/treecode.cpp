@@ -11,15 +11,23 @@
 
 Treecode::Treecode(class Particles& particles, class Clusters& clusters,
          const class Tree& tree, const class InteractionList& interaction_list,
-         const class Molecule& molecule, const struct Params& params)
-        : particles_(particles), clusters_(clusters), tree_(tree),
-          interaction_list_(interaction_list), molecule_(molecule), params_(params)
+         const class Molecule& molecule, 
+         const struct Params& params, struct Timers_Treecode& timers)
+    : particles_(particles), clusters_(clusters), tree_(tree),
+      interaction_list_(interaction_list), molecule_(molecule), 
+      params_(params), timers_(timers)
 {
+    timers_.ctor.start();
+
     potential_.assign(2 * particles_.num(), 0.);
+
+    timers_.ctor.stop();
 }
           
 void Treecode::run_GMRES()
 {
+    timers_.run_GMRES.start();
+
     long int restrt = 10;
     long int length = 2 * particles_.num();
     long int ldw    = length;
@@ -44,12 +52,16 @@ void Treecode::run_GMRES()
     }
     
     std::cout << "GMRES completed. " << num_iter_ << " iterations, " << resid << " residual.";
+
+    timers_.run_GMRES.stop();
 }
 
 
 void Treecode::matrix_vector(double alpha, const double* __restrict__ potential_old,
                              double beta,        double* __restrict__ potential_new)
 {
+    timers_.matrix_vector.start();
+
     double potential_coeff_1 = 0.5 * (1. +      params_.phys_eps_);
     double potential_coeff_2 = 0.5 * (1. + 1. / params_.phys_eps_);
     
@@ -69,6 +81,9 @@ void Treecode::matrix_vector(double alpha, const double* __restrict__ potential_
     particles_.compute_charges(potential_old);
     clusters_.upward_pass();
 
+#ifdef OPENMP_ENABLED
+    #pragma omp parallel for
+#endif
     for (std::size_t target_node_idx = 0; target_node_idx < tree_.num_nodes(); ++target_node_idx) {
         
         for (auto source_node_idx : interaction_list_.particle_particle(target_node_idx))
@@ -103,16 +118,22 @@ void Treecode::matrix_vector(double alpha, const double* __restrict__ potential_
                 + alpha * (potential_coeff_2 * potential_old[i] - potential_new[i]);
                 
     std::free(potential_temp);
+
+    timers_.matrix_vector.stop();
 }
 
 
-void Treecode::precondition(double *z, double *r)
+void Treecode::precondition_diagonal(double *z, double *r)
 {
+    timers_.precondition.start();
+
     double potential_coeff_1 = 0.5 * (1. +      params_.phys_eps_);
     double potential_coeff_2 = 0.5 * (1. + 1. / params_.phys_eps_);
     
     for (std::size_t i = 0;                i <     particles_.num(); ++i) z[i] = r[i] / potential_coeff_1;
     for (std::size_t i = particles_.num(); i < 2 * particles_.num(); ++i) z[i] = r[i] / potential_coeff_2;
+
+    timers_.precondition.stop();
 }
 
 
@@ -121,6 +142,8 @@ void Treecode::particle_particle_interact(      double* __restrict__ potential,
                                           std::array<std::size_t, 2> target_node_particle_idxs,
                                           std::array<std::size_t, 2> source_node_particle_idxs)
 {
+    timers_.particle_particle_interact.start();
+
     std::size_t target_node_particle_begin = target_node_particle_idxs[0];
     std::size_t target_node_particle_end   = target_node_particle_idxs[1];
 
@@ -210,15 +233,17 @@ void Treecode::particle_particle_interact(      double* __restrict__ potential,
             }
         }
         
-#ifdef OPENACC_ENABLED
-        #pragma acc atomic
+#ifdef OPENMP_ENABLED
+        #pragma omp atomic update
 #endif
         potential[j]                 += pot_temp_1;
-#ifdef OPENACC_ENABLED
-        #pragma acc atomic
+#ifdef OPENMP_ENABLED
+        #pragma omp atomic update
 #endif
         potential[j + num_particles] += pot_temp_2;
     }
+
+    timers_.particle_particle_interact.stop();
 }
 
 
@@ -226,6 +251,8 @@ void Treecode::particle_cluster_interact(double* __restrict__ potential,
                                          std::array<std::size_t, 2> target_node_particle_idxs,
                                          std::size_t source_node_idx)
 {
+    timers_.particle_cluster_interact.start();
+
     std::size_t num_particles   = particles_.num();
     int num_interp_pts_per_node = clusters_.num_interp_pts_per_node();
     int num_charges_per_node    = clusters_.num_charges_per_node();
@@ -328,11 +355,19 @@ void Treecode::particle_cluster_interact(double* __restrict__ potential,
         }
         }
         
+#ifdef OPENMP_ENABLED
+        #pragma omp atomic update
+#endif
         potential[j]                 += targets_q_ptr   [j] * pot_comp_;
+#ifdef OPENMP_ENABLED
+        #pragma omp atomic update
+#endif
         potential[j + num_particles] += targets_q_dx_ptr[j] * pot_comp_dx
                                       + targets_q_dy_ptr[j] * pot_comp_dy
                                       + targets_q_dz_ptr[j] * pot_comp_dz;
     }
+
+    timers_.particle_cluster_interact.stop();
 }
 
 
@@ -340,6 +375,8 @@ void Treecode::cluster_particle_interact(double* __restrict__ potential,
                                          std::size_t target_node_idx,
                                          std::array<std::size_t, 2> source_node_particle_idxs)
 {
+    timers_.cluster_particle_interact.start();
+
     int num_interp_pts_per_node = clusters_.num_interp_pts_per_node();
     int num_potentials_per_node = clusters_.num_charges_per_node();
     
@@ -439,13 +476,27 @@ void Treecode::cluster_particle_interact(double* __restrict__ potential,
                           +  sources_q_dz_ptr[k]  * (dz * dz * d2term + d3term)));
         }
     
+#ifdef OPENMP_ENABLED
+        #pragma omp atomic update
+#endif
         clusters_p_ptr   [jj] += pot_comp_;
+#ifdef OPENMP_ENABLED
+        #pragma omp atomic update
+#endif
         clusters_p_dx_ptr[jj] += pot_comp_dx;
+#ifdef OPENMP_ENABLED
+        #pragma omp atomic update
+#endif
         clusters_p_dy_ptr[jj] += pot_comp_dy;
+#ifdef OPENMP_ENABLED
+        #pragma omp atomic update
+#endif
         clusters_p_dz_ptr[jj] += pot_comp_dz;
     }
     }
     }
+
+    timers_.cluster_particle_interact.stop();
 }
 
 
@@ -453,6 +504,8 @@ void Treecode::cluster_cluster_interact(double* __restrict__ potential,
                                         std::size_t target_node_idx,
                                         std::size_t source_node_idx)
 {
+    timers_.cluster_cluster_interact.start();
+
     int num_interp_pts_per_node = clusters_.num_interp_pts_per_node();
     int num_charges_per_node    = clusters_.num_charges_per_node();
 
@@ -555,18 +608,34 @@ void Treecode::cluster_cluster_interact(double* __restrict__ potential,
         }
         }
     
+#ifdef OPENMP_ENABLED
+        #pragma omp atomic update
+#endif
         clusters_p_ptr   [jj] += pot_comp_;
+#ifdef OPENMP_ENABLED
+        #pragma omp atomic update
+#endif
         clusters_p_dx_ptr[jj] += pot_comp_dx;
+#ifdef OPENMP_ENABLED
+        #pragma omp atomic update
+#endif
         clusters_p_dy_ptr[jj] += pot_comp_dy;
+#ifdef OPENMP_ENABLED
+        #pragma omp atomic update
+#endif
         clusters_p_dz_ptr[jj] += pot_comp_dz;
     }
     }
     }
+
+    timers_.cluster_cluster_interact.stop();
 }
 
 
 std::array<double, 3> Treecode::output()
 {
+    timers_.output.start();
+
     auto solvation_energy = constants::UNITS_PARA  * particles_.compute_solvation_energy(potential_);
     
     particles_.unorder(potential_);
@@ -617,5 +686,16 @@ std::array<double, 3> Treecode::output()
     
     if (params_.output_vtk_) particles_.output_VTK(potential_);
 
+    timers_.output.stop();
+
     return std::array<double, 3> {solvation_energy, coulombic_energy, free_energy};
+}
+
+
+void Timers_Treecode::print() const
+{
+    std::cout << "    run_GMRES time: " << run_GMRES.elapsed_time() << std::endl;
+    std::cout << "matrix_vector time: " << matrix_vector.elapsed_time() << std::endl;
+    std::cout << " precondition time: " << precondition.elapsed_time() << std::endl;
+
 }

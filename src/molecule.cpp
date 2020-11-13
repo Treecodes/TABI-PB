@@ -11,8 +11,11 @@
 #include "molecule.h"
 
 
-Molecule::Molecule(struct Params& params) : params_(params)
+Molecule::Molecule(struct Params& params, struct Timers_Molecule& timers)
+    : params_(params), timers_(timers)
 {
+    timers_.ctor.start();
+
     std::string line;
     while (std::getline(params.pqr_file_, line)) {
         
@@ -30,11 +33,15 @@ Molecule::Molecule(struct Params& params) : params_(params)
     }
     
     num_atoms_ = radius_.size();
+
+    timers_.ctor.stop();
 }
 
 
 void Molecule::build_xyzr_file() const
 {
+    timers_.build_xyzr_file.start();
+
     std::ofstream xyzr_file("molecule.xyzr");
     
     for (std::size_t i = 0; i < num_atoms_; ++i) {
@@ -43,11 +50,15 @@ void Molecule::build_xyzr_file() const
     }
 
     xyzr_file.close();
+
+    timers_.build_xyzr_file.stop();
 }
 
 
 void Molecule::compute_coulombic_energy()
 {
+    timers_.compute_coulombic_energy.start();
+
     double coulombic_energy = 0.;
     double epsp = params_.phys_eps_solute_;
     std::size_t num_atoms = num_atoms_;
@@ -58,6 +69,8 @@ void Molecule::compute_coulombic_energy()
 #ifdef OPENACC_ENABLED
     #pragma acc parallel loop gang present(molecule_coords_ptr, molecule_charge_ptr) \
 				   reduction(+:coulombic_energy)
+#elif OPENMP_ENABLED
+    #pragma omp parallel for reduction(+:coulombic_energy)
 #endif
     for (std::size_t i = 0; i < num_atoms; ++i) {
         double i_pos_x  = molecule_coords_ptr[3*i];
@@ -78,11 +91,15 @@ void Molecule::compute_coulombic_energy()
     }
 
     coulombic_energy_ = coulombic_energy;
+
+    timers_.compute_coulombic_energy.stop();
 }
 
 
 void Molecule::copyin_to_device() const
 {
+    timers_.copyin_to_device.start();
+
 #ifdef OPENACC_ENABLED
     const double* coords_ptr = coords_.data();
     const double* charge_ptr = charge_.data();
@@ -93,15 +110,21 @@ void Molecule::copyin_to_device() const
     #pragma acc enter data copyin(coords_ptr[0:coords_num], \
                                   charge_ptr[0:charge_num])
 #endif
+
+    timers_.copyin_to_device.stop();
 }
 
 
 void Molecule::delete_from_device() const
 {
+    timers_.delete_from_device.start();
+
 #ifdef OPENACC_ENABLED
     const double* coords_ptr = coords_.data();
     const double* charge_ptr = charge_.data();
 
     #pragma acc exit data delete(coords_ptr, charge_ptr)
 #endif
+
+    timers_.delete_from_device.stop();
 }

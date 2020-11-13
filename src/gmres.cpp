@@ -124,7 +124,7 @@ int Treecode::gmres_(long int n, const double *b, double *x, long int restrt,
         Treecode::matrix_vector(-1., x, 1., &work[2 * ldw]);
     }
 
-    Treecode::precondition(work, &work[2 * ldw]);
+    Treecode::precondition_diagonal(work, &work[2 * ldw]);
 
     double bnrm2 = dnrm2_(n, b);
     if (bnrm2 == 0.) bnrm2 = 1.;
@@ -153,7 +153,7 @@ int Treecode::gmres_(long int n, const double *b, double *x, long int restrt,
             ++iter;
 
             Treecode::matrix_vector(1., &work[(3 + i) * ldw], 0., &work[2 * ldw]);
-            Treecode::precondition(&work[2 * ldw], &work[2 * ldw]);
+            Treecode::precondition_diagonal(&work[2 * ldw], &work[2 * ldw]);
 
         /*           Construct I-th column of H orthnormal to the previous */
         /*           I-1 columns. */
@@ -206,7 +206,7 @@ int Treecode::gmres_(long int n, const double *b, double *x, long int restrt,
         for (long int idx = 0; idx < n; ++idx) work[2 * ldw + idx] = b[idx];
         
         Treecode::matrix_vector(-1., x, 1., &work[2 * ldw]);
-        Treecode::precondition(work, &work[2 * ldw]);
+        Treecode::precondition_diagonal(work, &work[2 * ldw]);
         
         work[restrt + ldw] = dnrm2_(n, work);
         resid = work[restrt + ldw] / bnrm2;

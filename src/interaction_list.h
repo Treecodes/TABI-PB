@@ -3,14 +3,24 @@
 
 #include <cstddef>
 
+#include "timer.h"
 #include "tree.h"
 #include "params.h"
+
+struct Timers_InteractionList
+{
+    Timer ctor;
+
+    Timers_InteractionList() = default;
+    ~Timers_InteractionList() = default;
+};
 
 class InteractionList
 {
 private:
     const class Tree& tree_;
     const struct Params& params_;
+    struct Timers_InteractionList& timers_;
     
     int size_check_;
     
@@ -23,7 +33,7 @@ private:
     void build_BLDTT_lists(std::size_t target_node_idx, std::size_t source_node_idx);
     
 public:
-    InteractionList(const class Tree& tree, const struct Params& params);
+    InteractionList(const class Tree&, const struct Params&, struct Timers_InteractionList&);
     ~InteractionList() = default;
     
     const std::vector<std::size_t>& particle_particle(std::size_t idx) const { return particle_particle_[idx]; }

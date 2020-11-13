@@ -24,9 +24,11 @@ static void apply_order(order_iterator order_begin, order_iterator order_end, va
 template <typename order_iterator, typename value_iterator>
 static void apply_unorder(order_iterator order_begin, order_iterator order_end, value_iterator v_begin);
  
-Particles::Particles(const class Molecule& mol, const struct Params& params)
-    : molecule_(mol), params_(params)
+Particles::Particles(const class Molecule& mol, const struct Params& params, struct Timers_Particles& timers)
+    : molecule_(mol), params_(params), timers_(timers)
 {
+    timers_.ctor.start();
+
     Particles::generate_particles(params_.mesh_, params_.mesh_density_, params_.mesh_probe_radius_);
     
     source_charge_.assign(num_, 0.);
@@ -43,6 +45,8 @@ Particles::Particles(const class Molecule& mol, const struct Params& params)
     
     order_.resize(num_);
     std::iota(order_.begin(), order_.end(), 0);
+
+    timers_.ctor.stop();
 };
 
 
@@ -183,6 +187,7 @@ void Particles::compute_source_term()
 {
 /* this computes the source term where
  * S1=sum(qk*G0)/e1 S2=sim(qk*G0')/e1 */
+    timers_.compute_source_term.start();
 
     double eps_solute = params_.phys_eps_solute_;
 
@@ -207,6 +212,8 @@ void Particles::compute_source_term()
                                       particles_x_ptr, particles_y_ptr, particles_z_ptr, \
                                       particles_nx_ptr, particles_ny_ptr, particles_nz_ptr, \
                                       particles_source_term_ptr)
+#elif OPENMP_ENABLED
+    #pragma omp parallel for
 #endif
     for (std::size_t i = 0; i < num; ++i) {
 
@@ -239,22 +246,21 @@ void Particles::compute_source_term()
             source_term_1 += molecule_charge_ptr[j] * G0 / eps_solute;
             source_term_2 += molecule_charge_ptr[j] * G1 / eps_solute;
         }
-#ifdef OPENACC_ENABLED
-#pragma acc atomic
-#endif
+
         particles_source_term_ptr[i]       += source_term_1;
-#ifdef OPENACC_ENABLED
-#pragma acc atomic
-#endif
         particles_source_term_ptr[num + i] += source_term_2;
     }
     
     Particles::update_source_term_on_host();
+
+    timers_.compute_source_term.stop();
 }
 
 
 double Particles::compute_solvation_energy(std::vector<double>& potential) const
 {
+    timers_.compute_solvation_energy.start();
+
     double eps = params_.phys_eps_;
     double kappa = params_.phys_kappa_;
     double solvation_energy = 0.;
@@ -282,12 +288,13 @@ double Particles::compute_solvation_energy(std::vector<double>& potential) const
     #pragma acc parallel loop gang present(molecule_coords_ptr, molecule_charge_ptr, \
                                       particles_x_ptr, particles_y_ptr, particles_z_ptr, \
                                       particles_nx_ptr, particles_ny_ptr, particles_nz_ptr, \
-                                      particles_area_ptr)
+                                      particles_area_ptr) \
+                                   reduction(+:solvation_energy)
 #endif
     for (std::size_t i = 0; i < num; ++i) {
 
 #ifdef OPENACC_ENABLED
-        #pragma acc loop vector
+        #pragma acc loop vector reduction(+:solvation_energy)
 #endif
         for (std::size_t j = 0; j < num_atoms; ++j) {
         
@@ -318,6 +325,8 @@ double Particles::compute_solvation_energy(std::vector<double>& potential) const
 #ifdef OPENACC_ENABLED
     #pragma acc exit data delete(potential_ptr[0:potential_num])
 #endif
+
+    timers_.compute_solvation_energy.stop();
 
     return solvation_energy;
 }
@@ -471,24 +480,10 @@ void Particles::unorder(std::vector<double>& potential)
 }
 
 
-void Particles::compute_charges(const std::vector<double>& potential)
-{
-    for (std::size_t i = 0; i < num_; ++i) {
-        target_charge_   [i] = constants::ONE_OVER_4PI;
-        target_charge_dx_[i] = constants::ONE_OVER_4PI * nx_[i];
-        target_charge_dy_[i] = constants::ONE_OVER_4PI * ny_[i];
-        target_charge_dz_[i] = constants::ONE_OVER_4PI * nz_[i];
-        
-        source_charge_   [i] =          area_[i] * potential[num_ + i];
-        source_charge_dx_[i] = nx_[i] * area_[i] * potential[i];
-        source_charge_dy_[i] = ny_[i] * area_[i] * potential[i];
-        source_charge_dz_[i] = nz_[i] * area_[i] * potential[i];
-    }
-}
-
-
 void Particles::compute_charges(const double* __restrict__ potential_ptr)
 {
+    timers_.compute_charges.start();
+
     std::size_t num = num_;
 
     const double* __restrict__ nx_ptr = nx_.data();
@@ -511,6 +506,8 @@ void Particles::compute_charges(const double* __restrict__ potential_ptr)
                 target_q_ptr, target_q_dx_ptr, target_q_dy_ptr, target_q_dz_ptr, \
                 source_q_ptr, source_q_dx_ptr, source_q_dy_ptr, source_q_dz_ptr)
 
+#elif OPENMP_ENABLED
+    #pragma omp parallel for
 #endif
     for (std::size_t i = 0; i < num; ++i) {
         target_q_ptr   [i] = constants::ONE_OVER_4PI;
@@ -523,11 +520,15 @@ void Particles::compute_charges(const double* __restrict__ potential_ptr)
         source_q_dy_ptr[i] = ny_ptr[i] * area_ptr[i] * potential_ptr[i];
         source_q_dz_ptr[i] = nz_ptr[i] * area_ptr[i] * potential_ptr[i];
     }
+
+    timers_.compute_charges.stop();
 }
 
 
 void Particles::output_VTK(const std::vector<double>& potential) const
 {
+    timers_.output_VTK.start();
+
     std::ofstream vtk_file("output.vtk");
     vtk_file << "# vtk DataFile Version 1.0\n";
     vtk_file << "vtk file output.vtk\n";
@@ -560,11 +561,15 @@ void Particles::output_VTK(const std::vector<double>& potential) const
         
     vtk_file << std::endl;
     vtk_file.close();
+
+    timers_.output_VTK.stop();
 }
 
 
 void Particles::copyin_to_device() const
 {
+    timers_.copyin_to_device.start();
+
 #ifdef OPENACC_ENABLED
     const double* x_ptr = x_.data();
     const double* y_ptr = y_.data();
@@ -614,6 +619,8 @@ void Particles::copyin_to_device() const
                 tq_ptr[0:tq_num], tq_dx_ptr[0:tq_dx_num], tq_dy_ptr[0:tq_dy_num], tq_dz_ptr[0:tq_dz_num], \
                 sq_ptr[0:sq_num], sq_dx_ptr[0:sq_dx_num], sq_dy_ptr[0:sq_dy_num], sq_dz_ptr[0:sq_dz_num])
 #endif
+
+    timers_.copyin_to_device.stop();
 }
 
 
@@ -630,6 +637,8 @@ void Particles::update_source_term_on_host() const
 
 void Particles::delete_from_device() const
 {
+    timers_.delete_from_device.start();
+
 #ifdef OPENACC_ENABLED
     const double* x_ptr = x_.data();
     const double* y_ptr = y_.data();
@@ -679,6 +688,8 @@ void Particles::delete_from_device() const
                 tq_ptr[0:tq_num], tq_dx_ptr[0:tq_dx_num], tq_dy_ptr[0:tq_dy_num], tq_dz_ptr[0:tq_dz_num], \
                 sq_ptr[0:sq_num], sq_dx_ptr[0:sq_dx_num], sq_dy_ptr[0:sq_dy_num], sq_dz_ptr[0:sq_dz_num])
 #endif
+
+    timers_.delete_from_device.stop();
 }
 
 

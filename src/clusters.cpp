@@ -7,9 +7,12 @@
 #include "constants.h"
 #include "clusters.h"
 
-Clusters::Clusters(const class Particles& particles, const class Tree& tree, const struct Params& params)
-    : particles_(particles), tree_(tree), params_(params)
+Clusters::Clusters(const class Particles& particles, const class Tree& tree, 
+                   const struct Params& params, struct Timers_Clusters& timers)
+    : particles_(particles), tree_(tree), params_(params), timers_(timers)
 {
+    timers_.ctor.start();
+
     num_interp_pts_per_node_ = params_.tree_degree_ + 1;
     num_charges_per_node_    = std::pow(num_interp_pts_per_node_, 3);
     
@@ -29,11 +32,15 @@ Clusters::Clusters(const class Particles& particles, const class Tree& tree, con
     interp_potential_dx_.resize(num_charges_);
     interp_potential_dy_.resize(num_charges_);
     interp_potential_dz_.resize(num_charges_);
+
+    timers_.ctor.stop();
 }
 
 
 void Clusters::compute_all_interp_pts()
 {
+    timers_.compute_all_interp_pts.start();
+
     double* __restrict__ clusters_x_ptr   = interp_x_.data();
     double* __restrict__ clusters_y_ptr   = interp_y_.data();
     double* __restrict__ clusters_z_ptr   = interp_z_.data();
@@ -55,11 +62,15 @@ void Clusters::compute_all_interp_pts()
             clusters_z_ptr[node_start + i] = node_bounds[4] + (tt + 1.) / 2. * (node_bounds[5] - node_bounds[4]);
         }
     }
+
+    timers_.compute_all_interp_pts.stop();
 }
 
 
 void Clusters::upward_pass()
 {
+    timers_.upward_pass.start();
+
     const double* __restrict__ clusters_x_ptr   = interp_x_.data();
     const double* __restrict__ clusters_y_ptr   = interp_y_.data();
     const double* __restrict__ clusters_z_ptr   = interp_z_.data();
@@ -247,11 +258,15 @@ void Clusters::upward_pass()
 #ifdef OPENACC_ENABLED
     #pragma acc exit data delete(weights_ptr[0:weights_num])
 #endif
+
+    timers_.upward_pass.stop();
 }
 
 
 void Clusters::downward_pass(double* __restrict__ potential)
 {
+    timers_.downward_pass.start();
+
     const double* __restrict__ clusters_x_ptr    = interp_x_.data();
     const double* __restrict__ clusters_y_ptr    = interp_y_.data();
     const double* __restrict__ clusters_z_ptr    = interp_z_.data();
@@ -408,11 +423,15 @@ void Clusters::downward_pass(double* __restrict__ potential)
 #ifdef OPENACC_ENABLED
     #pragma acc exit data delete(weights_ptr[0:weights_num])
 #endif
+
+    timers_.downward_pass.stop();
 }
 
 
 void Clusters::clear_charges()
 {
+    timers_.clear_charges.start();
+
 #ifdef OPENACC_ENABLED
     std::size_t num_charges = num_charges_;
     double* __restrict__ clusters_q_ptr    = interp_charge_.data();
@@ -434,11 +453,15 @@ void Clusters::clear_charges()
     std::fill(interp_charge_dy_.begin(), interp_charge_dy_.end(), 0);
     std::fill(interp_charge_dz_.begin(), interp_charge_dz_.end(), 0);
 #endif
+
+    timers_.clear_charges.stop();
 }
 
 
 void Clusters::clear_potentials()
 {
+    timers_.clear_potentials.start();
+
 #ifdef OPENACC_ENABLED
     std::size_t num_potentials = num_charges_;
     double* __restrict__ clusters_p_ptr    = interp_potential_.data();
@@ -460,11 +483,15 @@ void Clusters::clear_potentials()
     std::fill(interp_potential_dy_.begin(), interp_potential_dy_.end(), 0);
     std::fill(interp_potential_dz_.begin(), interp_potential_dz_.end(), 0);
 #endif
+
+    timers_.clear_potentials.stop();
 }
 
 
 void Clusters::copyin_to_device() const
 {
+    timers_.copyin_to_device.start();
+
 #ifdef OPENACC_ENABLED
     const double* x_ptr = interp_x_.data();
     const double* y_ptr = interp_y_.data();
@@ -498,11 +525,15 @@ void Clusters::copyin_to_device() const
                 q_ptr[0:q_num], q_dx_ptr[0:q_dx_num], q_dy_ptr[0:q_dy_num], q_dz_ptr[0:q_dz_num], \
                 p_ptr[0:p_num], p_dx_ptr[0:p_dx_num], p_dy_ptr[0:p_dy_num], p_dz_ptr[0:p_dz_num])
 #endif
+
+    timers_.copyin_to_device.stop();
 }
 
 
 void Clusters::delete_from_device() const
 {
+    timers_.delete_from_device.start();
+
 #ifdef OPENACC_ENABLED
     const double* x_ptr = interp_x_.data();
     const double* y_ptr = interp_y_.data();
@@ -536,6 +567,8 @@ void Clusters::delete_from_device() const
                 q_ptr[0:q_num], q_dx_ptr[0:q_dx_num], q_dy_ptr[0:q_dy_num], q_dz_ptr[0:q_dz_num], \
                 p_ptr[0:p_num], p_dx_ptr[0:p_dx_num], p_dy_ptr[0:p_dy_num], p_dz_ptr[0:p_dz_num])
 #endif
+
+    timers_.delete_from_device.stop();
 }
 
 

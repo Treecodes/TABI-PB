@@ -9,8 +9,8 @@
     #include "tabipb_wrap/TABIPBStruct.h"
 #endif
 
-struct Params {
-
+struct Params
+{
     enum Mesh {
         SES,
         SKIN

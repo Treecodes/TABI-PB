@@ -4,16 +4,26 @@
 #include <array>
 #include <cstddef>
 
+#include "timer.h"
 #include "params.h"
 #include "particles.h"
 
 class InteractionList;
+
+struct Timers_Tree
+{
+    Timer ctor;
+
+    Timers_Tree() = default;
+    ~Timers_Tree() = default;
+};
 
 class Tree
 {
 private:
     class Particles& particles_;
     const struct Params& params_;
+    struct Timers_Tree& timers_;
 
     std::size_t num_nodes_;
     std::size_t num_leaves_;
@@ -49,7 +59,7 @@ private:
     void construct(std::size_t, std::size_t, std::size_t, std::size_t);
     
 public:
-    Tree(class Particles&, const struct Params&);
+    Tree(class Particles&, const struct Params&, struct Timers_Tree&);
     ~Tree() = default;
     
     std::size_t num_nodes() const { return num_nodes_; };

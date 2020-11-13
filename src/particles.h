@@ -4,18 +4,34 @@
 #include <vector>
 #include <cstdlib>
 
+#include "timer.h"
 #include "molecule.h"
 #include "params.h"
 
-class Particles {
+struct Timers_Particles
+{
+    Timer ctor;
+    Timer compute_source_term;
+    Timer compute_charges;
+    Timer compute_solvation_energy;
+    Timer copyin_to_device;
+    Timer delete_from_device;
+    Timer output_VTK;
 
+    Timers_Particles() = default;
+    ~Timers_Particles() = default;
+};
+
+class Particles
+{
 private:
+    const class Molecule& molecule_;
+    const struct Params& params_;
+    struct Timers_Particles& timers_;
+    
     std::size_t num_;
     std::size_t num_faces_;
     double surface_area_;
-    
-    const class Molecule& molecule_;
-    const struct Params& params_;
     
     std::vector<std::size_t> face_x_;
     std::vector<std::size_t> face_y_;
@@ -48,14 +64,13 @@ private:
     void update_source_term_on_host() const;
     
 public:
-    Particles(const class Molecule&, const struct Params&);
+    Particles(const class Molecule&, const struct Params&, struct Timers_Particles&);
     ~Particles() = default;
     
     int partition_8(std::size_t, std::size_t, std::array<std::size_t, 16>&);
     void reorder();
     void unorder(std::vector<double>& potential);
     
-    void compute_charges(const std::vector<double>& potential);
     void compute_charges(const double* potential);
     
     const std::array<double, 6> bounds(std::size_t begin, std::size_t end) const;

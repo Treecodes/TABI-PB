@@ -5,7 +5,9 @@
 #include "../params.h"
 #include "../molecule.h"
 
-Molecule::Molecule(Valist* APBSMolecule, struct Params& params) : params_(params)
+Molecule::Molecule(Valist* APBSMolecule, 
+                   struct Params& params, struct Timers_Molecule& timers)
+    : params_(params), timers_(timers)
 {
     num_atoms_ = Valist_getNumberAtoms(APBSMolecule);
     

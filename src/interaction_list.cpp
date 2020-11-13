@@ -4,9 +4,12 @@
 
 #include "interaction_list.h"
 
-InteractionList::InteractionList(const class Tree& tree, const struct Params& params)
-    : tree_(tree), params_(params)
+InteractionList::InteractionList(const class Tree& tree,
+                                 const struct Params& params, struct Timers_InteractionList& timers)
+    : tree_(tree), params_(params), timers_(timers)
 {
+    timers_.ctor.start();
+
     size_check_ = std::pow(params_.tree_degree_ + 1, 3);
     particle_particle_.resize(tree_.num_nodes_);
     particle_cluster_ .resize(tree_.num_nodes_);
@@ -14,28 +17,9 @@ InteractionList::InteractionList(const class Tree& tree, const struct Params& pa
     cluster_cluster_  .resize(tree_.num_nodes_);
     
     //for (auto batch_idx : tree_.leaves_) InteractionList::build_BLTC_lists(batch_idx, 0);
-    
     InteractionList::build_BLDTT_lists(0,0);
-    
-//    for (std::size_t node_idx = 0; node_idx < particle_particle_.size(); ++node_idx) {
-//        std::cout << "Node " << node_idx << ", PP: ";
-//        for (std::size_t list_idx = 0; list_idx < particle_particle_[node_idx].size(); ++list_idx)
-//            std::cout << particle_particle_[node_idx][list_idx] << ", ";
-//
-//        std::cout << std::endl << "Node " << node_idx << ", PC: ";
-//        for (std::size_t list_idx = 0; list_idx < particle_cluster_[node_idx].size(); ++list_idx)
-//            std::cout << particle_cluster_[node_idx][list_idx] << ", ";
-//
-//        std::cout << std::endl << "Node " << node_idx << ", CP: ";
-//        for (std::size_t list_idx = 0; list_idx < cluster_particle_[node_idx].size(); ++list_idx)
-//            std::cout << cluster_particle_[node_idx][list_idx] << ", ";
-//
-//        std::cout << std::endl << "Node " << node_idx << ", CC: ";
-//        for (std::size_t list_idx = 0; list_idx < cluster_cluster_[node_idx].size(); ++list_idx)
-//            std::cout << cluster_cluster_[node_idx][list_idx] << ", ";
-//
-//        std::cout << std::endl << std::endl;
-//    }
+
+    timers_.ctor.stop();
 }
 
 

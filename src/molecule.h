@@ -6,16 +6,30 @@
 #include <fstream>
 #include <cstddef>
 
+#include "timer.h"
 #include "params.h"
 
 #ifdef TABIPB_APBS
     #include "generic/valist.h"
 #endif
 
-class Molecule {
+struct Timers_Molecule
+{
+    Timer ctor;
+    Timer compute_coulombic_energy;
+    Timer build_xyzr_file;
+    Timer copyin_to_device;
+    Timer delete_from_device;
 
+    Timers_Molecule() = default;
+    ~Timers_Molecule() = default;
+};
+
+class Molecule
+{
 private:
     const struct Params& params_;
+    struct Timers_Molecule& timers_;
     
     std::size_t num_atoms_;
     std::vector<double> coords_;
@@ -25,11 +39,11 @@ private:
     double coulombic_energy_;
 
 public:
-    Molecule(struct Params&);
+    Molecule(struct Params&, struct Timers_Molecule&);
     ~Molecule() = default;
     
 #ifdef TABIPB_APBS
-    Molecule(Valist*, struct Params&);
+    Molecule(Valist*, struct Params&, struct Timers_Molecule&);
 #endif
     
     void build_xyzr_file() const;

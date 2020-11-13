@@ -6,9 +6,12 @@
 
 #include "tree.h"
 
-Tree::Tree(class Particles& particles, const struct Params& params)
-    : particles_(particles), params_(params)
+Tree::Tree(class Particles& particles, 
+           const struct Params& params, struct Timers_Tree& timers)
+    : particles_(particles), params_(params), timers_(timers)
 {
+    timers_.ctor.start();
+
     num_nodes_     = 0;
     num_leaves_    = 0;
     min_leaf_size_ = std::numeric_limits<std::size_t>::max();
@@ -24,6 +27,8 @@ Tree::Tree(class Particles& particles, const struct Params& params)
     auto container_end = std::remove_if(leaves_.begin(), leaves_.end(), [this](std::size_t n)
         {return this->node_num_children_[n] > 0; });
     leaves_.erase(container_end, leaves_.end());
+
+    timers_.ctor.stop();
 }
 
 

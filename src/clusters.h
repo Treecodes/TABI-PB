@@ -3,9 +3,25 @@
 
 #include <cstddef>
 
+#include "timer.h"
 #include "particles.h"
 #include "tree.h"
 #include "params.h"
+
+struct Timers_Clusters
+{
+    Timer ctor;
+    Timer upward_pass;
+    Timer downward_pass;
+    Timer clear_charges;
+    Timer clear_potentials;
+    Timer compute_all_interp_pts;
+    Timer copyin_to_device;
+    Timer delete_from_device;
+
+    Timers_Clusters() = default;
+    ~Timers_Clusters() = default;
+};
 
 class Clusters
 {
@@ -13,6 +29,7 @@ private:
     const class Particles& particles_;
     const class Tree& tree_;
     const struct Params& params_;
+    struct Timers_Clusters& timers_;
 
     int num_interp_pts_per_node_;
     int num_charges_per_node_;
@@ -36,7 +53,7 @@ private:
     
     
 public:
-    Clusters(const class Particles& particles, const class Tree& tree, const struct Params& params);
+    Clusters(const class Particles&, const class Tree&, const struct Params&, struct Timers_Clusters&);
     ~Clusters() = default;
     
     void upward_pass();
