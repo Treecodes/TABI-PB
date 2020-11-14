@@ -5,7 +5,7 @@
 #include "../tree.h"
 #include "../interaction_list.h"
 #include "../clusters.h"
-#include "../treecode.h"
+#include "../boundary_element.h"
 
 #include "TABIPBWrap.h"
 
@@ -29,11 +29,12 @@ struct TABIPBOutput runTABIPBWrapAPBS(struct TABIPBInput tabipbIn, Valist* APBSM
     clusters.compute_all_interp_pts();
     
     class InteractionList interaction_list(tree, params, timers.interaction_list);
-    class Treecode treecode(particles, clusters, tree, interaction_list, molecule, 
-                            params, timers.treecode);
+    class BoundaryElement boundary_element(particles, clusters, tree, interaction_list, molecule, 
+                            params, timers.boundary_element);
     
-    treecode.run_GMRES();
-    auto energies = treecode.output();
+    boundary_element.run_GMRES();
+    boundary_element.finalize();
+    auto energies = Output(boundary_element, timers);
 
     return TABIPBOutput{energies[0], energies[1], energies[2]};
 }

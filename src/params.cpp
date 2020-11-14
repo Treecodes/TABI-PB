@@ -21,6 +21,7 @@ Params::Params(char* infile)
 
     output_vtk_ = false;
     output_csv_ = false;
+    output_timers_ = false;
     
     std::string line;
     
@@ -110,6 +111,7 @@ Params::Params(char* infile)
         } else if (param_token == "outdata") {
              if (param_value == "vtk") output_vtk_ = true;
              if (param_value == "csv") output_csv_ = true;
+             if (param_value == "timers") output_timers_ = true;
         
         } else {
             std::cout << "Skipping undefined token: " << param_token << std::endl;

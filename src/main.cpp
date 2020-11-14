@@ -2,14 +2,15 @@
 #include <iomanip>
 #include <cstdlib>
 
-#include "tabipb_timers.h"
 #include "params.h"
 #include "molecule.h"
 #include "particles.h"
 #include "tree.h"
 #include "interaction_list.h"
 #include "clusters.h"
-#include "treecode.h"
+#include "boundary_element.h"
+#include "tabipb_timers.h"
+#include "output.h"
 
 
 int main(int argc, char* argv[])
@@ -46,19 +47,19 @@ int main(int argc, char* argv[])
     // build interaction lists from the tree constructed above
     class InteractionList interaction_list(tree, params, timers.interaction_list);
     
-    // initialize the treecode and construct the potential output array
-    class Treecode treecode(particles, clusters, 
-                            tree, interaction_list, molecule, 
-                            params, timers.treecode);
+    // initialize the boundary element method and construct the potential output array
+    class BoundaryElement boundary_element(particles, clusters,
+                                   tree, interaction_list, molecule,
+                                   params, timers.boundary_element);
     
-    treecode.run_GMRES();
-    treecode.output();
+    boundary_element.run_GMRES();
+    boundary_element.finalize();
 
     molecule.delete_from_device();
     particles.delete_from_device();
     clusters.delete_from_device();
 
-    timers.print();
+    auto energies = Output(boundary_element, timers);
     
     return 0;
 }

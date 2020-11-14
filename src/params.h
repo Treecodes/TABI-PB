@@ -38,7 +38,7 @@ struct Params
     double phys_kappa_;
     double phys_kappa2_;
 
-   /* treecode parameters */
+   /* boundary_element parameters */
     int tree_degree_;
     int tree_max_per_leaf_;
     double tree_theta_;
@@ -52,6 +52,7 @@ struct Params
    /* output of potential data */
     bool output_vtk_;
     bool output_csv_;
+    bool output_timers_;
     
     Params(char* paramfile);
     ~Params() = default;

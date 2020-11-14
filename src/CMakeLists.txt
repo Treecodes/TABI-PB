@@ -6,8 +6,9 @@ add_executable(tabipb main.cpp
         tree.cpp tree.h
         clusters.cpp clusters.h
         interaction_list.cpp interaction_list.h
-        treecode.cpp gmres.cpp treecode.h
-        constants.h)
+        boundary_element.cpp gmres.cpp boundary_element.h
+        output.cpp output.h
+        tabipb_timers.h timer.h constants.h)
 
 target_compile_features(tabipb PRIVATE cxx_std_11)
 target_compile_options(tabipb PRIVATE 
@@ -55,7 +56,8 @@ if (ENABLE_TABIPB_APBS)
         params.cpp params.h molecule.cpp molecule.h
         particles.cpp particles.h tree.cpp tree.h
         clusters.cpp clusters.h interaction_list.cpp interaction_list.h
-        treecode.cpp gmres.cpp treecode.h constants.h
+        boundary_element.cpp gmres.cpp boundary_element.h constants.h
+        output.cpp output.h tabipb_timers.h timer.h
         tabipb_wrap/TABIPBWrap.cpp tabipb_wrap/TABIPBWrap.h
         tabipb_wrap/TABIPBStruct.h tabipb_wrap/params_apbs_ctor.cpp
         tabipb_wrap/molecule_apbs_ctor.cpp)

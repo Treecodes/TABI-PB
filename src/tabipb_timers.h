@@ -9,7 +9,7 @@
 #include "tree.h"
 #include "clusters.h"
 #include "interaction_list.h"
-#include "treecode.h"
+#include "boundary_element.h"
 
 struct Timers
 {
@@ -18,7 +18,7 @@ struct Timers
     Timers_Tree tree;
     Timers_Clusters clusters;
     Timers_InteractionList interaction_list;
-    Timers_Treecode treecode;
+    Timers_BoundaryElement boundary_element;
 
     Timers() = default;
     ~Timers() = default;
@@ -30,7 +30,7 @@ struct Timers
         tree.print();
         clusters.print();
         interaction_list.print();
-        treecode.print();
+        boundary_element.print();
     }
 };
 

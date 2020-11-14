@@ -2,7 +2,7 @@
 #include <iomanip>
 #include <cmath>
 
-#include "treecode.h"
+#include "boundary_element.h"
 
 /*  -- Iterative template routine --
 *     Univ. of Tennessee and Oak Ridge National Laboratory
@@ -106,7 +106,7 @@ static void update_(long int i, long int n, double* x, const double* h, long int
 static void basis_(long int i, long int n, double* h, double* v, long int ldv, double* w);
 
 //*****************************************************************
-int Treecode::gmres_(long int n, const double *b, double *x, long int restrt,
+int BoundaryElement::gmres_(long int n, const double *b, double *x, long int restrt,
                      double* work, long int ldw, double* h, long int ldh,
                      long int& iter, double& resid)
 {
@@ -121,10 +121,10 @@ int Treecode::gmres_(long int n, const double *b, double *x, long int restrt,
     if (dnrm2_(n, x) != 0.) {
     
         for (long int idx = 0; idx < n; ++idx) work[2 * ldw + idx] = b[idx];
-        Treecode::matrix_vector(-1., x, 1., &work[2 * ldw]);
+        BoundaryElement::matrix_vector(-1., x, 1., &work[2 * ldw]);
     }
 
-    Treecode::precondition_diagonal(work, &work[2 * ldw]);
+    BoundaryElement::precondition_diagonal(work, &work[2 * ldw]);
 
     double bnrm2 = dnrm2_(n, b);
     if (bnrm2 == 0.) bnrm2 = 1.;
@@ -152,8 +152,8 @@ int Treecode::gmres_(long int n, const double *b, double *x, long int restrt,
         for (long int i = 0; i < restrt; ++i) {
             ++iter;
 
-            Treecode::matrix_vector(1., &work[(3 + i) * ldw], 0., &work[2 * ldw]);
-            Treecode::precondition_diagonal(&work[2 * ldw], &work[2 * ldw]);
+            BoundaryElement::matrix_vector(1., &work[(3 + i) * ldw], 0., &work[2 * ldw]);
+            BoundaryElement::precondition_diagonal(&work[2 * ldw], &work[2 * ldw]);
 
         /*           Construct I-th column of H orthnormal to the previous */
         /*           I-1 columns. */
@@ -205,8 +205,8 @@ int Treecode::gmres_(long int n, const double *b, double *x, long int restrt,
 
         for (long int idx = 0; idx < n; ++idx) work[2 * ldw + idx] = b[idx];
         
-        Treecode::matrix_vector(-1., x, 1., &work[2 * ldw]);
-        Treecode::precondition_diagonal(work, &work[2 * ldw]);
+        BoundaryElement::matrix_vector(-1., x, 1., &work[2 * ldw]);
+        BoundaryElement::precondition_diagonal(work, &work[2 * ldw]);
         
         work[restrt + ldw] = dnrm2_(n, work);
         resid = work[restrt + ldw] / bnrm2;

@@ -26,6 +26,7 @@ Params::Params(TABIPBInput tabipbIn)
     
     if (tabipbIn.output_data_ == 1) output_vtk_ = true;
     output_csv_ = false;
+    output_timers_ = false;
     
     phys_eps_    = phys_eps_solvent_ / phys_eps_solute_;
     phys_kappa2_ = constants::BULK_COEFF * phys_bulk_strength_ / phys_eps_solvent_ / phys_temp_;

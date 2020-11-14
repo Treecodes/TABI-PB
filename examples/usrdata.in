@@ -1,6 +1,6 @@
 mol               1a63.pqr
 mesh              SES
-sdens             3
+sdens             1
 srad              1.4
 pdie              1
 sdie              80
@@ -12,3 +12,4 @@ tree_theta        0.8
 precondition      OFF
 outdata           VTK
 outdata           CSV
+outdata           timers

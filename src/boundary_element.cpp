@@ -7,12 +7,12 @@
 #include <cstring>
 
 #include "constants.h"
-#include "treecode.h"
+#include "boundary_element.h"
 
-Treecode::Treecode(class Particles& particles, class Clusters& clusters,
+BoundaryElement::BoundaryElement(class Particles& particles, class Clusters& clusters,
          const class Tree& tree, const class InteractionList& interaction_list,
          const class Molecule& molecule, 
-         const struct Params& params, struct Timers_Treecode& timers)
+         const struct Params& params, struct Timers_BoundaryElement& timers)
     : particles_(particles), clusters_(clusters), tree_(tree),
       interaction_list_(interaction_list), molecule_(molecule), 
       params_(params), timers_(timers)
@@ -24,7 +24,7 @@ Treecode::Treecode(class Particles& particles, class Clusters& clusters,
     timers_.ctor.stop();
 }
           
-void Treecode::run_GMRES()
+void BoundaryElement::run_GMRES()
 {
     timers_.run_GMRES.start();
 
@@ -34,7 +34,7 @@ void Treecode::run_GMRES()
     long int ldh    = restrt + 1;
     
     // These values are modified on return
-    double resid    = 1e-4;
+    residual_       = 1e-4;
     num_iter_       = 100;
 
     std::vector<double> work_vec(ldw * (restrt + 4));
@@ -43,21 +43,21 @@ void Treecode::run_GMRES()
     double* work = work_vec.data();
     double* h    = h_vec.data();
 
-    int err_code = Treecode::gmres_(length, particles_.source_term_ptr(), potential_.data(),
-                                    restrt, work, ldw, h, ldh, num_iter_, resid);
+    int err_code = BoundaryElement::gmres_(length, particles_.source_term_ptr(), potential_.data(),
+                                    restrt, work, ldw, h, ldh, num_iter_, residual_);
 
     if (err_code) {
         std::cout << "GMRES error code " << err_code << ". Exiting.";
         std::exit(1);
     }
     
-    std::cout << "GMRES completed. " << num_iter_ << " iterations, " << resid << " residual.";
+    std::cout << "GMRES completed. " << num_iter_ << " iterations, " << residual_ << " residual.";
 
     timers_.run_GMRES.stop();
 }
 
 
-void Treecode::matrix_vector(double alpha, const double* __restrict__ potential_old,
+void BoundaryElement::matrix_vector(double alpha, const double* __restrict__ potential_old,
                              double beta,        double* __restrict__ potential_new)
 {
     timers_.matrix_vector.start();
@@ -87,19 +87,19 @@ void Treecode::matrix_vector(double alpha, const double* __restrict__ potential_
     for (std::size_t target_node_idx = 0; target_node_idx < tree_.num_nodes(); ++target_node_idx) {
         
         for (auto source_node_idx : interaction_list_.particle_particle(target_node_idx))
-            Treecode::particle_particle_interact(potential_new, potential_old,
+            BoundaryElement::particle_particle_interact(potential_new, potential_old,
                     tree_.node_particle_idxs(target_node_idx), tree_.node_particle_idxs(source_node_idx));
     
         for (auto source_node_idx : interaction_list_.particle_cluster(target_node_idx))
-            Treecode::particle_cluster_interact(potential_new, 
+            BoundaryElement::particle_cluster_interact(potential_new, 
                     tree_.node_particle_idxs(target_node_idx), source_node_idx);
         
         for (auto source_node_idx : interaction_list_.cluster_particle(target_node_idx))
-            Treecode::cluster_particle_interact(potential_new, 
+            BoundaryElement::cluster_particle_interact(potential_new, 
                     target_node_idx, tree_.node_particle_idxs(source_node_idx));
         
         for (auto source_node_idx : interaction_list_.cluster_cluster(target_node_idx))
-            Treecode::cluster_cluster_interact(potential_new, target_node_idx, source_node_idx);
+            BoundaryElement::cluster_cluster_interact(potential_new, target_node_idx, source_node_idx);
     }
     
     clusters_.downward_pass(potential_new);
@@ -123,7 +123,7 @@ void Treecode::matrix_vector(double alpha, const double* __restrict__ potential_
 }
 
 
-void Treecode::precondition_diagonal(double *z, double *r)
+void BoundaryElement::precondition_diagonal(double *z, double *r)
 {
     timers_.precondition.start();
 
@@ -137,7 +137,7 @@ void Treecode::precondition_diagonal(double *z, double *r)
 }
 
 
-void Treecode::particle_particle_interact(      double* __restrict__ potential,
+void BoundaryElement::particle_particle_interact(      double* __restrict__ potential,
                                           const double* __restrict__ potential_old,
                                           std::array<std::size_t, 2> target_node_particle_idxs,
                                           std::array<std::size_t, 2> source_node_particle_idxs)
@@ -247,7 +247,7 @@ void Treecode::particle_particle_interact(      double* __restrict__ potential,
 }
 
 
-void Treecode::particle_cluster_interact(double* __restrict__ potential,
+void BoundaryElement::particle_cluster_interact(double* __restrict__ potential,
                                          std::array<std::size_t, 2> target_node_particle_idxs,
                                          std::size_t source_node_idx)
 {
@@ -371,7 +371,7 @@ void Treecode::particle_cluster_interact(double* __restrict__ potential,
 }
 
 
-void Treecode::cluster_particle_interact(double* __restrict__ potential,
+void BoundaryElement::cluster_particle_interact(double* __restrict__ potential,
                                          std::size_t target_node_idx,
                                          std::array<std::size_t, 2> source_node_particle_idxs)
 {
@@ -500,7 +500,7 @@ void Treecode::cluster_particle_interact(double* __restrict__ potential,
 }
 
 
-void Treecode::cluster_cluster_interact(double* __restrict__ potential,
+void BoundaryElement::cluster_cluster_interact(double* __restrict__ potential,
                                         std::size_t target_node_idx,
                                         std::size_t source_node_idx)
 {
@@ -632,16 +632,15 @@ void Treecode::cluster_cluster_interact(double* __restrict__ potential,
 }
 
 
-std::array<double, 3> Treecode::output()
+void BoundaryElement::finalize()
 {
-    timers_.output.start();
+    timers_.finalize.start();
 
-    auto solvation_energy = constants::UNITS_PARA  * particles_.compute_solvation_energy(potential_);
+    solvation_energy_ = constants::UNITS_PARA  * particles_.compute_solvation_energy(potential_);
+    coulombic_energy_ = constants::UNITS_COEFF * molecule_.coulombic_energy();
+    free_energy_      = solvation_energy_ + coulombic_energy_;
     
     particles_.unorder(potential_);
-    
-    auto coulombic_energy = constants::UNITS_COEFF * molecule_.coulombic_energy();
-    auto free_energy      = solvation_energy + coulombic_energy;
 
     constexpr double pot_scaling = constants::UNITS_COEFF * constants::PI * 4.;
     std::transform(std::begin(potential_), std::end(potential_),
@@ -653,50 +652,21 @@ std::array<double, 3> Treecode::output()
     auto pot_normal_min_max = std::minmax_element(
         potential_.begin() + potential_.size() / 2, potential_.end());
         
-    auto pot_min = *pot_min_max.first;
-    auto pot_max = *pot_min_max.second;
+    pot_min_ = *pot_min_max.first;
+    pot_max_ = *pot_min_max.second;
     
-    auto pot_normal_min = *pot_normal_min_max.first;
-    auto pot_normal_max = *pot_normal_min_max.second;
-        
-    std::cout << std::fixed << std::setprecision(6);
-    std::cout << "\n\n*** OUTPUT FOR TABI-PB RUN ***";
-    std::cout << "\n\n    Solvation energy = " << solvation_energy
-                                               << " kJ/mol";
-    std::cout << "\n         Free energy = "   << free_energy
-                                               << " kJ/mol";
-    std::cout << "\n\nThe max and min potential and normal derivatives on vertices:";
-    std::cout << "\n        Potential min: " << pot_min << ", "
-                                     "max: " << pot_max;
-    std::cout << "\nNormal derivative min: " << pot_normal_min << ", "
-                                     "max: " << pot_normal_max << "\n" << std::endl;
-                                     
-    if (params_.output_csv_) {
-        std::ofstream csv_file("output.csv");
-        csv_file << molecule_.num_atoms() << ", " << params_.mesh_ << ", "
-                 << params_.mesh_density_ << ", " << params_.mesh_probe_radius_ << ", "
-                 << params_.tree_degree_ << ", " << params_.tree_theta_ << ", "
-                 << params_.tree_max_per_leaf_ << ", " << params_.precondition_ << ", "
-                 << particles_.num() << ", " << particles_.surface_area() << ", "
-                 << solvation_energy << ", " << coulombic_energy << ", "
-                 << pot_min << ", " << pot_max << ", "
-                 << pot_normal_min << ", " << pot_normal_max << ", "
-                 << num_iter_ << std::endl;
-    }
+    pot_normal_min_ = *pot_normal_min_max.first;
+    pot_normal_max_ = *pot_normal_min_max.second;
     
-    if (params_.output_vtk_) particles_.output_VTK(potential_);
-
-    timers_.output.stop();
-
-    return std::array<double, 3> {solvation_energy, coulombic_energy, free_energy};
+    timers_.finalize.stop();
 }
 
 
-void Timers_Treecode::print() const
+void Timers_BoundaryElement::print() const
 {
     std::cout.setf(std::ios::fixed, std::ios::floatfield);
     std::cout.precision(5);
-    std::cout << "|...Treecode function times (s)...." << std::endl;
+    std::cout << "|...BoundaryElement function times (s)...." << std::endl;
     std::cout << "|   |...ctor.......................: ";
     std::cout << std::setw(12) << std::right << ctor.elapsed_time() << std::endl;
     std::cout << "|   |...run_GMRES..................: ";
@@ -713,7 +683,7 @@ void Timers_Treecode::print() const
     std::cout << std::setw(12) << std::right << cluster_cluster_interact.elapsed_time() << std::endl;
     std::cout << "|       |...precondition...........: ";
     std::cout << std::setw(12) << std::right << precondition.elapsed_time() << std::endl;
-    std::cout << "|   |...output.....................: ";
-    std::cout << std::setw(12) << std::right << output.elapsed_time() << std::endl;
+    std::cout << "|   |...finalize...................: ";
+    std::cout << std::setw(12) << std::right << finalize.elapsed_time() << std::endl;
     std::cout << "|" << std::endl;
 }

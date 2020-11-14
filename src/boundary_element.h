@@ -6,9 +6,10 @@
 #include "clusters.h"
 #include "interaction_list.h"
 
-struct Timers_Treecode;
+struct Timers_BoundaryElement;
+struct Timers;
 
-class Treecode
+class BoundaryElement
 {
 private:
     class Particles& particles_;
@@ -17,11 +18,21 @@ private:
     const class InteractionList& interaction_list_;
     const class Molecule& molecule_;
     const struct Params& params_;
-    struct Timers_Treecode& timers_;
+    struct Timers_BoundaryElement& timers_;
     
     std::vector<double> potential_;
     
     long int num_iter_;
+    double residual_;
+    
+    double solvation_energy_;
+    double free_energy_;
+    double coulombic_energy_;
+    
+    double pot_min_;
+    double pot_max_;
+    double pot_normal_min_;
+    double pot_normal_max_;
     
     int gmres_(long int n, const double* b, double* x, long int restrt,
                double* work, long int ldw, double *h, long int ldh,
@@ -48,22 +59,24 @@ private:
             std::size_t target_node_idx, std::size_t source_node_idx);
     
 public:
-    Treecode(class Particles& particles, class Clusters& clusters,
+    BoundaryElement(class Particles& particles, class Clusters& clusters,
              const class Tree& tree, const class InteractionList& interaction_list,
              const class Molecule& molecule, const struct Params& params,
-             struct Timers_Treecode& timers);
-    ~Treecode() = default;
+             struct Timers_BoundaryElement& timers);
+    ~BoundaryElement() = default;
     
     void run_GMRES();
-    std::array<double, 3> output();
+    void finalize();
+    
+    friend std::array<double, 3> Output(const BoundaryElement&, const Timers&);
 };
 
 
-struct Timers_Treecode
+struct Timers_BoundaryElement
 {
     Timer ctor;
     Timer run_GMRES;
-    Timer output;
+    Timer finalize;
 
     Timer matrix_vector;
     Timer precondition;
@@ -76,8 +89,8 @@ struct Timers_Treecode
     std::string get_headers() const;
     std::string get_durations() const;
 
-    Timers_Treecode() = default;
-    ~Timers_Treecode() = default;
+    Timers_BoundaryElement() = default;
+    ~Timers_BoundaryElement() = default;
 };
 
 #endif /* H_TABIPB_TREECODE_STRUCT_H */
