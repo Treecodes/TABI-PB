@@ -741,3 +741,26 @@ static void apply_unorder(order_iterator order_begin, order_iterator order_end, 
     
     std::copy(tmp.begin(), tmp.end(), v_begin);
 }
+
+
+void Timers_Particles::print() const
+{
+    std::cout.setf(std::ios::fixed, std::ios::floatfield);
+    std::cout.precision(5);
+    std::cout << "|...Particles function times (s)...." << std::endl;
+    std::cout << "|   |...ctor.......................: ";
+    std::cout << std::setw(12) << std::right << ctor.elapsed_time() << std::endl;
+    std::cout << "|   |...compute_source_term........: ";
+    std::cout << std::setw(12) << std::right << compute_source_term.elapsed_time() << std::endl;
+    std::cout << "|   |...compute_charges............: ";
+    std::cout << std::setw(12) << std::right << compute_charges.elapsed_time() << std::endl;
+    std::cout << "|   |...compute_solvation_energy...: ";
+    std::cout << std::setw(12) << std::right << compute_solvation_energy.elapsed_time() << std::endl;
+    std::cout << "|   |...copyin_to_device...........: ";
+    std::cout << std::setw(12) << std::right << copyin_to_device.elapsed_time() << std::endl;
+    std::cout << "|   |...delete_from_device.........: ";
+    std::cout << std::setw(12) << std::right << copyin_to_device.elapsed_time() << std::endl;
+    std::cout << "|   |...output_VTK.................: ";
+    std::cout << std::setw(12) << std::right << output_VTK.elapsed_time() << std::endl;
+    std::cout << "|" << std::endl;
+}

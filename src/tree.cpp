@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <numeric>
 #include <iostream>
+#include <iomanip>
 #include <cmath>
 
 #include "tree.h"
@@ -122,4 +123,15 @@ const std::array<std::size_t, 2> Tree::node_particle_idxs(std::size_t node_idx) 
 {
     return std::array<std::size_t, 2> {node_particles_begin_[node_idx],
                                        node_particles_end_[node_idx]};
+}
+
+
+void Timers_Tree::print() const
+{
+    std::cout.setf(std::ios::fixed, std::ios::floatfield);
+    std::cout.precision(5);
+    std::cout << "|...Tree function times (s)...." << std::endl;
+    std::cout << "|   |...ctor.......................: ";
+    std::cout << std::setw(12) << std::right << ctor.elapsed_time() << std::endl;
+    std::cout << "|" << std::endl;
 }

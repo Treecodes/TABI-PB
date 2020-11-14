@@ -9,14 +9,7 @@
 #include "particles.h"
 
 class InteractionList;
-
-struct Timers_Tree
-{
-    Timer ctor;
-
-    Timers_Tree() = default;
-    ~Timers_Tree() = default;
-};
+class Timers_Tree;
 
 class Tree
 {
@@ -68,6 +61,19 @@ public:
     const std::vector<std::size_t>& leaves() const { return leaves_; }
     
     friend class InteractionList;
+};
+
+
+struct Timers_Tree
+{
+    Timer ctor;
+    
+    void print() const;
+    std::string get_headers() const;
+    std::string get_durations() const;
+
+    Timers_Tree() = default;
+    ~Timers_Tree() = default;
 };
 
 #endif /* H_STRUCT_TREE_H */

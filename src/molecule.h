@@ -13,17 +13,7 @@
     #include "generic/valist.h"
 #endif
 
-struct Timers_Molecule
-{
-    Timer ctor;
-    Timer compute_coulombic_energy;
-    Timer build_xyzr_file;
-    Timer copyin_to_device;
-    Timer delete_from_device;
-
-    Timers_Molecule() = default;
-    ~Timers_Molecule() = default;
-};
+struct Timers_Molecule;
 
 class Molecule
 {
@@ -57,6 +47,23 @@ public:
     void compute_coulombic_energy();
     void copyin_to_device() const;
     void delete_from_device() const;
+};
+
+
+struct Timers_Molecule
+{
+    Timer ctor;
+    Timer compute_coulombic_energy;
+    Timer build_xyzr_file;
+    Timer copyin_to_device;
+    Timer delete_from_device;
+    
+    void print() const;
+    std::string get_headers() const;
+    std::string get_durations() const;
+
+    Timers_Molecule() = default;
+    ~Timers_Molecule() = default;
 };
 
 #endif /* H_MOLECULE_STRUCT_H */

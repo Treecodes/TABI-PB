@@ -694,8 +694,26 @@ std::array<double, 3> Treecode::output()
 
 void Timers_Treecode::print() const
 {
-    std::cout << "    run_GMRES time: " << run_GMRES.elapsed_time() << std::endl;
-    std::cout << "matrix_vector time: " << matrix_vector.elapsed_time() << std::endl;
-    std::cout << " precondition time: " << precondition.elapsed_time() << std::endl;
-
+    std::cout.setf(std::ios::fixed, std::ios::floatfield);
+    std::cout.precision(5);
+    std::cout << "|...Treecode function times (s)...." << std::endl;
+    std::cout << "|   |...ctor.......................: ";
+    std::cout << std::setw(12) << std::right << ctor.elapsed_time() << std::endl;
+    std::cout << "|   |...run_GMRES..................: ";
+    std::cout << std::setw(12) << std::right << run_GMRES.elapsed_time() << std::endl;
+    std::cout << "|       |...matrix_vector..........: ";
+    std::cout << std::setw(12) << std::right << matrix_vector.elapsed_time() << std::endl;
+    std::cout << "|           |...PP interact........: ";
+    std::cout << std::setw(12) << std::right << particle_particle_interact.elapsed_time() << std::endl;
+    std::cout << "|           |...PC interact........: ";
+    std::cout << std::setw(12) << std::right << particle_cluster_interact.elapsed_time() << std::endl;
+    std::cout << "|           |...CP interact........: ";
+    std::cout << std::setw(12) << std::right << cluster_particle_interact.elapsed_time() << std::endl;
+    std::cout << "|           |...CC interact........: ";
+    std::cout << std::setw(12) << std::right << cluster_cluster_interact.elapsed_time() << std::endl;
+    std::cout << "|       |...precondition...........: ";
+    std::cout << std::setw(12) << std::right << precondition.elapsed_time() << std::endl;
+    std::cout << "|   |...output.....................: ";
+    std::cout << std::setw(12) << std::right << output.elapsed_time() << std::endl;
+    std::cout << "|" << std::endl;
 }

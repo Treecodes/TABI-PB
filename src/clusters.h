@@ -8,20 +8,7 @@
 #include "tree.h"
 #include "params.h"
 
-struct Timers_Clusters
-{
-    Timer ctor;
-    Timer upward_pass;
-    Timer downward_pass;
-    Timer clear_charges;
-    Timer clear_potentials;
-    Timer compute_all_interp_pts;
-    Timer copyin_to_device;
-    Timer delete_from_device;
-
-    Timers_Clusters() = default;
-    ~Timers_Clusters() = default;
-};
+struct Timers_Clusters;
 
 class Clusters
 {
@@ -85,6 +72,26 @@ public:
     void copyin_to_device() const;
     void delete_from_device() const;
     
+};
+
+
+struct Timers_Clusters
+{
+    Timer ctor;
+    Timer upward_pass;
+    Timer downward_pass;
+    Timer clear_charges;
+    Timer clear_potentials;
+    Timer compute_all_interp_pts;
+    Timer copyin_to_device;
+    Timer delete_from_device;
+    
+    void print() const;
+    std::string get_headers() const;
+    std::string get_durations() const;
+
+    Timers_Clusters() = default;
+    ~Timers_Clusters() = default;
 };
 
 #endif /* H_TABIPB_CLUSTERS_STRUCT_H */

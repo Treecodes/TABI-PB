@@ -1,5 +1,7 @@
 #include <array>
 #include <limits>
+#include <iostream>
+#include <iomanip>
 #include <cmath>
 #include <cstddef>
 #include <cstring>
@@ -583,4 +585,29 @@ const std::array<std::size_t, 2> Clusters::cluster_charges_idxs(std::size_t node
 {
     return std::array<std::size_t, 2> {num_charges_per_node_ *  node_idx,
                                        num_charges_per_node_ * (node_idx + 1)};
+}
+
+
+void Timers_Clusters::print() const
+{
+    std::cout.setf(std::ios::fixed, std::ios::floatfield);
+    std::cout.precision(5);
+    std::cout << "|...Clusters function times (s)...." << std::endl;
+    std::cout << "|   |...ctor.......................: ";
+    std::cout << std::setw(12) << std::right << ctor.elapsed_time() << std::endl;
+    std::cout << "|   |...upward_pass................: ";
+    std::cout << std::setw(12) << std::right << upward_pass.elapsed_time() << std::endl;
+    std::cout << "|   |...downward_pass..............: ";
+    std::cout << std::setw(12) << std::right << downward_pass.elapsed_time() << std::endl;
+    std::cout << "|   |...clear_charges..............: ";
+    std::cout << std::setw(12) << std::right << clear_charges.elapsed_time() << std::endl;
+    std::cout << "|   |...clear_potentials...........: ";
+    std::cout << std::setw(12) << std::right << clear_potentials.elapsed_time() << std::endl;
+    std::cout << "|   |...compute_all_interp_pts.....: ";
+    std::cout << std::setw(12) << std::right << compute_all_interp_pts.elapsed_time() << std::endl;
+    std::cout << "|   |...copyin_to_device...........: ";
+    std::cout << std::setw(12) << std::right << copyin_to_device.elapsed_time() << std::endl;
+    std::cout << "|   |...delete_from_device.........: ";
+    std::cout << std::setw(12) << std::right << delete_from_device.elapsed_time() << std::endl;
+    std::cout << "|" << std::endl;
 }

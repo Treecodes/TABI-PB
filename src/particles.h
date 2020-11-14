@@ -8,19 +8,7 @@
 #include "molecule.h"
 #include "params.h"
 
-struct Timers_Particles
-{
-    Timer ctor;
-    Timer compute_source_term;
-    Timer compute_charges;
-    Timer compute_solvation_energy;
-    Timer copyin_to_device;
-    Timer delete_from_device;
-    Timer output_VTK;
-
-    Timers_Particles() = default;
-    ~Timers_Particles() = default;
-};
+struct Timers_Particles;
 
 class Particles
 {
@@ -105,6 +93,25 @@ public:
     void compute_source_term();
     void copyin_to_device() const;
     void delete_from_device() const;
+};
+
+
+struct Timers_Particles
+{
+    Timer ctor;
+    Timer compute_source_term;
+    Timer compute_charges;
+    Timer compute_solvation_energy;
+    Timer copyin_to_device;
+    Timer delete_from_device;
+    Timer output_VTK;
+    
+    void print() const;
+    std::string get_headers() const;
+    std::string get_durations() const;
+
+    Timers_Particles() = default;
+    ~Timers_Particles() = default;
 };
 
 #endif /* H_PARTICLE_STRUCT_H */

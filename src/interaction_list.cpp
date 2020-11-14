@@ -1,4 +1,5 @@
 #include <iostream>
+#include <iomanip>
 #include <cmath>
 #include <cstddef>
 
@@ -106,4 +107,15 @@ void InteractionList::build_BLDTT_lists(std::size_t target_node_idx, std::size_t
         
         }
     }
+}
+
+
+void Timers_InteractionList::print() const
+{
+    std::cout.setf(std::ios::fixed, std::ios::floatfield);
+    std::cout.precision(5);
+    std::cout << "|...InteractionList function times (s)...." << std::endl;
+    std::cout << "|   |...ctor.......................: ";
+    std::cout << std::setw(12) << std::right << ctor.elapsed_time() << std::endl;
+    std::cout << "|" << std::endl;
 }

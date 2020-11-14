@@ -7,13 +7,7 @@
 #include "tree.h"
 #include "params.h"
 
-struct Timers_InteractionList
-{
-    Timer ctor;
-
-    Timers_InteractionList() = default;
-    ~Timers_InteractionList() = default;
-};
+struct Timers_InteractionList;
 
 class InteractionList
 {
@@ -40,6 +34,19 @@ public:
     const std::vector<std::size_t>& particle_cluster (std::size_t idx) const { return particle_cluster_ [idx]; }
     const std::vector<std::size_t>& cluster_particle (std::size_t idx) const { return cluster_particle_ [idx]; }
     const std::vector<std::size_t>& cluster_cluster  (std::size_t idx) const { return cluster_cluster_  [idx]; }
+};
+
+
+struct Timers_InteractionList
+{
+    Timer ctor;
+    
+    void print() const;
+    std::string get_headers() const;
+    std::string get_durations() const;
+
+    Timers_InteractionList() = default;
+    ~Timers_InteractionList() = default;
 };
 
 #endif /* H_TABIPB_INTERACTION_LIST_STRUCT_H */

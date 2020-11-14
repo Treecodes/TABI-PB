@@ -25,6 +25,11 @@ struct Timers
 
     void print() const
     {
+        molecule.print();
+        particles.print();
+        tree.print();
+        clusters.print();
+        interaction_list.print();
         treecode.print();
     }
 };

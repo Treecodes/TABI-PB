@@ -4,6 +4,7 @@
 #include <fstream>
 #include <sstream>
 #include <iostream>
+#include <iomanip>
 #include <cmath>
 #include <cstddef>
 
@@ -127,4 +128,23 @@ void Molecule::delete_from_device() const
 #endif
 
     timers_.delete_from_device.stop();
+}
+
+
+void Timers_Molecule::print() const
+{
+    std::cout.setf(std::ios::fixed, std::ios::floatfield);
+    std::cout.precision(5);
+    std::cout << "|...Molecule function times (s)...." << std::endl;
+    std::cout << "|   |...ctor.......................: ";
+    std::cout << std::setw(12) << std::right << ctor.elapsed_time() << std::endl;
+    std::cout << "|   |...compute_coulombic_energy...: ";
+    std::cout << std::setw(12) << std::right << compute_coulombic_energy.elapsed_time() << std::endl;
+    std::cout << "|   |...build_xyzr_file............: ";
+    std::cout << std::setw(12) << std::right << build_xyzr_file.elapsed_time() << std::endl;
+    std::cout << "|   |...copyin_to_device...........: ";
+    std::cout << std::setw(12) << std::right << copyin_to_device.elapsed_time() << std::endl;
+    std::cout << "|   |...delete_from_device.........: ";
+    std::cout << std::setw(12) << std::right << delete_from_device.elapsed_time() << std::endl;
+    std::cout << "|" << std::endl;
 }

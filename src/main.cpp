@@ -59,13 +59,6 @@ int main(int argc, char* argv[])
     clusters.delete_from_device();
 
     timers.print();
-
-//    std::cout << "Time ms molecule: " << timers.molecule.elapsed_time() << std::endl;
-//    std::cout << "Time ms particles: " << timers.particles.elapsed_time() << std::endl;
-//    std::cout << "Time ms tree: " << timers.tree.elapsed_time() << std::endl;
-//    std::cout << "Time ms clusters: " << timers.clusters.elapsed_time() << std::endl;
-//    std::cout << "Time ms interaction list: " << timers.interaction_list.elapsed_time() << std::endl;
-//    std::cout << "Time ms treecode: " << timers.treecode.elapsed_time() << std::endl;
-
+    
     return 0;
 }
