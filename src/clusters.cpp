@@ -605,9 +605,43 @@ void Timers_Clusters::print() const
     std::cout << std::setw(12) << std::right << clear_potentials.elapsed_time() << std::endl;
     std::cout << "|   |...compute_all_interp_pts.....: ";
     std::cout << std::setw(12) << std::right << compute_all_interp_pts.elapsed_time() << std::endl;
+#ifdef OPENACC_ENABLED
     std::cout << "|   |...copyin_to_device...........: ";
     std::cout << std::setw(12) << std::right << copyin_to_device.elapsed_time() << std::endl;
     std::cout << "|   |...delete_from_device.........: ";
     std::cout << std::setw(12) << std::right << delete_from_device.elapsed_time() << std::endl;
+#endif
     std::cout << "|" << std::endl;
+}
+
+
+std::string Timers_Clusters::get_durations() const
+{
+    std::string durations;
+    durations.append(std::to_string(ctor                   .elapsed_time())).append(", ");
+    durations.append(std::to_string(upward_pass            .elapsed_time())).append(", ");
+    durations.append(std::to_string(downward_pass          .elapsed_time())).append(", ");
+    durations.append(std::to_string(clear_charges          .elapsed_time())).append(", ");
+    durations.append(std::to_string(clear_potentials       .elapsed_time())).append(", ");
+    durations.append(std::to_string(compute_all_interp_pts .elapsed_time())).append(", ");
+    durations.append(std::to_string(copyin_to_device       .elapsed_time())).append(", ");
+    durations.append(std::to_string(delete_from_device     .elapsed_time())).append(", ");
+    
+    return durations;
+}
+
+
+std::string Timers_Clusters::get_headers() const
+{
+    std::string headers;
+    headers.append("Clusters ctor, ");
+    headers.append("Clusters upward_pass, ");
+    headers.append("Clusters downward_pass, ");
+    headers.append("Clusters clear_charges, ");
+    headers.append("Clusters clear_potentials, ");
+    headers.append("Clusters compute_all_interp_pts, ");
+    headers.append("Clusters copyin_to_device, ");
+    headers.append("Clusters delete_from_device, ");
+    
+    return headers;
 }

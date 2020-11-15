@@ -668,22 +668,56 @@ void Timers_BoundaryElement::print() const
     std::cout.precision(5);
     std::cout << "|...BoundaryElement function times (s)...." << std::endl;
     std::cout << "|   |...ctor.......................: ";
-    std::cout << std::setw(12) << std::right << ctor.elapsed_time() << std::endl;
+    std::cout << std::setw(12) << std::right << ctor                       .elapsed_time() << std::endl;
     std::cout << "|   |...run_GMRES..................: ";
-    std::cout << std::setw(12) << std::right << run_GMRES.elapsed_time() << std::endl;
+    std::cout << std::setw(12) << std::right << run_GMRES                  .elapsed_time() << std::endl;
     std::cout << "|       |...matrix_vector..........: ";
-    std::cout << std::setw(12) << std::right << matrix_vector.elapsed_time() << std::endl;
+    std::cout << std::setw(12) << std::right << matrix_vector              .elapsed_time() << std::endl;
     std::cout << "|           |...PP interact........: ";
-    std::cout << std::setw(12) << std::right << particle_particle_interact.elapsed_time() << std::endl;
+    std::cout << std::setw(12) << std::right << particle_particle_interact .elapsed_time() << std::endl;
     std::cout << "|           |...PC interact........: ";
-    std::cout << std::setw(12) << std::right << particle_cluster_interact.elapsed_time() << std::endl;
+    std::cout << std::setw(12) << std::right << particle_cluster_interact  .elapsed_time() << std::endl;
     std::cout << "|           |...CP interact........: ";
-    std::cout << std::setw(12) << std::right << cluster_particle_interact.elapsed_time() << std::endl;
+    std::cout << std::setw(12) << std::right << cluster_particle_interact  .elapsed_time() << std::endl;
     std::cout << "|           |...CC interact........: ";
-    std::cout << std::setw(12) << std::right << cluster_cluster_interact.elapsed_time() << std::endl;
+    std::cout << std::setw(12) << std::right << cluster_cluster_interact   .elapsed_time() << std::endl;
     std::cout << "|       |...precondition...........: ";
-    std::cout << std::setw(12) << std::right << precondition.elapsed_time() << std::endl;
+    std::cout << std::setw(12) << std::right << precondition               .elapsed_time() << std::endl;
     std::cout << "|   |...finalize...................: ";
-    std::cout << std::setw(12) << std::right << finalize.elapsed_time() << std::endl;
+    std::cout << std::setw(12) << std::right << finalize                   .elapsed_time() << std::endl;
     std::cout << "|" << std::endl;
+}
+
+
+std::string Timers_BoundaryElement::get_durations() const
+{
+    std::string durations;
+    durations.append(std::to_string(ctor                       .elapsed_time())).append(", ");
+    durations.append(std::to_string(run_GMRES                  .elapsed_time())).append(", ");
+    durations.append(std::to_string(matrix_vector              .elapsed_time())).append(", ");
+    durations.append(std::to_string(particle_particle_interact .elapsed_time())).append(", ");
+    durations.append(std::to_string(particle_cluster_interact  .elapsed_time())).append(", ");
+    durations.append(std::to_string(cluster_particle_interact  .elapsed_time())).append(", ");
+    durations.append(std::to_string(cluster_cluster_interact   .elapsed_time())).append(", ");
+    durations.append(std::to_string(precondition               .elapsed_time())).append(", ");
+    durations.append(std::to_string(finalize                   .elapsed_time())).append(", ");
+    
+    return durations;
+}
+
+
+std::string Timers_BoundaryElement::get_headers() const
+{
+    std::string headers;
+    headers.append("BoundaryElement ctor, ");
+    headers.append("BoundaryElement run_GMRES, ");
+    headers.append("BoundaryElement matrix_vector, ");
+    headers.append("BoundaryElement particle_particle_interact, ");
+    headers.append("BoundaryElement particle_cluster_interact, ");
+    headers.append("BoundaryElement cluster_particle_interact, ");
+    headers.append("BoundaryElement cluster_cluster_interact, ");
+    headers.append("BoundaryElement precondition, ");
+    headers.append("BoundaryElement finalize, ");
+    
+    return headers;
 }

@@ -87,8 +87,8 @@ struct Timers_Clusters
     Timer delete_from_device;
     
     void print() const;
-    std::string get_headers() const;
     std::string get_durations() const;
+    std::string get_headers() const;
 
     Timers_Clusters() = default;
     ~Timers_Clusters() = default;

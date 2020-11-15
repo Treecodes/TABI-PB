@@ -107,8 +107,8 @@ struct Timers_Particles
     Timer output_VTK;
     
     void print() const;
-    std::string get_headers() const;
     std::string get_durations() const;
+    std::string get_headers() const;
 
     Timers_Particles() = default;
     ~Timers_Particles() = default;

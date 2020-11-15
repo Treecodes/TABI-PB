@@ -135,3 +135,21 @@ void Timers_Tree::print() const
     std::cout << std::setw(12) << std::right << ctor.elapsed_time() << std::endl;
     std::cout << "|" << std::endl;
 }
+
+
+std::string Timers_Tree::get_durations() const
+{
+    std::string durations;
+    durations.append(std::to_string(ctor.elapsed_time())).append(", ");
+    
+    return durations;
+}
+
+
+std::string Timers_Tree::get_headers() const
+{
+    std::string headers;
+    headers.append("Tree ctor, ");
+    
+    return headers;
+}

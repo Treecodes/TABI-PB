@@ -52,6 +52,7 @@ struct Params
    /* output of potential data */
     bool output_vtk_;
     bool output_csv_;
+    bool output_csv_headers_;
     bool output_timers_;
     
     Params(char* paramfile);

@@ -42,8 +42,8 @@ struct Timers_InteractionList
     Timer ctor;
     
     void print() const;
-    std::string get_headers() const;
     std::string get_durations() const;
+    std::string get_headers() const;
 
     Timers_InteractionList() = default;
     ~Timers_InteractionList() = default;

@@ -23,6 +23,8 @@ int main(int argc, char* argv[])
     struct Params params(argv[1]);
     struct Timers timers;
     
+    timers.tabipb.start();
+    
     //construct the biomolecule from the provided pqr file
     class Molecule molecule(params, timers.molecule);
     
@@ -58,6 +60,8 @@ int main(int argc, char* argv[])
     molecule.delete_from_device();
     particles.delete_from_device();
     clusters.delete_from_device();
+    
+    timers.tabipb.stop();
 
     auto energies = Output(boundary_element, timers);
     

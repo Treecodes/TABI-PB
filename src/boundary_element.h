@@ -86,8 +86,8 @@ struct Timers_BoundaryElement
     Timer cluster_cluster_interact;
 
     void print() const;
-    std::string get_headers() const;
     std::string get_durations() const;
+    std::string get_headers() const;
 
     Timers_BoundaryElement() = default;
     ~Timers_BoundaryElement() = default;

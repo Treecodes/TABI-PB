@@ -756,11 +756,39 @@ void Timers_Particles::print() const
     std::cout << std::setw(12) << std::right << compute_charges.elapsed_time() << std::endl;
     std::cout << "|   |...compute_solvation_energy...: ";
     std::cout << std::setw(12) << std::right << compute_solvation_energy.elapsed_time() << std::endl;
+#ifdef OPENACC_ENABLED
     std::cout << "|   |...copyin_to_device...........: ";
     std::cout << std::setw(12) << std::right << copyin_to_device.elapsed_time() << std::endl;
     std::cout << "|   |...delete_from_device.........: ";
     std::cout << std::setw(12) << std::right << copyin_to_device.elapsed_time() << std::endl;
-    std::cout << "|   |...output_VTK.................: ";
-    std::cout << std::setw(12) << std::right << output_VTK.elapsed_time() << std::endl;
+#endif
     std::cout << "|" << std::endl;
+}
+
+
+std::string Timers_Particles::get_durations() const
+{
+    std::string durations;
+    durations.append(std::to_string(ctor                     .elapsed_time())).append(", ");
+    durations.append(std::to_string(compute_source_term      .elapsed_time())).append(", ");
+    durations.append(std::to_string(compute_charges          .elapsed_time())).append(", ");
+    durations.append(std::to_string(compute_solvation_energy .elapsed_time())).append(", ");
+    durations.append(std::to_string(copyin_to_device         .elapsed_time())).append(", ");
+    durations.append(std::to_string(delete_from_device       .elapsed_time())).append(", ");
+    
+    return durations;
+}
+
+
+std::string Timers_Particles::get_headers() const
+{
+    std::string headers;
+    headers.append("Particles ctor, ");
+    headers.append("Particles compute_source_term, ");
+    headers.append("Particles compute_charges, ");
+    headers.append("Particles compute_solvation_energy, ");
+    headers.append("Particles copyin_to_device, ");
+    headers.append("Particles delete_from_device, ");
+    
+    return headers;
 }

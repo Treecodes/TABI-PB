@@ -69,8 +69,8 @@ struct Timers_Tree
     Timer ctor;
     
     void print() const;
-    std::string get_headers() const;
     std::string get_durations() const;
+    std::string get_headers() const;
 
     Timers_Tree() = default;
     ~Timers_Tree() = default;

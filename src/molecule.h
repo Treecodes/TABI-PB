@@ -59,8 +59,8 @@ struct Timers_Molecule
     Timer delete_from_device;
     
     void print() const;
-    std::string get_headers() const;
     std::string get_durations() const;
+    std::string get_headers() const;
 
     Timers_Molecule() = default;
     ~Timers_Molecule() = default;
