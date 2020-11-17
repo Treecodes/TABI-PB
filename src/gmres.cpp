@@ -119,12 +119,12 @@ int BoundaryElement::gmres_(long int n, const double *b, double *x, long int res
     for (long int idx = 0; idx < n; ++idx) work[2 * ldw + idx] = b[idx];
 
     if (dnrm2_(n, x) != 0.) {
-    
         for (long int idx = 0; idx < n; ++idx) work[2 * ldw + idx] = b[idx];
         BoundaryElement::matrix_vector(-1., x, 1., &work[2 * ldw]);
     }
 
-    BoundaryElement::precondition_diagonal(work, &work[2 * ldw]);
+    if (params_.precondition_) BoundaryElement::precondition_block   (work, &work[2 * ldw]);
+    else                       BoundaryElement::precondition_diagonal(work, &work[2 * ldw]);
 
     double bnrm2 = dnrm2_(n, b);
     if (bnrm2 == 0.) bnrm2 = 1.;
@@ -153,7 +153,8 @@ int BoundaryElement::gmres_(long int n, const double *b, double *x, long int res
             ++iter;
 
             BoundaryElement::matrix_vector(1., &work[(3 + i) * ldw], 0., &work[2 * ldw]);
-            BoundaryElement::precondition_diagonal(&work[2 * ldw], &work[2 * ldw]);
+            if (params_.precondition_) BoundaryElement::precondition_block   (&work[2 * ldw], &work[2 * ldw]);
+            else                       BoundaryElement::precondition_diagonal(&work[2 * ldw], &work[2 * ldw]);
 
         /*           Construct I-th column of H orthnormal to the previous */
         /*           I-1 columns. */
@@ -206,7 +207,8 @@ int BoundaryElement::gmres_(long int n, const double *b, double *x, long int res
         for (long int idx = 0; idx < n; ++idx) work[2 * ldw + idx] = b[idx];
         
         BoundaryElement::matrix_vector(-1., x, 1., &work[2 * ldw]);
-        BoundaryElement::precondition_diagonal(work, &work[2 * ldw]);
+        if (params_.precondition_) BoundaryElement::precondition_block   (work, &work[2 * ldw]);
+        else                       BoundaryElement::precondition_diagonal(work, &work[2 * ldw]);
         
         work[restrt + ldw] = dnrm2_(n, work);
         resid = work[restrt + ldw] / bnrm2;

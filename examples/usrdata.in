@@ -13,3 +13,4 @@ precondition      OFF
 outdata           VTK
 outdata           CSV
 outdata           timers
+precondition      false

@@ -6,7 +6,8 @@ add_executable(tabipb main.cpp
         tree.cpp tree.h
         clusters.cpp clusters.h
         interaction_list.cpp interaction_list.h
-        boundary_element.cpp gmres.cpp boundary_element.h
+        boundary_element.cpp gmres.cpp
+	precondition.cpp boundary_element.h
         output.cpp output.h
         tabipb_timers.h timer.h constants.h)
 
@@ -15,6 +16,10 @@ target_compile_options(tabipb PRIVATE
                        $<$<CONFIG:RELEASE>:-O3>
                        $<$<CONFIG:RELWITHDEBINFO>:-O3>
                        $<$<CONFIG:DEBUG>:-O0 -Wall>)
+
+set(BLA_VENDOR Apple)
+find_package(LAPACK)
+target_link_libraries(tabipb PRIVATE ${LAPACK_LIBRARIES})
 
 if (ENABLE_OPENACC)
     target_link_libraries(tabipb PRIVATE OpenACC::OpenACC_CXX -acc)
@@ -56,7 +61,8 @@ if (ENABLE_TABIPB_APBS)
         params.cpp params.h molecule.cpp molecule.h
         particles.cpp particles.h tree.cpp tree.h
         clusters.cpp clusters.h interaction_list.cpp interaction_list.h
-        boundary_element.cpp gmres.cpp boundary_element.h constants.h
+        boundary_element.cpp gmres.cpp precondition.cpp 
+        boundary_element.h constants.h
         output.cpp output.h tabipb_timers.h timer.h
         tabipb_wrap/TABIPBWrap.cpp tabipb_wrap/TABIPBWrap.h
         tabipb_wrap/TABIPBStruct.h tabipb_wrap/params_apbs_ctor.cpp

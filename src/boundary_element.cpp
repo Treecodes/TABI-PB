@@ -123,20 +123,6 @@ void BoundaryElement::matrix_vector(double alpha, const double* __restrict__ pot
 }
 
 
-void BoundaryElement::precondition_diagonal(double *z, double *r)
-{
-    timers_.precondition.start();
-
-    double potential_coeff_1 = 0.5 * (1. +      params_.phys_eps_);
-    double potential_coeff_2 = 0.5 * (1. + 1. / params_.phys_eps_);
-    
-    for (std::size_t i = 0;                i <     particles_.num(); ++i) z[i] = r[i] / potential_coeff_1;
-    for (std::size_t i = particles_.num(); i < 2 * particles_.num(); ++i) z[i] = r[i] / potential_coeff_2;
-
-    timers_.precondition.stop();
-}
-
-
 void BoundaryElement::particle_particle_interact(      double* __restrict__ potential,
                                           const double* __restrict__ potential_old,
                                           std::array<std::size_t, 2> target_node_particle_idxs,
@@ -213,20 +199,20 @@ void BoundaryElement::particle_particle_interact(      double* __restrict__ pote
                 double exp_kappa_r = std::exp(-kappa_r);
                 double Gk = exp_kappa_r * G0;
                 
-                double cos_theta  = (source_nx * dist_x + source_ny * dist_y + source_nz * dist_z) * one_over_r;
-                double cos_theta0 = (target_nx * dist_x + target_ny * dist_y + target_nz * dist_z) * one_over_r;
+                double source_cos  = (source_nx * dist_x + source_ny * dist_y + source_nz * dist_z) * one_over_r;
+                double target_cos = (target_nx * dist_x + target_ny * dist_y + target_nz * dist_z) * one_over_r;
                 
                 double tp1 = G0 * one_over_r;
                 double tp2 = (1. + kappa_r) * exp_kappa_r;
 
                 double dot_tqsq = source_nx * target_nx + source_ny * target_ny + source_nz * target_nz;
-                double G3 = (dot_tqsq - 3. * cos_theta0 * cos_theta) * one_over_r * tp1;
-                double G4 = tp2 * G3 - kappa2 * cos_theta0 * cos_theta * Gk;
+                double G3 = (dot_tqsq - 3. * target_cos * source_cos) * one_over_r * tp1;
+                double G4 = tp2 * G3 - kappa2 * target_cos * source_cos * Gk;
 
-                double L1 = cos_theta  * tp1 * (1. - tp2 * eps);
+                double L1 = source_cos  * tp1 * (1. - tp2 * eps);
                 double L2 = G0 - Gk;
                 double L3 = G4 - G3;
-                double L4 = cos_theta0 * tp1 * (1. - tp2 / eps);
+                double L4 = target_cos * tp1 * (1. - tp2 / eps);
                 
                 pot_temp_1 += (L1 * potential_old_0 + L2 * potential_old_1) * source_area;
                 pot_temp_2 += (L3 * potential_old_0 + L4 * potential_old_1) * source_area;

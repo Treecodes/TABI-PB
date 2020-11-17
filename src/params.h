@@ -44,7 +44,7 @@ struct Params
     double tree_theta_;
     
    /* preconditioning */
-    int precondition_;
+    bool precondition_;
    
    /* nonpolar energy */
     int nonpolar_;
