@@ -7,7 +7,7 @@ add_executable(tabipb main.cpp
         clusters.cpp clusters.h
         interaction_list.cpp interaction_list.h
         boundary_element.cpp gmres.cpp
-	precondition.cpp boundary_element.h
+        precondition.cpp boundary_element.h
         output.cpp output.h
         tabipb_timers.h timer.h constants.h)
 

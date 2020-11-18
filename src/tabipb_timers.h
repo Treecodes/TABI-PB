@@ -1,6 +1,7 @@
 #ifndef H_TABIPB_TIMERS_STRUCT_H
 #define H_TABIPB_TIMERS_STRUCT_H
 
+#include <iostream>
 #include <chrono>
 
 #include "timer.h"
