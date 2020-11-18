@@ -21,7 +21,7 @@ Params::Params(TABIPBInput tabipbIn)
     tree_max_per_leaf_ = tabipbIn.tree_max_per_leaf_;
     tree_theta_ = tabipbIn.tree_theta_;
 
-    if (tabipbIn.nonpolar_ == 1) nonpolar_ = true;
+    nonpolar_ = false;
     precondition_ = false;
     
     if (tabipbIn.output_data_ == 1) output_vtk_ = true;
