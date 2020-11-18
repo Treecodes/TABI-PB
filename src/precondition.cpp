@@ -105,18 +105,18 @@ void BoundaryElement::precondition_block(double *z, double *r)
                     double L3 = G4 - G3;
                     double L4 = target_cos * tp1 * (1. - tp2 / eps);
 
-                    column_major_A[(col                ) * num_rows + (row                )] = -L1 * source_area;
-                    column_major_A[(col + num_particles) * num_rows + (row                )] = -L2 * source_area;
-                    column_major_A[(col                ) * num_rows + (row + num_particles)] = -L3 * source_area;
-                    column_major_A[(col + num_particles) * num_rows + (row + num_particles)] = -L4 * source_area;
+                    column_major_A[(row                ) * num_rows + (col                )] = -L1 * source_area;
+                    column_major_A[(row                ) * num_rows + (col + num_particles)] = -L2 * source_area;
+                    column_major_A[(row + num_particles) * num_rows + (col                )] = -L3 * source_area;
+                    column_major_A[(row + num_particles) * num_rows + (col + num_particles)] = -L4 * source_area;
 
                     L1 = target_cos * tp1 * (1. - tp2 * eps);
                     L4 = source_cos * tp1 * (1. - tp2 / eps);
 
-                    column_major_A[(row                ) * num_rows + (col                )] = -L1 * source_area;
-                    column_major_A[(row + num_particles) * num_rows + (col                )] = -L2 * source_area;
-                    column_major_A[(row                ) * num_rows + (col + num_particles)] = -L3 * source_area;
-                    column_major_A[(row + num_particles) * num_rows + (col + num_particles)] = -L4 * source_area;
+                    column_major_A[(col                ) * num_rows + (row                )] = -L1 * source_area;
+                    column_major_A[(col                ) * num_rows + (row + num_particles)] = -L2 * source_area;
+                    column_major_A[(col + num_particles) * num_rows + (row                )] = -L3 * source_area;
+                    column_major_A[(col + num_particles) * num_rows + (row + num_particles)] = -L4 * source_area;
                 }
             }
 
@@ -334,7 +334,7 @@ static int lu_decomp(double* A, int N, int* ipiv)
         imax = i;
 
         for (int k = i; k < N; k++) {
-            if ((absA = std::abs(A[i*N+k])) > maxA) {
+            if ((absA = std::abs(A[k*N+i])) > maxA) {
                 maxA = absA;
                 imax = k;
             }
@@ -352,17 +352,17 @@ static int lu_decomp(double* A, int N, int* ipiv)
             ipiv[N]++;
 
             for (int kk = 0; kk < N; ++kk) {
-                double temp    = A[kk*N + i];
-                A[kk*N + i]    = A[kk*N + imax];
-                A[kk*N + imax] = temp;
+                double temp    = A[i*N + kk];
+                A[i*N + kk]    = A[imax*N + kk];
+                A[imax*N + kk] = temp;
             }
         }
 
         for (int j = i + 1; j < N; j++) {
-            A[i*N + j] /= A[i*N + i];
+            A[j*N + i] /= A[i*N + i];
 
             for (int k = i + 1; k < N; k++) {
-                A[k*N + j] -= A[i*N + j] * A[k*N + i];
+                A[j*N + k] -= A[j*N + i] * A[i*N + k];
             }
         }
   }
@@ -382,12 +382,12 @@ static void lu_solve(double* matrixA, int N, int* ipiv, double* rhs)
     xtemp[i] = rhs[ipiv[i]];
 
     for (int k = 0; k < i; k++)
-      xtemp[i] -= matrixA[k*N + i] * xtemp[k];
+      xtemp[i] -= matrixA[i*N +k] * xtemp[k];
   }
 
   for (int i = N - 1; i >= 0; i--) {
     for (int k = i + 1; k < N; k++) {
-      xtemp[i] -= matrixA[k*N + i] * xtemp[k];
+      xtemp[i] -= matrixA[i*N + k] * xtemp[k];
     }
 
     xtemp[i] = xtemp[i] / matrixA[i*N + i];
