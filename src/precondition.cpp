@@ -5,6 +5,9 @@
 
 #include <iostream>
 
+static int lu_decomp(double* A, int N, int* ipiv);
+static void lu_solve(double* matrixA, int N, int* ipiv, double* rhs);
+
 void BoundaryElement::precondition_diagonal(double *z, double *r)
 {
     timers_.precondition.start();
@@ -48,7 +51,7 @@ void BoundaryElement::precondition_block(double *z, double *r)
         std::size_t num_particles = particle_end - particle_begin;
         std::size_t num_rows = 2 * num_particles;
 
-        std::vector<double> column_major_A(4 * num_particles * num_particles, 0.);
+        std::vector<double> column_major_A(num_rows * num_rows, 0.);
         std::vector<double> rhs(num_rows, 0.);
         std::vector<int> ipiv(num_rows, 0);
 
@@ -126,7 +129,13 @@ void BoundaryElement::precondition_block(double *z, double *r)
 
         int nrhs = 1, info;
         int num_rows_int = (int)num_rows;
-        dgesv_(&num_rows_int, &nrhs, column_major_A.data(), &num_rows_int, ipiv.data(), rhs.data(), &num_rows_int, &info);
+        
+        //CLAPACK style call:
+        //dgesv_(&num_rows_int, &nrhs, column_major_A.data(), &num_rows_int,
+        //      ipiv.data(), rhs.data(), &num_rows_int, &info);
+
+        lu_decomp(column_major_A.data(), num_rows_int, ipiv.data());
+        lu_solve(column_major_A.data(), num_rows_int, ipiv.data(), rhs.data());
 
         for (std::size_t j = particle_begin; j < particle_end; ++j) {
             z[j]                       = rhs[j - particle_begin];
@@ -311,19 +320,81 @@ void BoundaryElement::precondition_block(double *z, double *r)
 }
 
 
-//static void leaflength(TreeNode *p, int idx, int *nrow)
-//{
-///* find the leaf length */
-//
-//    int i;
-//
-//    if (idx == p->ibeg && p->num_children == 0) {
-//        *nrow = p->numpar;
-//    } else {
-//        if (p->num_children != 0) {
-//            for (i = 0; i < p->num_children; i++)
-//                leaflength(p->child[i], idx, nrow);
-//        }
-//     }
-//
-//}
+
+static int lu_decomp(double* A, int N, int* ipiv)
+{
+    int imax;
+    double maxA, absA, Tol = 1.0e-14;
+
+    for (int i = 0; i < N; i++)
+        ipiv[i] = i; // record pivoting number
+
+    for (int i = 0; i < N; i++) {
+        maxA = 0.0;
+        imax = i;
+
+        for (int k = i; k < N; k++) {
+            if ((absA = std::abs(A[i*N+k])) > maxA) {
+                maxA = absA;
+                imax = k;
+            }
+        }
+
+        if (maxA < Tol) return 0; //failure, matrix is degenerate
+
+        if (imax != i) {
+            //pivoting P
+            int idx = ipiv[i];
+            ipiv[i] = ipiv[imax];
+            ipiv[imax] = idx;
+
+            //counting pivots starting from N (for determinant)
+            ipiv[N]++;
+
+            for (int kk = 0; kk < N; ++kk) {
+                double temp    = A[kk*N + i];
+                A[kk*N + i]    = A[kk*N + imax];
+                A[kk*N + imax] = temp;
+            }
+        }
+
+        for (int j = i + 1; j < N; j++) {
+            A[i*N + j] /= A[i*N + i];
+
+            for (int k = i + 1; k < N; k++) {
+                A[k*N + j] -= A[i*N + j] * A[k*N + i];
+            }
+        }
+  }
+
+  return 1;
+}
+
+static void lu_solve(double* matrixA, int N, int* ipiv, double* rhs)
+{
+  /* b will contain the solution */
+  
+  int i, k;
+
+  std::vector<double> xtemp(N, 0.);
+
+  for (int i = 0; i < N; i++) {
+    xtemp[i] = rhs[ipiv[i]];
+
+    for (int k = 0; k < i; k++)
+      xtemp[i] -= matrixA[k*N + i] * xtemp[k];
+  }
+
+  for (int i = N - 1; i >= 0; i--) {
+    for (int k = i + 1; k < N; k++) {
+      xtemp[i] -= matrixA[k*N + i] * xtemp[k];
+    }
+
+    xtemp[i] = xtemp[i] / matrixA[i*N + i];
+  }
+
+  for (int i = 0; i < N; i++) {
+    rhs[i] = xtemp[i];
+  }
+  
+}
