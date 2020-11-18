@@ -17,10 +17,6 @@ target_compile_options(tabipb PRIVATE
                        $<$<CONFIG:RELWITHDEBINFO>:-O3>
                        $<$<CONFIG:DEBUG>:-O0 -Wall>)
 
-set(BLA_VENDOR Apple)
-find_package(LAPACK)
-target_link_libraries(tabipb PRIVATE ${LAPACK_LIBRARIES})
-
 if (ENABLE_OPENACC)
     target_link_libraries(tabipb PRIVATE OpenACC::OpenACC_CXX -acc)
     target_compile_definitions(tabipb PRIVATE OPENACC_ENABLED)

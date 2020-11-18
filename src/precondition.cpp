@@ -1,5 +1,3 @@
-//#include <Accelerate/Accelerate.h>
-
 #include "constants.h"
 #include "boundary_element.h"
 
