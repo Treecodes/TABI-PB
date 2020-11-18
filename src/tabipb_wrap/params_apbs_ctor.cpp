@@ -21,11 +21,12 @@ Params::Params(TABIPBInput tabipbIn)
     tree_max_per_leaf_ = tabipbIn.tree_max_per_leaf_;
     tree_theta_ = tabipbIn.tree_theta_;
 
-    if (tabipbIn.precondition_ == 1) precondition_ = true;
     if (tabipbIn.nonpolar_ == 1) nonpolar_ = true;
+    precondition_ = false;
     
     if (tabipbIn.output_data_ == 1) output_vtk_ = true;
     output_csv_ = false;
+    output_csv_headers_ = false;
     output_timers_ = false;
     
     phys_eps_    = phys_eps_solvent_ / phys_eps_solute_;
