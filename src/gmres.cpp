@@ -93,13 +93,13 @@
 
 static double dnrm2_(long int n, const double* w);
 static void dscal_(long int n, double alpha, double* x);
-static double ddot_(long int n, const double* __restrict__ x, const double* __restrict__ y);
-static void daxpy_(long int n, double alpha, const double* __restrict__ x, double* __restrict__ y);
+static double ddot_(long int n, const double* __restrict x, const double* __restrict y);
+static void daxpy_(long int n, double alpha, const double* __restrict x, double* __restrict y);
 static void drot_(double& dx, double& dy, double c, double s);
 static void drotg_(double da, double db, double& c, double& s);
-static void dtrsv_(long int n, const double* __restrict__ a, long int lda, double* __restrict__ x);
-static void dgemv_(long int m, long int n, const double* __restrict__ a, long int lda,
-                   const double* __restrict__ x, double* __restrict__ y);
+static void dtrsv_(long int n, const double* __restrict a, long int lda, double* __restrict x);
+static void dgemv_(long int m, long int n, const double* __restrict a, long int lda,
+                   const double* __restrict x, double* __restrict y);
 
 static void update_(long int i, long int n, double* x, const double* h, long int ldh,
                     double* y, const double* s, const double* v, long int ldv);
@@ -273,8 +273,8 @@ static void dscal_(long int n, double alpha, double* x)
     }
 }
 
-static double ddot_(long int n, const double* __restrict__ x,
-                    const double* __restrict__ y)
+static double ddot_(long int n, const double* __restrict x,
+                    const double* __restrict y)
 {
     double ddot = 0.;
     for (long int idx = 0; idx < n; ++idx) {
@@ -284,8 +284,8 @@ static double ddot_(long int n, const double* __restrict__ x,
 }
 
 
-static void daxpy_(long int n, double alpha, const double* __restrict__ x,
-                   double* __restrict__ y)
+static void daxpy_(long int n, double alpha, const double* __restrict x,
+                   double* __restrict y)
 {
     for (long int idx = 0; idx < n; ++idx) {
         y[idx] += alpha * x[idx];
@@ -327,8 +327,8 @@ static void drotg_(double da, double db, double& c, double& s)
 }
 
 
-static void dtrsv_(long int n, const double* __restrict__ a, long int lda,
-                   double* __restrict__ x)
+static void dtrsv_(long int n, const double* __restrict a, long int lda,
+                   double* __restrict x)
 {
 /*  solve A*x = b, where A is upper triangular */
 
@@ -344,8 +344,8 @@ static void dtrsv_(long int n, const double* __restrict__ a, long int lda,
 }
 
 
-static void dgemv_(long int m, long int n, const double* __restrict__ a, long int lda,
-                   const double* __restrict__ x, double* __restrict__ y)
+static void dgemv_(long int m, long int n, const double* __restrict a, long int lda,
+                   const double* __restrict x, double* __restrict y)
 {
 /*  Form  y = A*x + y */
 

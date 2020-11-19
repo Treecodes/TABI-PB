@@ -43,9 +43,9 @@ void Clusters::compute_all_interp_pts()
 {
     timers_.compute_all_interp_pts.start();
 
-    double* __restrict__ clusters_x_ptr   = interp_x_.data();
-    double* __restrict__ clusters_y_ptr   = interp_y_.data();
-    double* __restrict__ clusters_z_ptr   = interp_z_.data();
+    double* __restrict clusters_x_ptr   = interp_x_.data();
+    double* __restrict clusters_y_ptr   = interp_y_.data();
+    double* __restrict clusters_z_ptr   = interp_z_.data();
     
     int degree = params_.tree_degree_;
     int num_interp_pts_per_node = num_interp_pts_per_node_;
@@ -73,23 +73,23 @@ void Clusters::upward_pass()
 {
     timers_.upward_pass.start();
 
-    const double* __restrict__ clusters_x_ptr   = interp_x_.data();
-    const double* __restrict__ clusters_y_ptr   = interp_y_.data();
-    const double* __restrict__ clusters_z_ptr   = interp_z_.data();
+    const double* __restrict clusters_x_ptr   = interp_x_.data();
+    const double* __restrict clusters_y_ptr   = interp_y_.data();
+    const double* __restrict clusters_z_ptr   = interp_z_.data();
     
-    double* __restrict__ clusters_q_ptr         = interp_charge_.data();
-    double* __restrict__ clusters_q_dx_ptr      = interp_charge_dx_.data();
-    double* __restrict__ clusters_q_dy_ptr      = interp_charge_dy_.data();
-    double* __restrict__ clusters_q_dz_ptr      = interp_charge_dz_.data();
+    double* __restrict clusters_q_ptr         = interp_charge_.data();
+    double* __restrict clusters_q_dx_ptr      = interp_charge_dx_.data();
+    double* __restrict clusters_q_dy_ptr      = interp_charge_dy_.data();
+    double* __restrict clusters_q_dz_ptr      = interp_charge_dz_.data();
     
-    const double* __restrict__ particles_x_ptr  = particles_.x_ptr();
-    const double* __restrict__ particles_y_ptr  = particles_.y_ptr();
-    const double* __restrict__ particles_z_ptr  = particles_.z_ptr();
+    const double* __restrict particles_x_ptr  = particles_.x_ptr();
+    const double* __restrict particles_y_ptr  = particles_.y_ptr();
+    const double* __restrict particles_z_ptr  = particles_.z_ptr();
     
-    const double* __restrict__ sources_q_ptr    = particles_.source_charge_ptr();
-    const double* __restrict__ sources_q_dx_ptr = particles_.source_charge_dx_ptr();
-    const double* __restrict__ sources_q_dy_ptr = particles_.source_charge_dy_ptr();
-    const double* __restrict__ sources_q_dz_ptr = particles_.source_charge_dz_ptr();
+    const double* __restrict sources_q_ptr    = particles_.source_charge_ptr();
+    const double* __restrict sources_q_dx_ptr = particles_.source_charge_dx_ptr();
+    const double* __restrict sources_q_dy_ptr = particles_.source_charge_dy_ptr();
+    const double* __restrict sources_q_dz_ptr = particles_.source_charge_dz_ptr();
         
     std::vector<double> weights (num_interp_pts_per_node_);
     double* weights_ptr = weights.data();
@@ -265,27 +265,27 @@ void Clusters::upward_pass()
 }
 
 
-void Clusters::downward_pass(double* __restrict__ potential)
+void Clusters::downward_pass(double* __restrict potential)
 {
     timers_.downward_pass.start();
 
-    const double* __restrict__ clusters_x_ptr    = interp_x_.data();
-    const double* __restrict__ clusters_y_ptr    = interp_y_.data();
-    const double* __restrict__ clusters_z_ptr    = interp_z_.data();
+    const double* __restrict clusters_x_ptr    = interp_x_.data();
+    const double* __restrict clusters_y_ptr    = interp_y_.data();
+    const double* __restrict clusters_z_ptr    = interp_z_.data();
     
-    const double* __restrict__ clusters_p_ptr    = interp_potential_.data();
-    const double* __restrict__ clusters_p_dx_ptr = interp_potential_dx_.data();
-    const double* __restrict__ clusters_p_dy_ptr = interp_potential_dy_.data();
-    const double* __restrict__ clusters_p_dz_ptr = interp_potential_dz_.data();
+    const double* __restrict clusters_p_ptr    = interp_potential_.data();
+    const double* __restrict clusters_p_dx_ptr = interp_potential_dx_.data();
+    const double* __restrict clusters_p_dy_ptr = interp_potential_dy_.data();
+    const double* __restrict clusters_p_dz_ptr = interp_potential_dz_.data();
     
-    const double* __restrict__ particles_x_ptr   = particles_.x_ptr();
-    const double* __restrict__ particles_y_ptr   = particles_.y_ptr();
-    const double* __restrict__ particles_z_ptr   = particles_.z_ptr();
+    const double* __restrict particles_x_ptr   = particles_.x_ptr();
+    const double* __restrict particles_y_ptr   = particles_.y_ptr();
+    const double* __restrict particles_z_ptr   = particles_.z_ptr();
     
-    const double* __restrict__ targets_q_ptr     = particles_.target_charge_ptr();
-    const double* __restrict__ targets_q_dx_ptr  = particles_.target_charge_dx_ptr();
-    const double* __restrict__ targets_q_dy_ptr  = particles_.target_charge_dy_ptr();
-    const double* __restrict__ targets_q_dz_ptr  = particles_.target_charge_dz_ptr();
+    const double* __restrict targets_q_ptr     = particles_.target_charge_ptr();
+    const double* __restrict targets_q_dx_ptr  = particles_.target_charge_dx_ptr();
+    const double* __restrict targets_q_dy_ptr  = particles_.target_charge_dy_ptr();
+    const double* __restrict targets_q_dz_ptr  = particles_.target_charge_dz_ptr();
     
     std::vector<double> weights (num_interp_pts_per_node_);
     double* weights_ptr = weights.data();
@@ -436,10 +436,10 @@ void Clusters::clear_charges()
 
 #ifdef OPENACC_ENABLED
     std::size_t num_charges = num_charges_;
-    double* __restrict__ clusters_q_ptr    = interp_charge_.data();
-    double* __restrict__ clusters_q_dx_ptr = interp_charge_dx_.data();
-    double* __restrict__ clusters_q_dy_ptr = interp_charge_dy_.data();
-    double* __restrict__ clusters_q_dz_ptr = interp_charge_dz_.data();
+    double* __restrict clusters_q_ptr    = interp_charge_.data();
+    double* __restrict clusters_q_dx_ptr = interp_charge_dx_.data();
+    double* __restrict clusters_q_dy_ptr = interp_charge_dy_.data();
+    double* __restrict clusters_q_dz_ptr = interp_charge_dz_.data();
     
     #pragma acc parallel loop present(clusters_q_ptr, clusters_q_dx_ptr, \
                                       clusters_q_dy_ptr, clusters_q_dz_ptr)
@@ -466,10 +466,10 @@ void Clusters::clear_potentials()
 
 #ifdef OPENACC_ENABLED
     std::size_t num_potentials = num_charges_;
-    double* __restrict__ clusters_p_ptr    = interp_potential_.data();
-    double* __restrict__ clusters_p_dx_ptr = interp_potential_dx_.data();
-    double* __restrict__ clusters_p_dy_ptr = interp_potential_dy_.data();
-    double* __restrict__ clusters_p_dz_ptr = interp_potential_dz_.data();
+    double* __restrict clusters_p_ptr    = interp_potential_.data();
+    double* __restrict clusters_p_dx_ptr = interp_potential_dx_.data();
+    double* __restrict clusters_p_dy_ptr = interp_potential_dy_.data();
+    double* __restrict clusters_p_dz_ptr = interp_potential_dz_.data();
     
     #pragma acc parallel loop present(clusters_p_ptr, clusters_p_dx_ptr, \
                                       clusters_p_dy_ptr, clusters_p_dz_ptr)

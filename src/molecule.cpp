@@ -64,8 +64,8 @@ void Molecule::compute_coulombic_energy()
     double epsp = params_.phys_eps_solute_;
     std::size_t num_atoms = num_atoms_;
     
-    const double* __restrict__ molecule_coords_ptr = coords_.data();
-    const double* __restrict__ molecule_charge_ptr = charge_.data();
+    const double* __restrict molecule_coords_ptr = coords_.data();
+    const double* __restrict molecule_charge_ptr = charge_.data();
 
 #ifdef OPENACC_ENABLED
     #pragma acc parallel loop gang present(molecule_coords_ptr, molecule_charge_ptr) \

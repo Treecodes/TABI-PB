@@ -194,18 +194,18 @@ void Particles::compute_source_term()
     std::size_t num_atoms = molecule_.num_atoms();
     std::size_t num = num_;
     
-    const double* __restrict__ particles_x_ptr = x_.data();
-    const double* __restrict__ particles_y_ptr = y_.data();
-    const double* __restrict__ particles_z_ptr = z_.data();
+    const double* __restrict particles_x_ptr = x_.data();
+    const double* __restrict particles_y_ptr = y_.data();
+    const double* __restrict particles_z_ptr = z_.data();
     
-    const double* __restrict__ particles_nx_ptr = nx_.data();
-    const double* __restrict__ particles_ny_ptr = ny_.data();
-    const double* __restrict__ particles_nz_ptr = nz_.data();
+    const double* __restrict particles_nx_ptr = nx_.data();
+    const double* __restrict particles_ny_ptr = ny_.data();
+    const double* __restrict particles_nz_ptr = nz_.data();
     
-    const double* __restrict__ molecule_coords_ptr = molecule_.coords_ptr();
-    const double* __restrict__ molecule_charge_ptr = molecule_.charge_ptr();
+    const double* __restrict molecule_coords_ptr = molecule_.coords_ptr();
+    const double* __restrict molecule_charge_ptr = molecule_.charge_ptr();
     
-    double* __restrict__ particles_source_term_ptr = source_term_.data();
+    double* __restrict particles_source_term_ptr = source_term_.data();
 
 #ifdef OPENACC_ENABLED
     #pragma acc parallel loop gang present(molecule_coords_ptr, molecule_charge_ptr, \
@@ -267,20 +267,20 @@ double Particles::compute_solvation_energy(std::vector<double>& potential) const
     std::size_t num_atoms = molecule_.num_atoms();
     std::size_t num = num_;
     
-    const double* __restrict__ particles_x_ptr = x_.data();
-    const double* __restrict__ particles_y_ptr = y_.data();
-    const double* __restrict__ particles_z_ptr = z_.data();
+    const double* __restrict particles_x_ptr = x_.data();
+    const double* __restrict particles_y_ptr = y_.data();
+    const double* __restrict particles_z_ptr = z_.data();
     
-    const double* __restrict__ particles_nx_ptr = nx_.data();
-    const double* __restrict__ particles_ny_ptr = ny_.data();
-    const double* __restrict__ particles_nz_ptr = nz_.data();
+    const double* __restrict particles_nx_ptr = nx_.data();
+    const double* __restrict particles_ny_ptr = ny_.data();
+    const double* __restrict particles_nz_ptr = nz_.data();
     
-    const double* __restrict__ particles_area_ptr = area_.data();
+    const double* __restrict particles_area_ptr = area_.data();
     
-    const double* __restrict__ molecule_coords_ptr = molecule_.coords_ptr();
-    const double* __restrict__ molecule_charge_ptr = molecule_.charge_ptr();
+    const double* __restrict molecule_coords_ptr = molecule_.coords_ptr();
+    const double* __restrict molecule_charge_ptr = molecule_.charge_ptr();
     
-    const double* __restrict__ potential_ptr = potential.data();
+    const double* __restrict potential_ptr = potential.data();
     std::size_t potential_num = potential.size();
     
 #ifdef OPENACC_ENABLED
@@ -480,26 +480,26 @@ void Particles::unorder(std::vector<double>& potential)
 }
 
 
-void Particles::compute_charges(const double* __restrict__ potential_ptr)
+void Particles::compute_charges(const double* __restrict potential_ptr)
 {
     timers_.compute_charges.start();
 
     std::size_t num = num_;
 
-    const double* __restrict__ nx_ptr = nx_.data();
-    const double* __restrict__ ny_ptr = ny_.data();
-    const double* __restrict__ nz_ptr = nz_.data();
-    const double* __restrict__ area_ptr = area_.data();
+    const double* __restrict nx_ptr = nx_.data();
+    const double* __restrict ny_ptr = ny_.data();
+    const double* __restrict nz_ptr = nz_.data();
+    const double* __restrict area_ptr = area_.data();
 
-    double* __restrict__ target_q_ptr    = target_charge_.data();
-    double* __restrict__ target_q_dx_ptr = target_charge_dx_.data();
-    double* __restrict__ target_q_dy_ptr = target_charge_dy_.data();
-    double* __restrict__ target_q_dz_ptr = target_charge_dz_.data();
+    double* __restrict target_q_ptr    = target_charge_.data();
+    double* __restrict target_q_dx_ptr = target_charge_dx_.data();
+    double* __restrict target_q_dy_ptr = target_charge_dy_.data();
+    double* __restrict target_q_dz_ptr = target_charge_dz_.data();
 
-    double* __restrict__ source_q_ptr    = source_charge_.data();
-    double* __restrict__ source_q_dx_ptr = source_charge_dx_.data();
-    double* __restrict__ source_q_dy_ptr = source_charge_dy_.data();
-    double* __restrict__ source_q_dz_ptr = source_charge_dz_.data();
+    double* __restrict source_q_ptr    = source_charge_.data();
+    double* __restrict source_q_dx_ptr = source_charge_dx_.data();
+    double* __restrict source_q_dy_ptr = source_charge_dy_.data();
+    double* __restrict source_q_dz_ptr = source_charge_dz_.data();
 
 #ifdef OPENACC_ENABLED
     #pragma acc parallel loop present(nx_ptr, ny_ptr, nz_ptr, area_ptr, potential_ptr, \

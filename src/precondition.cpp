@@ -1,3 +1,5 @@
+#include <cmath>
+
 #include "constants.h"
 #include "boundary_element.h"
 
@@ -28,14 +30,14 @@ void BoundaryElement::precondition_block(double *z, double *r)
     double kappa2 = params_.phys_kappa2_;
 
     const std::size_t num_total_particles         = particles_.num();
-    const double* __restrict__ particles_x_ptr    = particles_.x_ptr();
-    const double* __restrict__ particles_y_ptr    = particles_.y_ptr();
-    const double* __restrict__ particles_z_ptr    = particles_.z_ptr();
+    const double* __restrict particles_x_ptr    = particles_.x_ptr();
+    const double* __restrict particles_y_ptr    = particles_.y_ptr();
+    const double* __restrict particles_z_ptr    = particles_.z_ptr();
 
-    const double* __restrict__ particles_nx_ptr   = particles_.nx_ptr();
-    const double* __restrict__ particles_ny_ptr   = particles_.ny_ptr();
-    const double* __restrict__ particles_nz_ptr   = particles_.nz_ptr();
-    const double* __restrict__ particles_area_ptr = particles_.area_ptr();
+    const double* __restrict particles_nx_ptr   = particles_.nx_ptr();
+    const double* __restrict particles_ny_ptr   = particles_.ny_ptr();
+    const double* __restrict particles_nz_ptr   = particles_.nz_ptr();
+    const double* __restrict particles_area_ptr = particles_.area_ptr();
 
     double potential_coeff_1 = 0.5 * (1. +      params_.phys_eps_);
     double potential_coeff_2 = 0.5 * (1. + 1. / params_.phys_eps_);

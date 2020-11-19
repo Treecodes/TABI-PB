@@ -57,8 +57,8 @@ void BoundaryElement::run_GMRES()
 }
 
 
-void BoundaryElement::matrix_vector(double alpha, const double* __restrict__ potential_old,
-                             double beta,        double* __restrict__ potential_new)
+void BoundaryElement::matrix_vector(double alpha, const double* __restrict potential_old,
+                             double beta,        double* __restrict potential_new)
 {
     timers_.matrix_vector.start();
 
@@ -123,8 +123,8 @@ void BoundaryElement::matrix_vector(double alpha, const double* __restrict__ pot
 }
 
 
-void BoundaryElement::particle_particle_interact(      double* __restrict__ potential,
-                                          const double* __restrict__ potential_old,
+void BoundaryElement::particle_particle_interact(      double* __restrict potential,
+                                          const double* __restrict potential_old,
                                           std::array<std::size_t, 2> target_node_particle_idxs,
                                           std::array<std::size_t, 2> source_node_particle_idxs)
 {
@@ -140,15 +140,15 @@ void BoundaryElement::particle_particle_interact(      double* __restrict__ pote
     double kappa  = params_.phys_kappa_;
     double kappa2 = params_.phys_kappa2_;
     
-    const double* __restrict__ particles_x_ptr    = particles_.x_ptr();
-    const double* __restrict__ particles_y_ptr    = particles_.y_ptr();
-    const double* __restrict__ particles_z_ptr    = particles_.z_ptr();
+    const double* __restrict particles_x_ptr    = particles_.x_ptr();
+    const double* __restrict particles_y_ptr    = particles_.y_ptr();
+    const double* __restrict particles_z_ptr    = particles_.z_ptr();
     
-    const double* __restrict__ particles_nx_ptr   = particles_.nx_ptr();
-    const double* __restrict__ particles_ny_ptr   = particles_.ny_ptr();
-    const double* __restrict__ particles_nz_ptr   = particles_.nz_ptr();
+    const double* __restrict particles_nx_ptr   = particles_.nx_ptr();
+    const double* __restrict particles_ny_ptr   = particles_.ny_ptr();
+    const double* __restrict particles_nz_ptr   = particles_.nz_ptr();
 
-    const double* __restrict__ particles_area_ptr = particles_.area_ptr();
+    const double* __restrict particles_area_ptr = particles_.area_ptr();
     
     std::size_t num_particles = particles_.num();
 
@@ -233,7 +233,7 @@ void BoundaryElement::particle_particle_interact(      double* __restrict__ pote
 }
 
 
-void BoundaryElement::particle_cluster_interact(double* __restrict__ potential,
+void BoundaryElement::particle_cluster_interact(double* __restrict potential,
                                          std::array<std::size_t, 2> target_node_particle_idxs,
                                          std::size_t source_node_idx)
 {
@@ -252,23 +252,23 @@ void BoundaryElement::particle_cluster_interact(double* __restrict__ potential,
     double eps    = params_.phys_eps_;
     double kappa  = params_.phys_kappa_;
     
-    const double* __restrict__ particles_x_ptr   = particles_.x_ptr();
-    const double* __restrict__ particles_y_ptr   = particles_.y_ptr();
-    const double* __restrict__ particles_z_ptr   = particles_.z_ptr();
+    const double* __restrict particles_x_ptr   = particles_.x_ptr();
+    const double* __restrict particles_y_ptr   = particles_.y_ptr();
+    const double* __restrict particles_z_ptr   = particles_.z_ptr();
     
-    const double* __restrict__ targets_q_ptr     = particles_.target_charge_ptr();
-    const double* __restrict__ targets_q_dx_ptr  = particles_.target_charge_dx_ptr();
-    const double* __restrict__ targets_q_dy_ptr  = particles_.target_charge_dy_ptr();
-    const double* __restrict__ targets_q_dz_ptr  = particles_.target_charge_dz_ptr();
+    const double* __restrict targets_q_ptr     = particles_.target_charge_ptr();
+    const double* __restrict targets_q_dx_ptr  = particles_.target_charge_dx_ptr();
+    const double* __restrict targets_q_dy_ptr  = particles_.target_charge_dy_ptr();
+    const double* __restrict targets_q_dz_ptr  = particles_.target_charge_dz_ptr();
     
-    const double* __restrict__ clusters_x_ptr    = clusters_.interp_x_ptr();
-    const double* __restrict__ clusters_y_ptr    = clusters_.interp_y_ptr();
-    const double* __restrict__ clusters_z_ptr    = clusters_.interp_z_ptr();
+    const double* __restrict clusters_x_ptr    = clusters_.interp_x_ptr();
+    const double* __restrict clusters_y_ptr    = clusters_.interp_y_ptr();
+    const double* __restrict clusters_z_ptr    = clusters_.interp_z_ptr();
 
-    const double* __restrict__ clusters_q_ptr    = clusters_.interp_charge_ptr();
-    const double* __restrict__ clusters_q_dx_ptr = clusters_.interp_charge_dx_ptr();
-    const double* __restrict__ clusters_q_dy_ptr = clusters_.interp_charge_dy_ptr();
-    const double* __restrict__ clusters_q_dz_ptr = clusters_.interp_charge_dz_ptr();
+    const double* __restrict clusters_q_ptr    = clusters_.interp_charge_ptr();
+    const double* __restrict clusters_q_dx_ptr = clusters_.interp_charge_dx_ptr();
+    const double* __restrict clusters_q_dy_ptr = clusters_.interp_charge_dy_ptr();
+    const double* __restrict clusters_q_dz_ptr = clusters_.interp_charge_dz_ptr();
     
 #ifdef OPENACC_ENABLED
     #pragma acc parallel loop present(particles_x_ptr, particles_y_ptr, particles_z_ptr, \
@@ -357,7 +357,7 @@ void BoundaryElement::particle_cluster_interact(double* __restrict__ potential,
 }
 
 
-void BoundaryElement::cluster_particle_interact(double* __restrict__ potential,
+void BoundaryElement::cluster_particle_interact(double* __restrict potential,
                                          std::size_t target_node_idx,
                                          std::array<std::size_t, 2> source_node_particle_idxs)
 {
@@ -375,23 +375,23 @@ void BoundaryElement::cluster_particle_interact(double* __restrict__ potential,
     double eps    = params_.phys_eps_;
     double kappa  = params_.phys_kappa_;
     
-    const double* __restrict__ clusters_x_ptr    = clusters_.interp_x_ptr();
-    const double* __restrict__ clusters_y_ptr    = clusters_.interp_y_ptr();
-    const double* __restrict__ clusters_z_ptr    = clusters_.interp_z_ptr();
+    const double* __restrict clusters_x_ptr    = clusters_.interp_x_ptr();
+    const double* __restrict clusters_y_ptr    = clusters_.interp_y_ptr();
+    const double* __restrict clusters_z_ptr    = clusters_.interp_z_ptr();
     
-    double* __restrict__ clusters_p_ptr          = clusters_.interp_potential_ptr();
-    double* __restrict__ clusters_p_dx_ptr       = clusters_.interp_potential_dx_ptr();
-    double* __restrict__ clusters_p_dy_ptr       = clusters_.interp_potential_dy_ptr();
-    double* __restrict__ clusters_p_dz_ptr       = clusters_.interp_potential_dz_ptr();
+    double* __restrict clusters_p_ptr          = clusters_.interp_potential_ptr();
+    double* __restrict clusters_p_dx_ptr       = clusters_.interp_potential_dx_ptr();
+    double* __restrict clusters_p_dy_ptr       = clusters_.interp_potential_dy_ptr();
+    double* __restrict clusters_p_dz_ptr       = clusters_.interp_potential_dz_ptr();
     
-    const double* __restrict__ particles_x_ptr   = particles_.x_ptr();
-    const double* __restrict__ particles_y_ptr   = particles_.y_ptr();
-    const double* __restrict__ particles_z_ptr   = particles_.z_ptr();
+    const double* __restrict particles_x_ptr   = particles_.x_ptr();
+    const double* __restrict particles_y_ptr   = particles_.y_ptr();
+    const double* __restrict particles_z_ptr   = particles_.z_ptr();
     
-    const double* __restrict__ sources_q_ptr     = particles_.source_charge_ptr();
-    const double* __restrict__ sources_q_dx_ptr  = particles_.source_charge_dx_ptr();
-    const double* __restrict__ sources_q_dy_ptr  = particles_.source_charge_dy_ptr();
-    const double* __restrict__ sources_q_dz_ptr  = particles_.source_charge_dz_ptr();
+    const double* __restrict sources_q_ptr     = particles_.source_charge_ptr();
+    const double* __restrict sources_q_dx_ptr  = particles_.source_charge_dx_ptr();
+    const double* __restrict sources_q_dy_ptr  = particles_.source_charge_dy_ptr();
+    const double* __restrict sources_q_dz_ptr  = particles_.source_charge_dz_ptr();
     
 #ifdef OPENACC_ENABLED
     #pragma acc parallel loop collapse(3) present(clusters_x_ptr, clusters_y_ptr, clusters_z_ptr, \
@@ -486,7 +486,7 @@ void BoundaryElement::cluster_particle_interact(double* __restrict__ potential,
 }
 
 
-void BoundaryElement::cluster_cluster_interact(double* __restrict__ potential,
+void BoundaryElement::cluster_cluster_interact(double* __restrict potential,
                                         std::size_t target_node_idx,
                                         std::size_t source_node_idx)
 {
@@ -504,19 +504,19 @@ void BoundaryElement::cluster_cluster_interact(double* __restrict__ potential,
     double eps    = params_.phys_eps_;
     double kappa  = params_.phys_kappa_;
     
-    const double* __restrict__ clusters_x_ptr    = clusters_.interp_x_ptr();
-    const double* __restrict__ clusters_y_ptr    = clusters_.interp_y_ptr();
-    const double* __restrict__ clusters_z_ptr    = clusters_.interp_z_ptr();
+    const double* __restrict clusters_x_ptr    = clusters_.interp_x_ptr();
+    const double* __restrict clusters_y_ptr    = clusters_.interp_y_ptr();
+    const double* __restrict clusters_z_ptr    = clusters_.interp_z_ptr();
 
-    double* __restrict__ clusters_p_ptr          = clusters_.interp_potential_ptr();
-    double* __restrict__ clusters_p_dx_ptr       = clusters_.interp_potential_dx_ptr();
-    double* __restrict__ clusters_p_dy_ptr       = clusters_.interp_potential_dy_ptr();
-    double* __restrict__ clusters_p_dz_ptr       = clusters_.interp_potential_dz_ptr();
+    double* __restrict clusters_p_ptr          = clusters_.interp_potential_ptr();
+    double* __restrict clusters_p_dx_ptr       = clusters_.interp_potential_dx_ptr();
+    double* __restrict clusters_p_dy_ptr       = clusters_.interp_potential_dy_ptr();
+    double* __restrict clusters_p_dz_ptr       = clusters_.interp_potential_dz_ptr();
     
-    const double* __restrict__ clusters_q_ptr    = clusters_.interp_charge_ptr();
-    const double* __restrict__ clusters_q_dx_ptr = clusters_.interp_charge_dx_ptr();
-    const double* __restrict__ clusters_q_dy_ptr = clusters_.interp_charge_dy_ptr();
-    const double* __restrict__ clusters_q_dz_ptr = clusters_.interp_charge_dz_ptr();
+    const double* __restrict clusters_q_ptr    = clusters_.interp_charge_ptr();
+    const double* __restrict clusters_q_dx_ptr = clusters_.interp_charge_dx_ptr();
+    const double* __restrict clusters_q_dy_ptr = clusters_.interp_charge_dy_ptr();
+    const double* __restrict clusters_q_dz_ptr = clusters_.interp_charge_dz_ptr();
 
 #ifdef OPENACC_ENABLED
     #pragma acc parallel loop collapse(3) present(clusters_x_ptr, clusters_y_ptr, clusters_z_ptr, \
