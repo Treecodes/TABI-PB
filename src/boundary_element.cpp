@@ -630,7 +630,7 @@ void BoundaryElement::finalize()
 
     constexpr double pot_scaling = constants::UNITS_COEFF * constants::PI * 4.;
     std::transform(std::begin(potential_), std::end(potential_),
-                   std::begin(potential_), [](double x){ return x * pot_scaling; });
+                   std::begin(potential_), [=](double x){ return x * pot_scaling; });
                    
     auto pot_min_max = std::minmax_element(
         potential_.begin(), potential_.begin() + potential_.size() / 2);

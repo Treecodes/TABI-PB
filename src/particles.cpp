@@ -175,7 +175,7 @@ void Particles::generate_particles(Params::Mesh mesh, double mesh_density, doubl
     }
     
     std::transform(area_.begin(), area_.end(), area_.begin(),
-                   [](double x) { return x / 3.; } );
+                   [=](double x) { return x / 3.; } );
     surface_area_ = std::accumulate(area_.begin(), area_.end(), decltype(area_)::value_type(0));
     std::cout << "Surface area of triangulated mesh is " << surface_area_ 
               << ". " << std::endl << std::endl;

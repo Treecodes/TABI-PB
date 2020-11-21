@@ -36,10 +36,10 @@ Params::Params(char* infile)
         std::string param_value = tokenized_line[1];
         
         std::transform(param_token.begin(), param_token.end(), param_token.begin(),
-                       [](unsigned char c){ return std::tolower(c); });
+                       [=](unsigned char c){ return std::tolower(c); });
                        
         std::transform(param_value.begin(), param_value.end(), param_value.begin(),
-                       [](unsigned char c){ return std::tolower(c); });
+                       [=](unsigned char c){ return std::tolower(c); });
         
         if (param_token == "mol" || param_token == "pqr") {
             pqr_file_.open(param_value, std::ifstream::in);
