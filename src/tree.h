@@ -9,7 +9,7 @@
 #include "particles.h"
 
 class InteractionList;
-class Timers_Tree;
+struct Timers_Tree;
 
 class Tree
 {
