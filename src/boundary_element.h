@@ -38,24 +38,24 @@ private:
                double* work, long int ldw, double *h, long int ldh,
                long int& iter, double& residual);
     
-    void matrix_vector(double alpha, const double* __restrict__ potential_old,
-                       double beta,        double* __restrict__ potential_new);
+    void matrix_vector(double alpha, const double* __restrict potential_old,
+                       double beta,        double* __restrict potential_new);
                        
     void precondition_diagonal(double* z, double* r);
     void precondition_block(double* z, double* r);
     
-    void particle_particle_interact(double* __restrict__ potential,
-                              const double* __restrict__ potential_old,
+    void particle_particle_interact(double* __restrict potential,
+                              const double* __restrict potential_old,
             std::array<std::size_t, 2> target_node_particle_idxs,
             std::array<std::size_t, 2> source_node_particle_idxs);
     
-    void particle_cluster_interact(double* __restrict__ potential,
+    void particle_cluster_interact(double* __restrict potential,
             std::array<std::size_t, 2> target_node_particle_idxs, std::size_t source_node_idx);
                                    
-    void cluster_particle_interact(double* __restrict__ potential,
+    void cluster_particle_interact(double* __restrict potential,
             std::size_t target_node_idx, std::array<std::size_t, 2> source_node_particle_idxs);
             
-    void cluster_cluster_interact(double* __restrict__ potential,
+    void cluster_cluster_interact(double* __restrict potential,
             std::size_t target_node_idx, std::size_t source_node_idx);
     
 public:
