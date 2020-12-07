@@ -97,9 +97,9 @@ static double ddot_(long int n, const double* __restrict x, const double* __rest
 static void daxpy_(long int n, double alpha, const double* __restrict x, double* __restrict y);
 static void drot_(double& dx, double& dy, double c, double s);
 static void drotg_(double da, double db, double& c, double& s);
-static void dtrsv_(long int n, const double* __restrict a, long int lda, double* __restrict x);
-static void dgemv_(long int m, long int n, const double* __restrict a, long int lda,
-                   const double* __restrict x, double* __restrict y);
+static void dtrsv_(long int n, const double* a, long int lda, double* x);
+static void dgemv_(long int m, long int n, const double* a, long int lda,
+                   const double* x, double* y);
 
 static void update_(long int i, long int n, double* x, const double* h, long int ldh,
                     double* y, const double* s, const double* v, long int ldv);
@@ -192,7 +192,9 @@ int BoundaryElement::gmres_(long int n, const double *b, double *x, long int res
                       << ": error = " << std::scientific << resid << std::endl;
 
             if (resid <= tol) {
+
                 update_(i+1, n, x, h, ldh, &work[2 * ldw], &work[ldw], &work[3 * ldw], ldw);
+
                 return 0;
             }
         }
@@ -209,10 +211,10 @@ int BoundaryElement::gmres_(long int n, const double *b, double *x, long int res
         BoundaryElement::matrix_vector(-1., x, 1., &work[2 * ldw]);
         if (params_.precondition_) BoundaryElement::precondition_block   (work, &work[2 * ldw]);
         else                       BoundaryElement::precondition_diagonal(work, &work[2 * ldw]);
-        
+
         work[restrt + ldw] = dnrm2_(n, work);
         resid = work[restrt + ldw] / bnrm2;
-        
+
         if (resid <= tol) {
             return 0;
         }
@@ -327,8 +329,8 @@ static void drotg_(double da, double db, double& c, double& s)
 }
 
 
-static void dtrsv_(long int n, const double* __restrict a, long int lda,
-                   double* __restrict x)
+static void dtrsv_(long int n, const double* a, long int lda,
+                   double* x)
 {
 /*  solve A*x = b, where A is upper triangular */
 
@@ -344,8 +346,8 @@ static void dtrsv_(long int n, const double* __restrict a, long int lda,
 }
 
 
-static void dgemv_(long int m, long int n, const double* __restrict a, long int lda,
-                   const double* __restrict x, double* __restrict y)
+static void dgemv_(long int m, long int n, const double* a, long int lda,
+                   const double* x, double* y)
 {
 /*  Form  y = A*x + y */
 

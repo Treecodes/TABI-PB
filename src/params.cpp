@@ -23,6 +23,7 @@ Params::Params(char* infile)
     output_csv_ = false;
     output_csv_headers_ = false;
     output_timers_ = false;
+    precondition_ = false;
     
     std::string line;
     
@@ -104,7 +105,7 @@ Params::Params(char* infile)
             }
         
         } else if (param_token == "precondition") {
-            if (param_value == "true") precondition_ = true;
+            if (param_value == "true" || param_value == "on") precondition_ = true;
         
         } else if (param_token == "nonpolar") {
             if (param_value == "true") nonpolar_ = true;
