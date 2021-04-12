@@ -43,7 +43,7 @@ Params::Params(char* infile)
                        [=](unsigned char c){ return std::tolower(c); });
         
         if (param_token == "mol" || param_token == "pqr") {
-            pqr_file_.open(param_value, std::ifstream::in);
+            pqr_file_.open(tokenized_line[1], std::ifstream::in);
             if (!pqr_file_.good()) {
                 std::cout << "pqr file is not readable. exiting. " << std::endl;
                 std::exit(1);
