@@ -12,7 +12,8 @@ struct Timers_InteractionList;
 class InteractionList
 {
 private:
-    const class Tree& tree_;
+    const class Tree& source_tree_;
+    const class Tree& target_tree_;
     const struct Params& params_;
     struct Timers_InteractionList& timers_;
     
@@ -28,6 +29,7 @@ private:
     
 public:
     InteractionList(const class Tree&, const struct Params&, struct Timers_InteractionList&);
+    InteractionList(const class Tree&, const class Tree&, const struct Params&, struct Timers_InteractionList&);
     ~InteractionList() = default;
     
     const std::vector<std::size_t>& particle_particle(std::size_t idx) const { return particle_particle_[idx]; }
