@@ -9,21 +9,21 @@
 #include "constants.h"
 #include "clusters.h"
 
-Clusters::Clusters(const class Particles& particles, const class Tree& tree, 
-                   const struct Params& params, struct Timers_Clusters& timers)
-    : particles_(particles), tree_(tree), params_(params), timers_(timers)
+Clusters::Clusters(const class Elements& elements, const class Tree& tree,
+                   const class InterpolationPoints& interp_pts, struct Timers_Clusters& timers)
+    : elements_(elements), tree_(tree), interp_pts_(interp_pts), timers_(timers)
 {
     timers_.ctor.start();
 
-    num_interp_pts_per_node_ = params_.tree_degree_ + 1;
-    num_charges_per_node_    = std::pow(num_interp_pts_per_node_, 3);
+    //num_interp_pts_per_node_ = degree + 1;
+    num_charges_per_node_    = std::pow(interp_pts_.num_interp_pts_per_node(), 3);
     
-    num_interp_pts_ = tree_.num_nodes() * num_interp_pts_per_node_;
+    //num_interp_pts_ = tree_.num_nodes() * num_interp_pts_per_node_;
     num_charges_    = tree_.num_nodes() * num_charges_per_node_;
 
-    interp_x_.resize(num_interp_pts_);
-    interp_y_.resize(num_interp_pts_);
-    interp_z_.resize(num_interp_pts_);
+    //interp_x_.resize(num_interp_pts_);
+    //interp_y_.resize(num_interp_pts_);
+    //interp_z_.resize(num_interp_pts_);
     
     interp_charge_.resize(num_charges_);
     interp_charge_dx_.resize(num_charges_);
@@ -39,59 +39,59 @@ Clusters::Clusters(const class Particles& particles, const class Tree& tree,
 }
 
 
-void Clusters::compute_all_interp_pts()
-{
-    timers_.compute_all_interp_pts.start();
-
-    double* __restrict clusters_x_ptr   = interp_x_.data();
-    double* __restrict clusters_y_ptr   = interp_y_.data();
-    double* __restrict clusters_z_ptr   = interp_z_.data();
-    
-    int degree = params_.tree_degree_;
-    int num_interp_pts_per_node = num_interp_pts_per_node_;
-    for (std::size_t node_idx = 0; node_idx < tree_.num_nodes(); ++node_idx) {
-    
-        std::size_t node_start = node_idx * num_interp_pts_per_node_;
-        auto node_bounds = tree_.node_particle_bounds(node_idx);
-
-#ifdef OPENACC_ENABLED
-        #pragma acc parallel loop present(clusters_x_ptr, clusters_y_ptr, clusters_z_ptr)
-#endif
-        for (int i = 0; i < num_interp_pts_per_node; ++i) {
-            double tt = std::cos(i * constants::PI / degree);
-            clusters_x_ptr[node_start + i] = node_bounds[0] + (tt + 1.) / 2. * (node_bounds[1] - node_bounds[0]);
-            clusters_y_ptr[node_start + i] = node_bounds[2] + (tt + 1.) / 2. * (node_bounds[3] - node_bounds[2]);
-            clusters_z_ptr[node_start + i] = node_bounds[4] + (tt + 1.) / 2. * (node_bounds[5] - node_bounds[4]);
-        }
-    }
-
-    timers_.compute_all_interp_pts.stop();
-}
+//void Clusters::compute_all_interp_pts()
+//{
+//    timers_.compute_all_interp_pts.start();
+//
+//    double* __restrict clusters_x_ptr   = interp_x_.data();
+//    double* __restrict clusters_y_ptr   = interp_y_.data();
+//    double* __restrict clusters_z_ptr   = interp_z_.data();
+//    
+//    int num_interp_pts_per_node = num_interp_pts_per_node_;
+//    int degree = num_interp_pts_per_node - 1;
+//    for (std::size_t node_idx = 0; node_idx < tree_.num_nodes(); ++node_idx) {
+//    
+//        std::size_t node_start = node_idx * num_interp_pts_per_node_;
+//        auto node_bounds = tree_.node_particle_bounds(node_idx);
+//
+//#ifdef OPENACC_ENABLED
+//        #pragma acc parallel loop present(clusters_x_ptr, clusters_y_ptr, clusters_z_ptr)
+//#endif
+//        for (int i = 0; i < num_interp_pts_per_node; ++i) {
+//            double tt = std::cos(i * constants::PI / degree);
+//            clusters_x_ptr[node_start + i] = node_bounds[0] + (tt + 1.) / 2. * (node_bounds[1] - node_bounds[0]);
+//            clusters_y_ptr[node_start + i] = node_bounds[2] + (tt + 1.) / 2. * (node_bounds[3] - node_bounds[2]);
+//            clusters_z_ptr[node_start + i] = node_bounds[4] + (tt + 1.) / 2. * (node_bounds[5] - node_bounds[4]);
+//        }
+//    }
+//
+//    timers_.compute_all_interp_pts.stop();
+//}
 
 
 void Clusters::upward_pass()
 {
     timers_.upward_pass.start();
 
-    const double* __restrict clusters_x_ptr   = interp_x_.data();
-    const double* __restrict clusters_y_ptr   = interp_y_.data();
-    const double* __restrict clusters_z_ptr   = interp_z_.data();
+    const double* __restrict clusters_x_ptr   = interp_pts_.interp_x_ptr();
+    const double* __restrict clusters_y_ptr   = interp_pts_.interp_y_ptr();
+    const double* __restrict clusters_z_ptr   = interp_pts_.interp_z_ptr();
     
     double* __restrict clusters_q_ptr         = interp_charge_.data();
     double* __restrict clusters_q_dx_ptr      = interp_charge_dx_.data();
     double* __restrict clusters_q_dy_ptr      = interp_charge_dy_.data();
     double* __restrict clusters_q_dz_ptr      = interp_charge_dz_.data();
     
-    const double* __restrict particles_x_ptr  = particles_.x_ptr();
-    const double* __restrict particles_y_ptr  = particles_.y_ptr();
-    const double* __restrict particles_z_ptr  = particles_.z_ptr();
+    const double* __restrict elements_x_ptr  = elements_.x_ptr();
+    const double* __restrict elements_y_ptr  = elements_.y_ptr();
+    const double* __restrict elements_z_ptr  = elements_.z_ptr();
     
-    const double* __restrict sources_q_ptr    = particles_.source_charge_ptr();
-    const double* __restrict sources_q_dx_ptr = particles_.source_charge_dx_ptr();
-    const double* __restrict sources_q_dy_ptr = particles_.source_charge_dy_ptr();
-    const double* __restrict sources_q_dz_ptr = particles_.source_charge_dz_ptr();
+    const double* __restrict sources_q_ptr    = elements_.source_charge_ptr();
+    const double* __restrict sources_q_dx_ptr = elements_.source_charge_dx_ptr();
+    const double* __restrict sources_q_dy_ptr = elements_.source_charge_dy_ptr();
+    const double* __restrict sources_q_dz_ptr = elements_.source_charge_dz_ptr();
         
-    std::vector<double> weights (num_interp_pts_per_node_);
+    std::vector<double> weights (interp_pts_.num_interp_pts_per_node());
     double* weights_ptr = weights.data();
     int weights_num = weights.size();
     
@@ -100,7 +100,7 @@ void Clusters::upward_pass()
         if (i == 0 || i == weights_num-1) weights[i] = ((i % 2 == 0)? 1 : -1) * 0.5;
     }
 
-    int num_interp_pts_per_node = num_interp_pts_per_node_;
+    int num_interp_pts_per_node = interp_pts_.num_interp_pts_per_node();
     
 #ifdef OPENACC_ENABLED
     #pragma acc enter data copyin(weights_ptr[0:weights_num])
@@ -110,7 +110,7 @@ void Clusters::upward_pass()
         
         auto particle_idxs = tree_.node_particle_idxs(node_idx);
         
-        std::size_t node_interp_pts_start = node_idx * num_interp_pts_per_node_;
+        std::size_t node_interp_pts_start = node_idx * interp_pts_.num_interp_pts_per_node();
         std::size_t node_charges_start    = node_idx * num_charges_per_node_;
         
         std::size_t particle_start = particle_idxs[0];
@@ -127,7 +127,7 @@ void Clusters::upward_pass()
         double* denominator_ptr = denominator.data();
         
 #ifdef OPENACC_ENABLED
-#pragma acc kernels present(particles_x_ptr, particles_y_ptr, particles_z_ptr, \
+#pragma acc kernels present(elements_x_ptr, elements_y_ptr, elements_z_ptr, \
                          sources_q_ptr, sources_q_dx_ptr, sources_q_dy_ptr, sources_q_dz_ptr, \
                          clusters_x_ptr, clusters_y_ptr, clusters_z_ptr, \
                          clusters_q_ptr, clusters_q_dx_ptr, clusters_q_dy_ptr, clusters_q_dz_ptr, \
@@ -155,9 +155,9 @@ void Clusters::upward_pass()
             double denominator_y = 0.;
             double denominator_z = 0.;
             
-            double xx    = particles_x_ptr[particle_start + i];
-            double yy    = particles_y_ptr[particle_start + i];
-            double zz    = particles_z_ptr[particle_start + i];
+            double xx    = elements_x_ptr[particle_start + i];
+            double yy    = elements_y_ptr[particle_start + i];
+            double zz    = elements_z_ptr[particle_start + i];
 
             // because there's a reduction over exact_idx[i], this loop carries a 
             // backward dependence and won't actually parallelize
@@ -215,9 +215,9 @@ void Clusters::upward_pass()
 #endif
             for (std::size_t i = 0; i < num_particles; i++) {  // loop over source points
             
-                double dist_x = particles_x_ptr[particle_start + i] - cx;
-                double dist_y = particles_y_ptr[particle_start + i] - cy;
-                double dist_z = particles_z_ptr[particle_start + i] - cz;
+                double dist_x = elements_x_ptr[particle_start + i] - cx;
+                double dist_y = elements_y_ptr[particle_start + i] - cy;
+                double dist_z = elements_z_ptr[particle_start + i] - cz;
                 
                 double numerator = 1.;
 
@@ -269,25 +269,25 @@ void Clusters::downward_pass(double* __restrict potential)
 {
     timers_.downward_pass.start();
 
-    const double* __restrict clusters_x_ptr    = interp_x_.data();
-    const double* __restrict clusters_y_ptr    = interp_y_.data();
-    const double* __restrict clusters_z_ptr    = interp_z_.data();
+    const double* __restrict clusters_x_ptr    = interp_pts_.interp_x_ptr();
+    const double* __restrict clusters_y_ptr    = interp_pts_.interp_y_ptr();
+    const double* __restrict clusters_z_ptr    = interp_pts_.interp_z_ptr();
     
     const double* __restrict clusters_p_ptr    = interp_potential_.data();
     const double* __restrict clusters_p_dx_ptr = interp_potential_dx_.data();
     const double* __restrict clusters_p_dy_ptr = interp_potential_dy_.data();
     const double* __restrict clusters_p_dz_ptr = interp_potential_dz_.data();
     
-    const double* __restrict particles_x_ptr   = particles_.x_ptr();
-    const double* __restrict particles_y_ptr   = particles_.y_ptr();
-    const double* __restrict particles_z_ptr   = particles_.z_ptr();
+    const double* __restrict elements_x_ptr   = elements_.x_ptr();
+    const double* __restrict elements_y_ptr   = elements_.y_ptr();
+    const double* __restrict elements_z_ptr   = elements_.z_ptr();
     
-    const double* __restrict targets_q_ptr     = particles_.target_charge_ptr();
-    const double* __restrict targets_q_dx_ptr  = particles_.target_charge_dx_ptr();
-    const double* __restrict targets_q_dy_ptr  = particles_.target_charge_dy_ptr();
-    const double* __restrict targets_q_dz_ptr  = particles_.target_charge_dz_ptr();
+    const double* __restrict targets_q_ptr     = elements_.target_charge_ptr();
+    const double* __restrict targets_q_dx_ptr  = elements_.target_charge_dx_ptr();
+    const double* __restrict targets_q_dy_ptr  = elements_.target_charge_dy_ptr();
+    const double* __restrict targets_q_dz_ptr  = elements_.target_charge_dz_ptr();
     
-    std::vector<double> weights (num_interp_pts_per_node_);
+    std::vector<double> weights (interp_pts_.num_interp_pts_per_node());
     double* weights_ptr = weights.data();
     int weights_num = weights.size();
     
@@ -296,8 +296,8 @@ void Clusters::downward_pass(double* __restrict potential)
         if (i == 0 || i == weights_num-1) weights[i] = ((i % 2 == 0)? 1 : -1) * 0.5;
     }
     
-    std::size_t potential_offset = particles_.num();
-    int num_interp_pts_per_node = num_interp_pts_per_node_;
+    std::size_t potential_offset = elements_.num();
+    int num_interp_pts_per_node = interp_pts_.num_interp_pts_per_node();
     
 #ifdef OPENACC_ENABLED
 #pragma acc enter data copyin(weights_ptr[0:weights_num])
@@ -306,7 +306,7 @@ void Clusters::downward_pass(double* __restrict potential)
     for (std::size_t node_idx = 0; node_idx < tree_.num_nodes(); ++node_idx) {
         
         auto particle_idxs = tree_.node_particle_idxs(node_idx);
-        std::size_t node_interp_pts_start = node_idx * num_interp_pts_per_node_;
+        std::size_t node_interp_pts_start = node_idx * num_interp_pts_per_node;
         std::size_t node_potentials_start = node_idx * num_charges_per_node_;
         
         std::size_t particle_start = particle_idxs[0];
@@ -314,7 +314,7 @@ void Clusters::downward_pass(double* __restrict potential)
 
 #ifdef OPENACC_ENABLED
         int stream_id = std::rand() % 3;
-#pragma acc parallel loop async(stream_id) present(particles_x_ptr, particles_y_ptr, particles_z_ptr, \
+#pragma acc parallel loop async(stream_id) present(elements_x_ptr, elements_y_ptr, elements_z_ptr, \
                                   targets_q_ptr, targets_q_dx_ptr, targets_q_dy_ptr, targets_q_dz_ptr, \
                                   clusters_x_ptr, clusters_y_ptr, clusters_z_ptr, \
                                   clusters_p_ptr, clusters_p_dx_ptr, clusters_p_dy_ptr, clusters_p_dz_ptr, \
@@ -330,9 +330,9 @@ void Clusters::downward_pass(double* __restrict potential)
             int exact_idx_y = -1;
             int exact_idx_z = -1;
             
-            double xx = particles_x_ptr[particle_start + i];
-            double yy = particles_y_ptr[particle_start + i];
-            double zz = particles_z_ptr[particle_start + i];
+            double xx = elements_x_ptr[particle_start + i];
+            double yy = elements_y_ptr[particle_start + i];
+            double zz = elements_z_ptr[particle_start + i];
             
 #ifdef OPENACC_ENABLED
             #pragma acc loop reduction(+:denominator_x,denominator_y,denominator_z) \
@@ -497,13 +497,13 @@ void Clusters::copyin_to_device() const
     timers_.copyin_to_device.start();
 
 #ifdef OPENACC_ENABLED
-    const double* x_ptr = interp_x_.data();
-    const double* y_ptr = interp_y_.data();
-    const double* z_ptr = interp_z_.data();
+    //const double* x_ptr = interp_x_.data();
+    //const double* y_ptr = interp_y_.data();
+    //const double* z_ptr = interp_z_.data();
     
-    std::size_t x_num = interp_x_.size();
-    std::size_t y_num = interp_y_.size();
-    std::size_t z_num = interp_z_.size();
+    //std::size_t x_num = interp_x_.size();
+    //std::size_t y_num = interp_y_.size();
+    //std::size_t z_num = interp_z_.size();
     
     const double* q_ptr    = interp_charge_.data();
     const double* q_dx_ptr = interp_charge_dx_.data();
@@ -525,7 +525,7 @@ void Clusters::copyin_to_device() const
     std::size_t p_dy_num = interp_potential_dy_.size();
     std::size_t p_dz_num = interp_potential_dz_.size();
     
-    #pragma acc enter data create(x_ptr[0:x_num], y_ptr[0:y_num], z_ptr[0:z_num], \
+    #pragma acc enter data create( /*x_ptr[0:x_num], y_ptr[0:y_num], z_ptr[0:z_num],*/ \
                 q_ptr[0:q_num], q_dx_ptr[0:q_dx_num], q_dy_ptr[0:q_dy_num], q_dz_ptr[0:q_dz_num], \
                 p_ptr[0:p_num], p_dx_ptr[0:p_dx_num], p_dy_ptr[0:p_dy_num], p_dz_ptr[0:p_dz_num])
 #endif
@@ -539,13 +539,13 @@ void Clusters::delete_from_device() const
     timers_.delete_from_device.start();
 
 #ifdef OPENACC_ENABLED
-    const double* x_ptr = interp_x_.data();
-    const double* y_ptr = interp_y_.data();
-    const double* z_ptr = interp_z_.data();
+    //const double* x_ptr = interp_x_.data();
+    //const double* y_ptr = interp_y_.data();
+    //const double* z_ptr = interp_z_.data();
     
-    std::size_t x_num = interp_x_.size();
-    std::size_t y_num = interp_y_.size();
-    std::size_t z_num = interp_z_.size();
+    //std::size_t x_num = interp_x_.size();
+    //std::size_t y_num = interp_y_.size();
+    //std::size_t z_num = interp_z_.size();
     
     const double* q_ptr    = interp_charge_.data();
     const double* q_dx_ptr = interp_charge_dx_.data();
@@ -567,7 +567,7 @@ void Clusters::delete_from_device() const
     std::size_t p_dy_num = interp_potential_dy_.size();
     std::size_t p_dz_num = interp_potential_dz_.size();
     
-    #pragma acc exit data delete(x_ptr[0:x_num], y_ptr[0:y_num], z_ptr[0:z_num], \
+    #pragma acc exit data delete(/*x_ptr[0:x_num], y_ptr[0:y_num], z_ptr[0:z_num],*/ \
                 q_ptr[0:q_num], q_dx_ptr[0:q_dx_num], q_dy_ptr[0:q_dy_num], q_dz_ptr[0:q_dz_num], \
                 p_ptr[0:p_num], p_dx_ptr[0:p_dx_num], p_dy_ptr[0:p_dy_num], p_dz_ptr[0:p_dz_num])
 #endif
@@ -576,11 +576,11 @@ void Clusters::delete_from_device() const
 }
 
 
-const std::array<std::size_t, 2> Clusters::cluster_interp_pts_idxs(std::size_t node_idx) const
-{
-    return std::array<std::size_t, 2> {num_interp_pts_per_node_ *  node_idx,
-                                       num_interp_pts_per_node_ * (node_idx + 1)};
-}
+//const std::array<std::size_t, 2> Clusters::cluster_interp_pts_idxs(std::size_t node_idx) const
+//{
+//    return std::array<std::size_t, 2> {num_interp_pts_per_node_ *  node_idx,
+//                                       num_interp_pts_per_node_ * (node_idx + 1)};
+//}
 
 
 const std::array<std::size_t, 2> Clusters::cluster_charges_idxs(std::size_t node_idx) const

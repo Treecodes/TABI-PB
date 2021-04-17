@@ -29,7 +29,7 @@ std::array<double, 3> Output(const BoundaryElement& bem, const Timers& timers)
                .append("mesh_density, ")         .append("mesh_probe_radius, ")
                .append("tree_degree, ")          .append("tree_theta, ")
                .append("tree_max_per_leaf, ")    .append("precondition, ")
-               .append("num_particles, ")        .append("surface_area, ")
+               .append("num_elements, ")        .append("surface_area, ")
                .append("num_iterations, ")       .append("residual, ")
                .append("solvation_energy, ")     .append("coulombic_energy, ")
                .append("free_energy, ")
@@ -43,11 +43,11 @@ std::array<double, 3> Output(const BoundaryElement& bem, const Timers& timers)
     if (bem.params_.output_csv_) {
         std::ofstream csv_file("output.csv");
         csv_file << std::scientific << std::setprecision(12)
-                 << bem.molecule_.num_atoms()      << ", " << bem.params_.mesh_              << ", "
+                 << bem.molecule_.num()            << ", " << bem.params_.mesh_              << ", "
                  << bem.params_.mesh_density_      << ", " << bem.params_.mesh_probe_radius_ << ", "
                  << bem.params_.tree_degree_       << ", " << bem.params_.tree_theta_        << ", "
                  << bem.params_.tree_max_per_leaf_ << ", " << bem.params_.precondition_      << ", "
-                 << bem.particles_.num()           << ", " << bem.particles_.surface_area()  << ", "
+                 << bem.elements_.num()            << ", " << bem.elements_.surface_area()   << ", "
                  << bem.num_iter_                  << ", " << bem.residual_                  << ", "
                  << bem.solvation_energy_          << ", " << bem.coulombic_energy_          << ", "
                  << bem.free_energy_               << ", "
@@ -57,7 +57,7 @@ std::array<double, 3> Output(const BoundaryElement& bem, const Timers& timers)
         csv_file.close();
     }
 
-    if (bem.params_.output_vtk_) bem.particles_.output_VTK(bem.potential_);
+    if (bem.params_.output_vtk_) bem.elements_.output_VTK(bem.potential_);
 
     return std::array<double, 3> {bem.solvation_energy_, bem.coulombic_energy_, bem.free_energy_};
 }

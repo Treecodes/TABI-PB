@@ -5,7 +5,6 @@
 #include <cstddef>
 
 #include "timer.h"
-#include "params.h"
 #include "particles.h"
 
 class InteractionList;
@@ -15,8 +14,9 @@ class Tree
 {
 private:
     class Particles& particles_;
-    const struct Params& params_;
     struct Timers_Tree& timers_;
+    
+    const int max_per_leaf_;
 
     std::size_t num_nodes_;
     std::size_t num_leaves_;
@@ -52,7 +52,7 @@ private:
     void construct(std::size_t, std::size_t, std::size_t, std::size_t);
     
 public:
-    Tree(class Particles&, const struct Params&, struct Timers_Tree&);
+    Tree(class Particles&, const int max_per_leaf, struct Timers_Tree&);
     ~Tree() = default;
     
     std::size_t num_nodes() const { return num_nodes_; };

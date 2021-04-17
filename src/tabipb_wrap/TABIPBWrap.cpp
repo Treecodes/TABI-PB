@@ -1,7 +1,7 @@
 #include "../tabipb_timers.h"
 #include "../params.h"
 #include "../molecule.h"
-#include "../particles.h"
+#include "../elements.h"
 #include "../tree.h"
 #include "../interaction_list.h"
 #include "../clusters.h"
@@ -19,17 +19,17 @@ struct TABIPBOutput runTABIPBWrapAPBS(struct TABIPBInput tabipbIn, Valist* APBSM
     molecule.compute_coulombic_energy();
     molecule.build_xyzr_file();
     
-    class Particles particles(molecule, params, timers.particles);
-    class Tree tree(particles, params, timers.tree);
+    class Elements elements(molecule, params, timers.elements);
+    class Tree tree(elements, params, timers.tree);
     
-    particles.compute_source_term();
+    elements.compute_source_term();
     
-    class Clusters clusters(particles, tree, params, timers.clusters);
+    class Clusters clusters(elements, tree, params, timers.clusters);
     
     clusters.compute_all_interp_pts();
     
     class InteractionList interaction_list(tree, params, timers.interaction_list);
-    class BoundaryElement boundary_element(particles, clusters, tree, interaction_list, molecule, 
+    class BoundaryElement boundary_element(elements, clusters, tree, interaction_list, molecule,
                             params, timers.boundary_element);
     
     boundary_element.run_GMRES();

@@ -1,3 +1,4 @@
+#include <numeric>
 #include <iterator>
 #include <vector>
 #include <string>
@@ -8,12 +9,11 @@
 #include <cmath>
 #include <cstddef>
 
-#include "params.h"
 #include "molecule.h"
 
 
 Molecule::Molecule(struct Params& params, struct Timers_Molecule& timers)
-    : params_(params), timers_(timers)
+    : Particles(params), timers_(timers)
 {
     timers_.ctor.start();
 
@@ -25,15 +25,17 @@ Molecule::Molecule(struct Params& params, struct Timers_Molecule& timers)
                                                 std::istream_iterator<std::string> {} };
 
         if (tokenized_line[0] == "ATOM") {
-            coords_.push_back(std::stod(tokenized_line[5]));
-            coords_.push_back(std::stod(tokenized_line[6]));
-            coords_.push_back(std::stod(tokenized_line[7]));
+            x_.push_back(std::stod(tokenized_line[5]));
+            y_.push_back(std::stod(tokenized_line[6]));
+            z_.push_back(std::stod(tokenized_line[7]));
             charge_.push_back(std::stod(tokenized_line[8]));
             radius_.push_back(std::stod(tokenized_line[9]));
         }
     }
     
-    num_atoms_ = radius_.size();
+    num_ = radius_.size();
+    order_.resize(num_);
+    std::iota(order_.begin(), order_.end(), 0);
 
     timers_.ctor.stop();
 }
@@ -45,9 +47,9 @@ void Molecule::build_xyzr_file() const
 
     std::ofstream xyzr_file("molecule.xyzr");
     
-    for (std::size_t i = 0; i < num_atoms_; ++i) {
-        xyzr_file << coords_[3*i+0] << " " << coords_[3*i+1] << " "
-                  << coords_[3*i+2] << " " << radius_[i] << std::endl;
+    for (std::size_t i = 0; i < num_; ++i) {
+        xyzr_file << x_[i] << " " << y_[i] << " "
+                  << z_[i] << " " << radius_[i] << std::endl;
     }
 
     xyzr_file.close();
@@ -62,30 +64,33 @@ void Molecule::compute_coulombic_energy()
 
     double coulombic_energy = 0.;
     double epsp = params_.phys_eps_solute_;
-    std::size_t num_atoms = num_atoms_;
+    std::size_t num_atoms = num_;
     
-    const double* __restrict molecule_coords_ptr = coords_.data();
+    const double* __restrict molecule_x_ptr = x_.data();
+    const double* __restrict molecule_y_ptr = y_.data();
+    const double* __restrict molecule_z_ptr = z_.data();
     const double* __restrict molecule_charge_ptr = charge_.data();
 
 #ifdef OPENACC_ENABLED
-    #pragma acc parallel loop gang present(molecule_coords_ptr, molecule_charge_ptr) \
-				   reduction(+:coulombic_energy)
+    #pragma acc parallel loop gang present(molecule_x_ptr, molecule_y_ptr, \
+                                           molecule_z_ptr, molecule_charge_ptr) \
+                                   reduction(+:coulombic_energy)
 #elif OPENMP_ENABLED
     #pragma omp parallel for reduction(+:coulombic_energy)
 #endif
     for (std::size_t i = 0; i < num_atoms; ++i) {
-        double i_pos_x  = molecule_coords_ptr[3*i];
-        double i_pos_y  = molecule_coords_ptr[3*i + 1];
-        double i_pos_z  = molecule_coords_ptr[3*i + 2];
+        double i_pos_x  = molecule_x_ptr[i];
+        double i_pos_y  = molecule_y_ptr[i];
+        double i_pos_z  = molecule_z_ptr[i];
         double i_charge = molecule_charge_ptr[i];
         
 #ifdef OPENACC_ENABLED
 	#pragma acc loop vector reduction(+:coulombic_energy)
 #endif
         for (std::size_t j = i+1; j < num_atoms; ++j) {
-            double dist_x = i_pos_x - molecule_coords_ptr[3*j];
-            double dist_y = i_pos_y - molecule_coords_ptr[3*j + 1];
-            double dist_z = i_pos_z - molecule_coords_ptr[3*j + 2];
+            double dist_x = i_pos_x - molecule_x_ptr[j];
+            double dist_y = i_pos_y - molecule_y_ptr[j];
+            double dist_z = i_pos_z - molecule_z_ptr[j];
             coulombic_energy += i_charge * molecule_charge_ptr[j] / epsp
                               / std::sqrt(dist_x*dist_x + dist_y*dist_y + dist_z*dist_z);
         }
@@ -97,18 +102,118 @@ void Molecule::compute_coulombic_energy()
 }
 
 
+
+//void Molecule::compute_coulombic_energy(class InterpolationPoinsts& interp_pts,
+//                                        class Tree& tree,
+//                                        class InteractionList& interaction_list)
+//{
+//    timers_.compute_coulombic_energy.start();
+//
+//    double coulombic_energy = 0.;
+//    double epsp = params_.phys_eps_solute_;
+//    std::size_t num_atoms = num_;
+//
+//    int num_charges_per_node = std::pow(interp_pts.num_interp_pts_per_node(), 3);
+//    std::size_t num_charges  = tree.num_nodes() * num_charges_per_node;
+//
+//    std::vector<double> coulomb_potential(num_atoms);
+//    std::vector<double> interp_charge(num_charges);
+//    std::vector<double> interp_potential(num_charges);
+//
+//    coulombic_energy_upward_pass();
+//
+//    for (std::size_t target_node_idx = 0; target_node_idx < tree_.num_nodes(); ++target_node_idx) {
+//
+//        for (auto source_node_idx : interaction_list.particle_particle(target_node_idx))
+//            coulombic_energy_particle_particle_interact(potential,
+//                    tree_.node_particle_idxs(target_node_idx), tree_.node_particle_idxs(source_node_idx));
+//
+//        for (auto source_node_idx : interaction_list.particle_cluster(target_node_idx))
+//            coulombic_energy_particle_cluster_interact(potential,
+//                    tree_.node_particle_idxs(target_node_idx), source_node_idx);
+//
+//        for (auto source_node_idx : interaction_list.cluster_particle(target_node_idx))
+//            coulombic_energy_cluster_particle_interact(potential,
+//                    target_node_idx, tree_.node_particle_idxs(source_node_idx));
+//
+//        for (auto source_node_idx : interaction_list.cluster_cluster(target_node_idx))
+//            coulombic_energy_cluster_cluster_interact(potential, target_node_idx, source_node_idx);
+//    }
+//
+//    coulombic_engergy_downward_pass(potential);
+//
+
+//
+//    const double* __restrict molecule_x_ptr = x_.data();
+//    const double* __restrict molecule_y_ptr = y_.data();
+//    const double* __restrict molecule_z_ptr = z_.data();
+//    const double* __restrict molecule_charge_ptr = charge_.data();
+//
+//#ifdef OPENACC_ENABLED
+//    #pragma acc parallel loop gang present(molecule_x_ptr, molecule_y_ptr, \
+//                                           molecule_z_ptr, molecule_charge_ptr) \
+//                                   reduction(+:coulombic_energy)
+//#elif OPENMP_ENABLED
+//    #pragma omp parallel for reduction(+:coulombic_energy)
+//#endif
+//    for (std::size_t i = 0; i < num_atoms; ++i) {
+//        double i_pos_x  = molecule_x_ptr[i];
+//        double i_pos_y  = molecule_y_ptr[i];
+//        double i_pos_z  = molecule_z_ptr[i];
+//        double i_charge = molecule_charge_ptr[i];
+//
+//#ifdef OPENACC_ENABLED
+//	#pragma acc loop vector reduction(+:coulombic_energy)
+//#endif
+//        for (std::size_t j = i+1; j < num_atoms; ++j) {
+//            double dist_x = i_pos_x - molecule_x_ptr[j];
+//            double dist_y = i_pos_y - molecule_y_ptr[j];
+//            double dist_z = i_pos_z - molecule_z_ptr[j];
+//            coulombic_energy += i_charge * molecule_charge_ptr[j] / epsp
+//                              / std::sqrt(dist_x*dist_x + dist_y*dist_y + dist_z*dist_z);
+//        }
+//    }
+//
+//    coulombic_energy_ = coulombic_energy;
+//
+//    timers_.compute_coulombic_energy.stop();
+//}
+
+
+void Molecule::reorder()
+{
+    apply_order(order_.begin(), order_.end(), charge_.begin());
+    apply_order(order_.begin(), order_.end(), radius_.begin());
+}
+
+
+void Molecule::unorder()
+{
+    apply_unorder(order_.begin(), order_.end(), x_.begin());
+    apply_unorder(order_.begin(), order_.end(), y_.begin());
+    apply_unorder(order_.begin(), order_.end(), z_.begin());
+    
+    apply_unorder(order_.begin(), order_.end(), charge_.begin());
+    apply_unorder(order_.begin(), order_.end(), radius_.begin());
+}
+
+
 void Molecule::copyin_to_device() const
 {
     timers_.copyin_to_device.start();
 
 #ifdef OPENACC_ENABLED
-    const double* coords_ptr = coords_.data();
+    const double* x_ptr = x_.data();
+    const double* y_ptr = y_.data();
+    const double* z_ptr = z_.data();
     const double* charge_ptr = charge_.data();
 
-    std::size_t coords_num = coords_.size();
+    std::size_t x_num = x_.size();
+    std::size_t y_num = y_.size();
+    std::size_t z_num = z_.size();
     std::size_t charge_num = charge_.size();
 
-    #pragma acc enter data copyin(coords_ptr[0:coords_num], \
+    #pragma acc enter data copyin(x_ptr[0:x_num], y_ptr[0:y_num], z_ptr[0:z_num] \
                                   charge_ptr[0:charge_num])
 #endif
 
@@ -121,10 +226,12 @@ void Molecule::delete_from_device() const
     timers_.delete_from_device.start();
 
 #ifdef OPENACC_ENABLED
-    const double* coords_ptr = coords_.data();
+    const double* x_ptr = x_.data();
+    const double* y_ptr = y_.data();
+    const double* z_ptr = z_.data();
     const double* charge_ptr = charge_.data();
 
-    #pragma acc exit data delete(coords_ptr, charge_ptr)
+    #pragma acc exit data delete(x_ptr, y_ptr, z_ptr, charge_ptr)
 #endif
 
     timers_.delete_from_device.stop();

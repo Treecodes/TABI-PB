@@ -7,9 +7,8 @@
 
 #include "tree.h"
 
-Tree::Tree(class Particles& particles, 
-           const struct Params& params, struct Timers_Tree& timers)
-    : particles_(particles), params_(params), timers_(timers)
+Tree::Tree(class Particles& particles, int max_per_leaf, struct Timers_Tree& timers)
+    : particles_(particles), max_per_leaf_(max_per_leaf), timers_(timers)
 {
     timers_.ctor.start();
 
@@ -75,14 +74,14 @@ void Tree::construct(std::size_t parent, std::size_t current_level,
     node_z_mid_.push_back((z_min + z_max) / 2.);
     
     node_radius_.push_back(radius);
-    
+        
     node_num_children_.push_back(0);
     node_children_idx_.insert(node_children_idx_.end(), {0, 0, 0, 0, 0, 0, 0, 0});
     node_parent_idx_.push_back(parent);
     node_level_.push_back(current_level);
-    
-    if (num_particles > params_.tree_max_per_leaf_) {
-    
+        
+    if (num_particles > max_per_leaf_) {
+            
         std::array<std::size_t, 16> partitioned_bounds;
         int num_children = particles_.partition_8(begin, end, partitioned_bounds);
         
