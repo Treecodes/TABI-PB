@@ -14,8 +14,8 @@ void BoundaryElement::precondition_diagonal(double *z, double *r)
     double potential_coeff_1 = 0.5 * (1. +      params_.phys_eps_);
     double potential_coeff_2 = 0.5 * (1. + 1. / params_.phys_eps_);
     
-    for (std::size_t i = 0;                i <     particles_.num(); ++i) z[i] = r[i] / potential_coeff_1;
-    for (std::size_t i = particles_.num(); i < 2 * particles_.num(); ++i) z[i] = r[i] / potential_coeff_2;
+    for (std::size_t i = 0;                i <     elements_.num(); ++i) z[i] = r[i] / potential_coeff_1;
+    for (std::size_t i = elements_.num(); i < 2 * elements_.num(); ++i) z[i] = r[i] / potential_coeff_2;
 
     timers_.precondition.stop();
 }
@@ -29,55 +29,55 @@ void BoundaryElement::precondition_block(double *z, double *r)
     double kappa  = params_.phys_kappa_;
     double kappa2 = params_.phys_kappa2_;
 
-    const std::size_t num_total_particles         = particles_.num();
-    const double* __restrict particles_x_ptr    = particles_.x_ptr();
-    const double* __restrict particles_y_ptr    = particles_.y_ptr();
-    const double* __restrict particles_z_ptr    = particles_.z_ptr();
+    const std::size_t num_total_elements         = elements_.num();
+    const double* __restrict elements_x_ptr    = elements_.x_ptr();
+    const double* __restrict elements_y_ptr    = elements_.y_ptr();
+    const double* __restrict elements_z_ptr    = elements_.z_ptr();
 
-    const double* __restrict particles_nx_ptr   = particles_.nx_ptr();
-    const double* __restrict particles_ny_ptr   = particles_.ny_ptr();
-    const double* __restrict particles_nz_ptr   = particles_.nz_ptr();
-    const double* __restrict particles_area_ptr = particles_.area_ptr();
+    const double* __restrict elements_nx_ptr   = elements_.nx_ptr();
+    const double* __restrict elements_ny_ptr   = elements_.ny_ptr();
+    const double* __restrict elements_nz_ptr   = elements_.nz_ptr();
+    const double* __restrict elements_area_ptr = elements_.area_ptr();
 
     double potential_coeff_1 = 0.5 * (1. +      params_.phys_eps_);
     double potential_coeff_2 = 0.5 * (1. + 1. / params_.phys_eps_);
 
     for (auto leaf_idx : tree_.leaves()) {
 
-        auto particle_idxs = tree_.node_particle_idxs(leaf_idx);
-        std::size_t particle_begin = particle_idxs[0];
-        std::size_t particle_end   = particle_idxs[1];
-        std::size_t num_particles = particle_end - particle_begin;
-        std::size_t num_cols = 2 * num_particles;
+        auto element_idxs = tree_.node_particle_idxs(leaf_idx);
+        std::size_t element_begin = element_idxs[0];
+        std::size_t element_end   = element_idxs[1];
+        std::size_t num_elements = element_end - element_begin;
+        std::size_t num_cols = 2 * num_elements;
 
         std::vector<double> A(num_cols * num_cols, 0.);
         std::vector<double> rhs(num_cols, 0.);
         std::vector<int> pivot(num_cols, 0);
 
-        for (std::size_t j = particle_begin; j < particle_end; ++j) {
+        for (std::size_t j = element_begin; j < element_end; ++j) {
 
-            std::size_t row = j - particle_begin;
+            std::size_t row = j - element_begin;
 
-            double target_x = particles_x_ptr[j];
-            double target_y = particles_y_ptr[j];
-            double target_z = particles_z_ptr[j];
+            double target_x = elements_x_ptr[j];
+            double target_y = elements_y_ptr[j];
+            double target_z = elements_z_ptr[j];
 
-            double target_nx = particles_nx_ptr[j];
-            double target_ny = particles_ny_ptr[j];
-            double target_nz = particles_nz_ptr[j];
+            double target_nx = elements_nx_ptr[j];
+            double target_ny = elements_ny_ptr[j];
+            double target_nz = elements_nz_ptr[j];
 
-            for (std::size_t k = particle_begin; k < j; ++k) {
+            for (std::size_t k = element_begin; k < j; ++k) {
 
-                std::size_t col = k - particle_begin;
+                std::size_t col = k - element_begin;
 
-                double source_x = particles_x_ptr[k];
-                double source_y = particles_y_ptr[k];
-                double source_z = particles_z_ptr[k];
+                double source_x = elements_x_ptr[k];
+                double source_y = elements_y_ptr[k];
+                double source_z = elements_z_ptr[k];
 
-                double source_nx = particles_nx_ptr[k];
-                double source_ny = particles_ny_ptr[k];
-                double source_nz = particles_nz_ptr[k];
-                double source_area = particles_area_ptr[k];
+                double source_nx = elements_nx_ptr[k];
+                double source_ny = elements_ny_ptr[k];
+                double source_nz = elements_nz_ptr[k];
+                double source_area = elements_area_ptr[k];
 
                 double dist_x = source_x - target_x;
                 double dist_y = source_y - target_y;
@@ -104,26 +104,26 @@ void BoundaryElement::precondition_block(double *z, double *r)
                     double L3 = G4 - G3;
                     double L4 = target_cos * tp1 * (1. - tp2 / eps);
 
-                    A[(row                ) * num_cols + (col                )] = -L1 * source_area;
-                    A[(row                ) * num_cols + (col + num_particles)] = -L2 * source_area;
-                    A[(row + num_particles) * num_cols + (col                )] = -L3 * source_area;
-                    A[(row + num_particles) * num_cols + (col + num_particles)] = -L4 * source_area;
+                    A[(row               ) * num_cols + (col               )] = -L1 * source_area;
+                    A[(row               ) * num_cols + (col + num_elements)] = -L2 * source_area;
+                    A[(row + num_elements) * num_cols + (col               )] = -L3 * source_area;
+                    A[(row + num_elements) * num_cols + (col + num_elements)] = -L4 * source_area;
 
                     L1 = target_cos * tp1 * (1. - tp2 * eps);
                     L4 = source_cos * tp1 * (1. - tp2 / eps);
 
-                    A[(col                ) * num_cols + (row                )] = -L1 * source_area;
-                    A[(col                ) * num_cols + (row + num_particles)] = -L2 * source_area;
-                    A[(col + num_particles) * num_cols + (row                )] = -L3 * source_area;
-                    A[(col + num_particles) * num_cols + (row + num_particles)] = -L4 * source_area;
+                    A[(col               ) * num_cols + (row               )] = -L1 * source_area;
+                    A[(col               ) * num_cols + (row + num_elements)] = -L2 * source_area;
+                    A[(col + num_elements) * num_cols + (row               )] = -L3 * source_area;
+                    A[(col + num_elements) * num_cols + (row + num_elements)] = -L4 * source_area;
                 }
             }
 
-            A[(row                ) * num_cols + (row                )] = potential_coeff_1;
-            A[(row + num_particles) * num_cols + (row + num_particles)] = potential_coeff_2;
+            A[(row               ) * num_cols + (row               )] = potential_coeff_1;
+            A[(row + num_elements) * num_cols + (row + num_elements)] = potential_coeff_2;
 
-            rhs[row]                 = r[j];
-            rhs[row + num_particles] = r[j + num_total_particles];
+            rhs[row]                = r[j];
+            rhs[row + num_elements] = r[j + num_total_elements];
         }
 
         int nrhs = 1, info;
@@ -136,9 +136,9 @@ void BoundaryElement::precondition_block(double *z, double *r)
         lu_decomp(A.data(), num_cols_int, pivot.data());
         lu_solve(A.data(), num_cols_int, pivot.data(), rhs.data());
 
-        for (std::size_t j = particle_begin; j < particle_end; ++j) {
-            z[j]                       = rhs[j - particle_begin];
-            z[j + num_total_particles] = rhs[j - particle_begin + num_particles];
+        for (std::size_t j = element_begin; j < element_end; ++j) {
+            z[j]                      = rhs[j - element_begin];
+            z[j + num_total_elements] = rhs[j - element_begin + num_elements];
         }
 
     }

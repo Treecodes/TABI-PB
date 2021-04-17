@@ -4,29 +4,29 @@
 #include <cstddef>
 
 #include "timer.h"
-#include "particles.h"
+#include "elements.h"
 #include "tree.h"
-#include "params.h"
+#include "interp_pts.h"
 
 struct Timers_Clusters;
 
 class Clusters
 {
 private:
-    const class Particles& particles_;
+    const class Elements& elements_;
     const class Tree& tree_;
-    const struct Params& params_;
+    const class InterpolationPoints& interp_pts_;
     struct Timers_Clusters& timers_;
 
-    int num_interp_pts_per_node_;
+    //int num_interp_pts_per_node_;
     int num_charges_per_node_;
     
-    std::size_t num_interp_pts_;
+    //std::size_t num_interp_pts_;
     std::size_t num_charges_;
 
-    std::vector<double> interp_x_;
-    std::vector<double> interp_y_;
-    std::vector<double> interp_z_;
+    //std::vector<double> interp_x_;
+    //std::vector<double> interp_y_;
+    //std::vector<double> interp_z_;
     
     std::vector<double> interp_charge_;
     std::vector<double> interp_charge_dx_;
@@ -40,7 +40,7 @@ private:
     
     
 public:
-    Clusters(const class Particles&, const class Tree&, const struct Params&, struct Timers_Clusters&);
+    Clusters(const class Elements&, const class Tree&, const class InterpolationPoints&, struct Timers_Clusters&);
     ~Clusters() = default;
     
     void upward_pass();
@@ -49,14 +49,14 @@ public:
     void clear_charges();
     void clear_potentials();
     
-    std::size_t num_interp_pts_per_node() const { return num_interp_pts_per_node_; };
+    //std::size_t num_interp_pts_per_node() const { return num_interp_pts_per_node_; };
     std::size_t num_charges_per_node()    const { return num_charges_per_node_; };
-    const std::array<std::size_t, 2> cluster_interp_pts_idxs(std::size_t node_idx) const;
+    //const std::array<std::size_t, 2> cluster_interp_pts_idxs(std::size_t node_idx) const;
     const std::array<std::size_t, 2> cluster_charges_idxs(std::size_t node_idx) const;
     
-    const double* interp_x_ptr() const { return interp_x_.data(); };
-    const double* interp_y_ptr() const { return interp_y_.data(); };
-    const double* interp_z_ptr() const { return interp_z_.data(); };
+    //const double* interp_x_ptr() const { return interp_x_.data(); };
+    //const double* interp_y_ptr() const { return interp_y_.data(); };
+    //const double* interp_z_ptr() const { return interp_z_.data(); };
     
     const double* interp_charge_ptr()    const { return interp_charge_.data(); };
     const double* interp_charge_dx_ptr() const { return interp_charge_dx_.data(); };
@@ -68,7 +68,7 @@ public:
     double* interp_potential_dy_ptr() { return interp_potential_dy_.data(); };
     double* interp_potential_dz_ptr() { return interp_potential_dz_.data(); };
     
-    void compute_all_interp_pts();
+    //void compute_all_interp_pts();
     void copyin_to_device() const;
     void delete_from_device() const;
     

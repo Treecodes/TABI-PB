@@ -7,18 +7,17 @@
 
 #include "timer.h"
 #include "molecule.h"
-#include "particles.h"
+#include "elements.h"
 #include "tree.h"
-#include "clusters.h"
 #include "interaction_list.h"
 #include "boundary_element.h"
 
 struct Timers
 {
     Timers_Molecule molecule;
-    Timers_Particles particles;
+    Timers_Elements elements;
     Timers_Tree tree;
-    Timers_Clusters clusters;
+    //Timers_Clusters clusters;
     Timers_InteractionList interaction_list;
     Timers_BoundaryElement boundary_element;
 
@@ -38,9 +37,8 @@ struct Timers
         std::cout << "|" << std::endl;
         
         molecule         .print();
-        particles        .print();
+        elements         .print();
         tree             .print();
-        clusters         .print();
         interaction_list .print();
         boundary_element .print();
     }
@@ -52,9 +50,8 @@ struct Timers
         durations.append(std::to_string(tabipb.elapsed_time())).append(", ");
         
         durations.append(molecule         .get_durations());
-        durations.append(particles        .get_durations());
+        durations.append(elements         .get_durations());
         durations.append(tree             .get_durations());
-        durations.append(clusters         .get_durations());
         durations.append(interaction_list .get_durations());
         durations.append(boundary_element .get_durations());
 
@@ -68,9 +65,8 @@ struct Timers
         headers.append("TABIPB Total time, ");
         
         headers.append(molecule         .get_headers());
-        headers.append(particles        .get_headers());
+        headers.append(elements         .get_headers());
         headers.append(tree             .get_headers());
-        headers.append(clusters         .get_headers());
         headers.append(interaction_list .get_headers());
         headers.append(boundary_element .get_headers());
 

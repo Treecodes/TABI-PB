@@ -5,13 +5,13 @@
 
 #include "interaction_list.h"
 
-InteractionList::InteractionList(const class Tree& tree,
-                                 const struct Params& params, struct Timers_InteractionList& timers)
-    : source_tree_(tree), target_tree_(tree), params_(params), timers_(timers)
+InteractionList::InteractionList(const class Tree& tree, const int degree, const double theta,
+                                 struct Timers_InteractionList& timers)
+    : source_tree_(tree), target_tree_(tree),
+      size_check_(std::pow(degree + 1, 3)), theta_(theta), timers_(timers)
 {
     timers_.ctor.start();
 
-    size_check_ = std::pow(params_.tree_degree_ + 1, 3);
     particle_particle_.resize(target_tree_.num_nodes_);
     particle_cluster_ .resize(target_tree_.num_nodes_);
     cluster_particle_ .resize(target_tree_.num_nodes_);
@@ -24,12 +24,12 @@ InteractionList::InteractionList(const class Tree& tree,
 }
 
 InteractionList::InteractionList(const class Tree& source_tree, const class Tree& target_tree,
-                                 const struct Params& params, struct Timers_InteractionList& timers)
-    : source_tree_(source_tree), target_tree_(target_tree), params_(params), timers_(timers)
+                                 const int degree, const double theta, struct Timers_InteractionList& timers)
+    : source_tree_(source_tree), target_tree_(target_tree),
+      size_check_(std::pow(degree + 1, 3)), theta_(theta), timers_(timers)
 {
     timers_.ctor.start();
 
-    size_check_ = std::pow(params_.tree_degree_ + 1, 3);
     particle_particle_.resize(target_tree_.num_nodes_);
     particle_cluster_ .resize(target_tree_.num_nodes_);
     cluster_particle_ .resize(target_tree_.num_nodes_);
@@ -51,7 +51,7 @@ void InteractionList::build_BLTC_lists(std::size_t batch_idx, std::size_t node_i
     double dist = std::sqrt(dist_x*dist_x + dist_y*dist_y + dist_z*dist_z);
     
     if ((source_tree_.node_radius_[batch_idx] + target_tree_.node_radius_[node_idx])
-         < dist * params_.tree_theta_
+         < dist * theta_
        && target_tree_.node_num_particles_[node_idx] > size_check_) {
        particle_cluster_[batch_idx].push_back(node_idx);
        
@@ -71,7 +71,7 @@ void InteractionList::build_BLDTT_lists(std::size_t target_node_idx, std::size_t
     double dist_y = target_tree_.node_y_mid_[target_node_idx] - source_tree_.node_y_mid_[source_node_idx];
     double dist_z = target_tree_.node_z_mid_[target_node_idx] - source_tree_.node_z_mid_[source_node_idx];
     
-    double accept_distance = std::sqrt(dist_x*dist_x + dist_y*dist_y + dist_z*dist_z) * params_.tree_theta_;
+    double accept_distance = std::sqrt(dist_x*dist_x + dist_y*dist_y + dist_z*dist_z) * theta_;
     double sum_node_radius = target_tree_.node_radius_[target_node_idx]
                            + source_tree_.node_radius_[source_node_idx];
 

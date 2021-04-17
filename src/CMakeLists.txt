@@ -1,11 +1,14 @@
 # CXX code for standalone
 add_executable(tabipb main.cpp
         params.cpp params.h
-        molecule.cpp molecule.h
         particles.cpp particles.h
+        molecule.cpp molecule.h
+        elements.cpp elements.h
         tree.cpp tree.h
-        clusters.cpp clusters.h
+        interp_pts.cpp interp_pts.h
         interaction_list.cpp interaction_list.h
+        tree_compute.h
+        source_term_compute.cpp source_term_compute.h
         boundary_element.cpp gmres.cpp
         precondition.cpp boundary_element.h
         output.cpp output.h
@@ -54,9 +57,10 @@ if (ENABLE_TABIPB_APBS)
     option(BUILD_SHARED_LIBS "Build shared libraries." OFF)
   
     set(LIBFILES
-        params.cpp params.h molecule.cpp molecule.h
-        particles.cpp particles.h tree.cpp tree.h
-        clusters.cpp clusters.h interaction_list.cpp interaction_list.h
+        params.cpp params.h particles.cpp particles.h 
+        molecule.cpp molecule.h elements.cpp elements.h tree.cpp tree.h
+        interaction_list.cpp interaction_list.h tree_compute.h
+        source_term_compute.cpp source_term_compute.h
         boundary_element.cpp gmres.cpp precondition.cpp 
         boundary_element.h constants.h
         output.cpp output.h tabipb_timers.h timer.h
