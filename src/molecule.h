@@ -7,7 +7,7 @@
 #include <cstddef>
 
 #include "timer.h"
-#include "params.h"
+#include "particles.h"
 
 #ifdef TABIPB_APBS
     #include "generic/valist.h"
@@ -15,18 +15,15 @@
 
 struct Timers_Molecule;
 
-class Molecule
+class Molecule : public Particles
 {
 private:
-    const struct Params& params_;
     struct Timers_Molecule& timers_;
     
-    std::size_t num_atoms_;
-    std::vector<double> coords_;
+    double coulombic_energy_;
     std::vector<double> charge_;
     std::vector<double> radius_;
 
-    double coulombic_energy_;
 
 public:
     Molecule(struct Params&, struct Timers_Molecule&);
@@ -36,17 +33,18 @@ public:
     Molecule(Valist*, struct Params&, struct Timers_Molecule&);
 #endif
     
+    void compute_coulombic_energy();
     void build_xyzr_file() const;
     
-    std::size_t num_atoms() const { return num_atoms_; };
     double coulombic_energy() const { return coulombic_energy_; };
-    const double* coords_ptr() const { return coords_.data(); };
     const double* charge_ptr() const { return charge_.data(); };
     const double* radius_ptr() const { return radius_.data(); };
     
-    void compute_coulombic_energy();
-    void copyin_to_device() const;
-    void delete_from_device() const;
+    void reorder() override;
+    void unorder() override;
+    
+    void copyin_to_device() const override;
+    void delete_from_device() const override;
 };
 
 

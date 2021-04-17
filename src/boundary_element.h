@@ -2,8 +2,8 @@
 #define H_TABIPB_TREECODE_STRUCT_H
 
 #include "timer.h"
-#include "particles.h"
-#include "clusters.h"
+#include "elements.h"
+#include "interp_pts.h"
 #include "interaction_list.h"
 
 struct Timers_BoundaryElement;
@@ -12,8 +12,8 @@ struct Timers;
 class BoundaryElement
 {
 private:
-    class Particles& particles_;
-    class Clusters& clusters_;
+    class Elements& elements_;
+    const class InterpolationPoints& interp_pts_;
     const class Tree& tree_;
     const class InteractionList& interaction_list_;
     const class Molecule& molecule_;
@@ -22,9 +22,25 @@ private:
     
     std::vector<double> potential_;
     
+    /* cluster specific data */
+    int num_charges_per_node_;
+    std::size_t num_charges_;
+    
+    std::vector<double> interp_charge_;
+    std::vector<double> interp_charge_dx_;
+    std::vector<double> interp_charge_dy_;
+    std::vector<double> interp_charge_dz_;
+    
+    std::vector<double> interp_potential_;
+    std::vector<double> interp_potential_dx_;
+    std::vector<double> interp_potential_dy_;
+    std::vector<double> interp_potential_dz_;
+    
+    /* iteration data */
     long int num_iter_;
     double residual_;
     
+    /* output */
     double solvation_energy_;
     double free_energy_;
     double coulombic_energy_;
@@ -57,9 +73,23 @@ private:
             
     void cluster_cluster_interact(double* __restrict potential,
             std::size_t target_node_idx, std::size_t source_node_idx);
+            
+    void upward_pass();
+    void downward_pass(double* __restrict potential);
+    
+    void clear_cluster_charges();
+    void clear_cluster_potentials();
+    void copyin_clusters_to_device() const;
+    void delete_clusters_from_device() const;
+    
+    const std::array<std::size_t, 2> cluster_charges_idxs(std::size_t node_idx) const {
+        return std::array<std::size_t, 2> {num_charges_per_node_ *  node_idx,
+                                           num_charges_per_node_ * (node_idx + 1)};
+    };
+
     
 public:
-    BoundaryElement(class Particles& particles, class Clusters& clusters,
+    BoundaryElement(class Elements& elements, const class InterpolationPoints& interp_pts,
              const class Tree& tree, const class InteractionList& interaction_list,
              const class Molecule& molecule, const struct Params& params,
              struct Timers_BoundaryElement& timers);
@@ -77,13 +107,24 @@ struct Timers_BoundaryElement
     Timer ctor;
     Timer run_GMRES;
     Timer finalize;
+    
+    Timer clear_charges;
+    Timer clear_potentials;
 
     Timer matrix_vector;
     Timer precondition;
+    
     Timer particle_particle_interact;
     Timer particle_cluster_interact;
     Timer cluster_particle_interact;
     Timer cluster_cluster_interact;
+    Timer upward_pass;
+    Timer downward_pass;
+    
+    Timer clear_cluster_charges;
+    Timer clear_cluster_potentials;
+    Timer copyin_clusters_to_device;
+    Timer delete_clusters_from_device;
 
     void print() const;
     std::string get_durations() const;
