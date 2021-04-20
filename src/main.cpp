@@ -4,10 +4,9 @@
 
 #include "params.h"
 #include "molecule.h"
-#include "particles.h"
+#include "elements.h"
 #include "tree.h"
 #include "interaction_list.h"
-//#include "clusters.h"
 #include "boundary_element.h"
 #include "tabipb_timers.h"
 #include "output.h"
@@ -49,23 +48,29 @@ int main(int argc, char* argv[])
                                     timers.interaction_list);
     class InteractionList elem_ilist(elem_tree, params.tree_degree_, params.tree_theta_,
                                     timers.interaction_list);
-    class InteractionList mol_elem_ilist(mol_tree, elem_tree, params.tree_degree_, params.tree_theta_,
+    class InteractionList mol_elem_ilist(elem_tree, mol_tree, params.tree_degree_, params.tree_theta_,
                                     timers.interaction_list);
 
+    //elements.compute_source_term();
     elements.compute_source_term(elem_interp_pts, elem_tree, molecule, mol_interp_pts, mol_tree, mol_elem_ilist);
     
-
-    // initialize the boundary element method and construct the potential output array
+    
+    /* energies, potential, and outfile routines are contained in output */
+    class Output output(molecule, elements, params, timers.output);
+    
+    // initialize the boundary element method
     class BoundaryElement boundary_element(elements, elem_interp_pts, elem_tree, elem_ilist, molecule,
-                                           params, timers.boundary_element);
+                                           params, output, timers.boundary_element);
     
     boundary_element.run_GMRES();
+        
+    //output.compute_coulombic_energy(mol_interp_pts, mol_tree, mol_ilist);
+    output.compute_solvation_energy(elem_interp_pts, elem_tree, mol_interp_pts, mol_tree, mol_elem_ilist);
     
-    molecule.compute_coulombic_energy();
-    //molecule.compute_coulombic_energy(mol_interp_pts, mol_tree, mol_ilist);
-    //elements.compute_solvation_energy(mol_interp_pts, mol_tree, elem_interp_pts, elem_tree, mol_elem_ilist);
-    
-    boundary_element.finalize();
+    output.compute_coulombic_energy();
+    //output.compute_solvation_energy();
+    output.finalize();
+
 
     molecule.delete_from_device();
     mol_interp_pts.delete_from_device();
@@ -74,8 +79,8 @@ int main(int argc, char* argv[])
     elem_interp_pts.delete_from_device();
     
     timers.tabipb.stop();
-
-    auto energies = Output(boundary_element, timers);
+    
+    output.files(timers);
     
     return 0;
 }

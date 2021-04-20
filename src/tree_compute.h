@@ -41,7 +41,7 @@ public:
                 const class InteractionList& interaction_list)
         : source_tree_(tree), target_tree_(tree), interaction_list_(interaction_list) {};
         
-    ~TreeCompute() = default;
+    virtual ~TreeCompute() = default;
     
     void run() {
         upward_pass();

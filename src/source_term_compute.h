@@ -19,8 +19,6 @@ private:
     const class Molecule& molecule_;
     const class InterpolationPoints& mol_interp_pts_;
     
-    const class InteractionList* interaction_list_;
-    
     const double one_over_4pi_eps_solute_;
     
     

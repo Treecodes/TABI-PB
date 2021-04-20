@@ -48,16 +48,13 @@ private:
 public:
     Elements(const class Molecule&, const struct Params&, struct Timers_Elements&);
     ~Elements() = default;
-    
-    void compute_source_term();
-    void compute_source_term(const class InterpolationPoints& elem_interp_pts, const class Tree& elem_tree,
-                             const class Molecule& molecule, const class InterpolationPoints& mol_interp_pts,
-                             const class Tree& mol_tree, const class InteractionList& interaction_list);
-    double compute_solvation_energy(std::vector<double>& potential) const;
-    
+        
+    std::size_t num_faces() const { return num_faces_; };
     double surface_area() const { return surface_area_; };
-    void compute_charges(const double* potential);
-    void output_VTK(const std::vector<double>& potential) const;
+    
+    const std::size_t* face_x_ptr() const { return face_x_.data(); };
+    const std::size_t* face_y_ptr() const { return face_y_.data(); };
+    const std::size_t* face_z_ptr() const { return face_z_.data(); };
     
     const double* nx_ptr() const { return nx_.data(); };
     const double* ny_ptr() const { return ny_.data(); };
@@ -80,6 +77,13 @@ public:
     void unorder() override;
     void unorder(std::vector<double>& potential);
     
+    void compute_source_term();
+    void compute_source_term(const class InterpolationPoints& elem_interp_pts, const class Tree& elem_tree,
+                             const class Molecule& molecule, const class InterpolationPoints& mol_interp_pts,
+                             const class Tree& mol_tree, const class InteractionList& interaction_list);
+    
+    void compute_charges(const double* potential);
+    
     void copyin_to_device() const override;
     void delete_from_device() const override;
 };
@@ -90,7 +94,6 @@ struct Timers_Elements
     Timer ctor;
     Timer compute_source_term;
     Timer compute_charges;
-    Timer compute_solvation_energy;
     Timer copyin_to_device;
     Timer delete_from_device;
     Timer output_VTK;

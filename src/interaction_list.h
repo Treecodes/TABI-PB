@@ -11,8 +11,8 @@ struct Timers_InteractionList;
 class InteractionList
 {
 private:
-    const class Tree& source_tree_;
     const class Tree& target_tree_;
+    const class Tree& source_tree_;
     struct Timers_InteractionList& timers_;
 
     int size_check_;

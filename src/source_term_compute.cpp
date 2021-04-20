@@ -182,7 +182,7 @@ void SourceTermCompute::particle_cluster_interact(std::array<std::size_t, 2> tar
     
     
 #ifdef OPENACC_ENABLED
-    #pragma acc parallel loop present(elem_x_ptr, elem_y_ptr, elem_z_ptr, elem_q_ptr, \
+    #pragma acc parallel loop present(elem_x_ptr, elem_y_ptr, elem_z_ptr, \
                     elem_q_dx_ptr,      elem_q_dy_ptr,      elem_q_dz_ptr, \
                     mol_clusters_x_ptr, mol_clusters_y_ptr, mol_clusters_z_ptr, \
                     mol_clusters_q_ptr, source_term_ptr)

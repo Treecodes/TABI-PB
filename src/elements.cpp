@@ -40,7 +40,7 @@ Elements::Elements(const class Molecule& mol, const struct Params& params, struc
     std::iota(order_.begin(), order_.end(), 0);
 
     timers_.ctor.stop();
-};
+}
 
 
 void Elements::generate_elements(Params::Mesh mesh, double mesh_density, double probe_radius)
@@ -253,7 +253,6 @@ void Elements::compute_source_term()
 }
 
 
-
 void Elements::compute_source_term(const class InterpolationPoints& elem_interp_pts,
                                    const class Tree& elem_tree,
                                    const class Molecule& molecule,
@@ -274,84 +273,6 @@ void Elements::compute_source_term(const class InterpolationPoints& elem_interp_
     Elements::update_source_term_on_host();
 
     timers_.compute_source_term.stop();
-}
-
-
-double Elements::compute_solvation_energy(std::vector<double>& potential) const
-{
-    timers_.compute_solvation_energy.start();
-
-    double eps = params_.phys_eps_;
-    double kappa = params_.phys_kappa_;
-    double solvation_energy = 0.;
-    std::size_t num_atoms = molecule_.num();
-    std::size_t num = num_;
-    
-    const double* __restrict elements_x_ptr = x_.data();
-    const double* __restrict elements_y_ptr = y_.data();
-    const double* __restrict elements_z_ptr = z_.data();
-    
-    const double* __restrict elements_nx_ptr = nx_.data();
-    const double* __restrict elements_ny_ptr = ny_.data();
-    const double* __restrict elements_nz_ptr = nz_.data();
-    
-    const double* __restrict elements_area_ptr = area_.data();
-    
-    const double* __restrict molecule_x_ptr = molecule_.x_ptr();
-    const double* __restrict molecule_y_ptr = molecule_.y_ptr();
-    const double* __restrict molecule_z_ptr = molecule_.z_ptr();
-    const double* __restrict molecule_charge_ptr = molecule_.charge_ptr();
-    
-    const double* __restrict potential_ptr = potential.data();
-    std::size_t potential_num = potential.size();
-    
-#ifdef OPENACC_ENABLED
-    #pragma acc enter data copyin(potential_ptr[0:potential_num])
-    #pragma acc parallel loop gang present(molecule_x_ptr, molecule_y_ptr, \
-                                      molecule_z_ptr, molecule_charge_ptr, \
-                                      elements_x_ptr, elements_y_ptr, elements_z_ptr, \
-                                      elements_nx_ptr, elements_ny_ptr, elements_nz_ptr, \
-                                      elements_area_ptr) \
-                                   reduction(+:solvation_energy)
-#endif
-    for (std::size_t i = 0; i < num; ++i) {
-
-#ifdef OPENACC_ENABLED
-        #pragma acc loop vector reduction(+:solvation_energy)
-#endif
-        for (std::size_t j = 0; j < num_atoms; ++j) {
-        
-            double x_dist = elements_x_ptr[i] - molecule_x_ptr[j];
-            double y_dist = elements_y_ptr[i] - molecule_y_ptr[j];
-            double z_dist = elements_z_ptr[i] - molecule_z_ptr[j];
-            double dist   = std::sqrt(x_dist*x_dist + y_dist*y_dist + z_dist*z_dist);
-
-            double cos_theta   = (elements_nx_ptr[i] * x_dist
-                                + elements_ny_ptr[i] * y_dist
-                                + elements_nz_ptr[i] * z_dist) / dist;
-
-            double kappa_r     = kappa * dist;
-            double exp_kappa_r = std::exp(-kappa_r);
-
-            double G0 = constants::ONE_OVER_4PI / dist;
-            double Gk = exp_kappa_r * G0;
-            double G1 = cos_theta * G0 / dist;
-            double G2 = G1 * (1.0 + kappa_r) * exp_kappa_r;
-        
-            double L1 = G1 - eps * G2;
-            double L2 = G0 - Gk;
-
-            solvation_energy += molecule_charge_ptr[j] * elements_area_ptr[i]
-                              * (L1 * potential_ptr[i] + L2 * potential_ptr[num + i]);
-        }
-    }
-#ifdef OPENACC_ENABLED
-    #pragma acc exit data delete(potential_ptr[0:potential_num])
-#endif
-
-    timers_.compute_solvation_energy.stop();
-
-    return solvation_energy;
 }
 
 
@@ -444,47 +365,6 @@ void Elements::compute_charges(const double* __restrict potential_ptr)
     }
 
     timers_.compute_charges.stop();
-}
-
-
-void Elements::output_VTK(const std::vector<double>& potential) const
-{
-    timers_.output_VTK.start();
-
-    std::ofstream vtk_file("output.vtk");
-    vtk_file << "# vtk DataFile Version 1.0\n";
-    vtk_file << "vtk file output.vtk\n";
-    vtk_file << "ASCII\n";
-    vtk_file << "DATASET POLYDATA\n\n";
-    
-    vtk_file << "POINTS " << num_ << " double\n";
-    vtk_file << std::fixed << std::setprecision(6);
-    for (std::size_t i = 0; i < num_; ++i)
-        vtk_file << x_[i] << " " << y_[i] << " " << z_[i] << "\n";
-        
-    vtk_file << "POLYGONS " << num_faces_ << " " << num_faces_ * 4 << "\n";
-    for (std::size_t i = 0; i < num_faces_; ++i)
-        vtk_file << "3 " << face_x_[i]-1 << " " << face_y_[i]-1 << " " << face_z_[i]-1 << "\n";
-
-    // These are in KCAL. Multiplying by KCAL_TO_KJ would make them KJ.
-    vtk_file << "\nPOINT_DATA " << num_ << "\n";
-    vtk_file << "SCALARS Potential double\n";
-    vtk_file << "LOOKUP_TABLE default\n";
-    std::copy(potential.begin(), potential.begin() + num_, std::ostream_iterator<double>(vtk_file, "\n"));
-    
-    // If we want induced surface charges, we can multiply NormalPotential by (1/eps + 1)
-    vtk_file << "SCALARS NormalPotential double\n";
-    vtk_file << "LOOKUP_TABLE default\n";
-    std::copy(potential.begin() + num_, potential.end(), std::ostream_iterator<double>(vtk_file, "\n"));
-
-    vtk_file << "\nNORMALS Normals double\n";
-    for (std::size_t i = 0; i < num_; ++i)
-        vtk_file << nx_[i] << " " << ny_[i] << " " << nz_[i] << "\n";
-        
-    vtk_file << std::endl;
-    vtk_file.close();
-
-    timers_.output_VTK.stop();
 }
 
 
@@ -645,8 +525,6 @@ void Timers_Elements::print() const
     std::cout << std::setw(12) << std::right << compute_source_term.elapsed_time() << std::endl;
     std::cout << "|   |...compute_charges............: ";
     std::cout << std::setw(12) << std::right << compute_charges.elapsed_time() << std::endl;
-    std::cout << "|   |...compute_solvation_energy...: ";
-    std::cout << std::setw(12) << std::right << compute_solvation_energy.elapsed_time() << std::endl;
 #ifdef OPENACC_ENABLED
     std::cout << "|   |...copyin_to_device...........: ";
     std::cout << std::setw(12) << std::right << copyin_to_device.elapsed_time() << std::endl;
@@ -663,7 +541,6 @@ std::string Timers_Elements::get_durations() const
     durations.append(std::to_string(ctor                     .elapsed_time())).append(", ");
     durations.append(std::to_string(compute_source_term      .elapsed_time())).append(", ");
     durations.append(std::to_string(compute_charges          .elapsed_time())).append(", ");
-    durations.append(std::to_string(compute_solvation_energy .elapsed_time())).append(", ");
     durations.append(std::to_string(copyin_to_device         .elapsed_time())).append(", ");
     durations.append(std::to_string(delete_from_device       .elapsed_time())).append(", ");
     
@@ -677,7 +554,6 @@ std::string Timers_Elements::get_headers() const
     headers.append("Elements ctor, ");
     headers.append("Elements compute_source_term, ");
     headers.append("Elements compute_charges, ");
-    headers.append("Elements compute_solvation_energy, ");
     headers.append("Elements copyin_to_device, ");
     headers.append("Elements delete_from_device, ");
     
