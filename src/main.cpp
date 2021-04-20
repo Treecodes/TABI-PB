@@ -64,13 +64,12 @@ int main(int argc, char* argv[])
     
     boundary_element.run_GMRES();
         
-    //output.compute_coulombic_energy(mol_interp_pts, mol_tree, mol_ilist);
+    output.compute_coulombic_energy(mol_interp_pts, mol_tree, mol_ilist);
     output.compute_solvation_energy(elem_interp_pts, elem_tree, mol_interp_pts, mol_tree, mol_elem_ilist);
     
-    output.compute_coulombic_energy();
+    //output.compute_coulombic_energy();
     //output.compute_solvation_energy();
     output.finalize();
-
 
     molecule.delete_from_device();
     mol_interp_pts.delete_from_device();

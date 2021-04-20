@@ -4,6 +4,7 @@
 #include <fstream>
 
 #include "tabipb_timers.h"
+#include "coulombic_energy_compute.h"
 #include "solvation_energy_compute.h"
 #include "constants.h"
 #include "output.h"
@@ -12,7 +13,9 @@
 Output::Output(class Molecule& mol, class Elements& elem, const struct Params& params, struct Timers_Output& timers)
     : molecule_(mol), elements_(elem), params_(params), timers_(timers), potential_offset_(elements_.num())
 {
+    timers_.ctor.start();
     potential_.assign(2 * elements_.num(), 0.);
+    timers_.ctor.stop();
 }
 
 
@@ -55,6 +58,22 @@ void Output::compute_coulombic_energy()
     }
 
     coulombic_energy_ = coulombic_energy;
+
+    timers_.compute_coulombic_energy.stop();
+}
+
+
+
+
+void Output::compute_coulombic_energy(const class InterpolationPoints& mol_interp_pts,  const class Tree& mol_tree,
+                                      const class InteractionList& interaction_list)
+{
+    timers_.compute_coulombic_energy.start();
+
+    class CoulombicEnergyCompute coulombic_energy(molecule_, mol_interp_pts, mol_tree,
+                                                  interaction_list, params_.phys_eps_solute_);
+                                                  
+    coulombic_energy_ = coulombic_energy.compute();
 
     timers_.compute_coulombic_energy.stop();
 }
@@ -212,7 +231,8 @@ void Output::files(const struct Timers& timers) const
                                      "max: " << pot_max_;
     std::cout << "\nNormal derivative min: " << pot_normal_min_ << ", "
                                      "max: " << pot_normal_max_ << "\n" << std::endl << std::endl;
-
+    
+    if (params_.output_vtk_) Output::output_VTK();
     if (params_.output_timers_) timers.print();
 
     if (params_.output_csv_headers_) {
@@ -249,8 +269,6 @@ void Output::files(const struct Timers& timers) const
                  << timers.get_durations()    << std::endl;
         csv_file.close();
     }
-
-    if (params_.output_vtk_) Output::output_VTK();
 }
 
 
