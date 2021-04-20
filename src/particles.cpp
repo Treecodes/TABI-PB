@@ -76,7 +76,8 @@ void Particles::generate_particles(Params::Mesh mesh, double mesh_density, doubl
     NS_param_file << "Check_duplicated_vertices = "                  << "true"           << std::endl;
     NS_param_file << "Save_Status_map = "                            << "false"          << std::endl;
     NS_param_file << "Save_PovRay = "                                << "false"          << std::endl;
-    NS_param_file << "Max_ses_patches_per_auxiliary_grid_2d_cell = " << 800              << std::endl;
+    NS_param_file << "Max_ses_patches_per_auxiliary_grid_2d_cell = " << 1600             << std::endl;
+    NS_param_file << "Max_ses_patches_auxiliary_grid_2d_size = "     << 50               << std::endl;
 
     NS_param_file.close();
     

@@ -313,7 +313,8 @@ void Clusters::downward_pass(double* __restrict potential)
         std::size_t num_particles  = particle_idxs[1] - particle_idxs[0];
 
 #ifdef OPENACC_ENABLED
-#pragma acc parallel loop present(particles_x_ptr, particles_y_ptr, particles_z_ptr, \
+        int stream_id = std::rand() % 3;
+#pragma acc parallel loop async(stream_id) present(particles_x_ptr, particles_y_ptr, particles_z_ptr, \
                                   targets_q_ptr, targets_q_dx_ptr, targets_q_dy_ptr, targets_q_dz_ptr, \
                                   clusters_x_ptr, clusters_y_ptr, clusters_z_ptr, \
                                   clusters_p_ptr, clusters_p_dx_ptr, clusters_p_dy_ptr, clusters_p_dz_ptr, \
@@ -423,6 +424,7 @@ void Clusters::downward_pass(double* __restrict potential)
         }
     } //end loop over nodes
 #ifdef OPENACC_ENABLED
+    #pragma acc wait
     #pragma acc exit data delete(weights_ptr[0:weights_num])
 #endif
 

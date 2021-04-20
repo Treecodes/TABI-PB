@@ -101,6 +101,10 @@ void BoundaryElement::matrix_vector(double alpha, const double* __restrict poten
         for (auto source_node_idx : interaction_list_.cluster_cluster(target_node_idx))
             BoundaryElement::cluster_cluster_interact(potential_new, target_node_idx, source_node_idx);
     }
+
+#ifdef OPENACC_ENABLED
+    #pragma acc wait
+#endif
     
     clusters_.downward_pass(potential_new);
 
@@ -153,7 +157,8 @@ void BoundaryElement::particle_particle_interact(      double* __restrict potent
     std::size_t num_particles = particles_.num();
 
 #ifdef OPENACC_ENABLED
-    #pragma acc parallel loop present(particles_x_ptr,  particles_y_ptr,  particles_z_ptr, \
+    int stream_id = std::rand() % 3;
+    #pragma acc parallel loop async(stream_id) present(particles_x_ptr,  particles_y_ptr,  particles_z_ptr, \
                                       particles_nx_ptr, particles_ny_ptr, particles_nz_ptr, \
                                       particles_area_ptr, potential, potential_old)
 #endif
@@ -219,11 +224,15 @@ void BoundaryElement::particle_particle_interact(      double* __restrict potent
             }
         }
         
-#ifdef OPENMP_ENABLED
+#ifdef OPENACC_ENABLED
+        #pragma acc atomic update
+#elif OPENMP_ENABLED
         #pragma omp atomic update
 #endif
         potential[j]                 += pot_temp_1;
-#ifdef OPENMP_ENABLED
+#ifdef OPENACC_ENABLED
+        #pragma acc atomic update
+#elif OPENMP_ENABLED
         #pragma omp atomic update
 #endif
         potential[j + num_particles] += pot_temp_2;
@@ -271,7 +280,8 @@ void BoundaryElement::particle_cluster_interact(double* __restrict potential,
     const double* __restrict clusters_q_dz_ptr = clusters_.interp_charge_dz_ptr();
     
 #ifdef OPENACC_ENABLED
-    #pragma acc parallel loop present(particles_x_ptr, particles_y_ptr, particles_z_ptr, \
+    int stream_id = std::rand() % 3;
+    #pragma acc parallel loop async(stream_id) present(particles_x_ptr, particles_y_ptr, particles_z_ptr, \
                     targets_q_ptr, targets_q_dx_ptr, targets_q_dy_ptr, targets_q_dz_ptr, \
                     clusters_x_ptr, clusters_y_ptr, clusters_z_ptr, \
                     clusters_q_ptr, clusters_q_dx_ptr, clusters_q_dy_ptr, clusters_q_dz_ptr, \
@@ -341,11 +351,15 @@ void BoundaryElement::particle_cluster_interact(double* __restrict potential,
         }
         }
         
-#ifdef OPENMP_ENABLED
+#ifdef OPENACC_ENABLED
+        #pragma acc atomic update
+#elif OPENMP_ENABLED
         #pragma omp atomic update
 #endif
         potential[j]                 += targets_q_ptr   [j] * pot_comp_;
-#ifdef OPENMP_ENABLED
+#ifdef OPENACC_ENABLED
+        #pragma acc atomic update
+#elif OPENMP_ENABLED
         #pragma omp atomic update
 #endif
         potential[j + num_particles] += targets_q_dx_ptr[j] * pot_comp_dx
@@ -394,7 +408,8 @@ void BoundaryElement::cluster_particle_interact(double* __restrict potential,
     const double* __restrict sources_q_dz_ptr  = particles_.source_charge_dz_ptr();
     
 #ifdef OPENACC_ENABLED
-    #pragma acc parallel loop collapse(3) present(clusters_x_ptr, clusters_y_ptr, clusters_z_ptr, \
+    int stream_id = std::rand() % 3;
+    #pragma acc parallel loop async(stream_id) collapse(3) present(clusters_x_ptr, clusters_y_ptr, clusters_z_ptr, \
                     clusters_p_ptr, clusters_p_dx_ptr, clusters_p_dy_ptr, clusters_p_dz_ptr, \
                     particles_x_ptr, particles_y_ptr, particles_z_ptr, \
                     sources_q_ptr, sources_q_dx_ptr, sources_q_dy_ptr, sources_q_dz_ptr, \
@@ -462,19 +477,27 @@ void BoundaryElement::cluster_particle_interact(double* __restrict potential,
                           +  sources_q_dz_ptr[k]  * (dz * dz * d2term + d3term)));
         }
     
-#ifdef OPENMP_ENABLED
+#ifdef OPENACC_ENABLED
+        #pragma acc atomic update
+#elif OPENMP_ENABLED
         #pragma omp atomic update
 #endif
         clusters_p_ptr   [jj] += pot_comp_;
-#ifdef OPENMP_ENABLED
+#ifdef OPENACC_ENABLED
+        #pragma acc atomic update
+#elif OPENMP_ENABLED
         #pragma omp atomic update
 #endif
         clusters_p_dx_ptr[jj] += pot_comp_dx;
-#ifdef OPENMP_ENABLED
+#ifdef OPENACC_ENABLED
+        #pragma acc atomic update
+#elif OPENMP_ENABLED
         #pragma omp atomic update
 #endif
         clusters_p_dy_ptr[jj] += pot_comp_dy;
-#ifdef OPENMP_ENABLED
+#ifdef OPENACC_ENABLED
+        #pragma acc atomic update
+#elif OPENMP_ENABLED
         #pragma omp atomic update
 #endif
         clusters_p_dz_ptr[jj] += pot_comp_dz;
@@ -519,7 +542,8 @@ void BoundaryElement::cluster_cluster_interact(double* __restrict potential,
     const double* __restrict clusters_q_dz_ptr = clusters_.interp_charge_dz_ptr();
 
 #ifdef OPENACC_ENABLED
-    #pragma acc parallel loop collapse(3) present(clusters_x_ptr, clusters_y_ptr, clusters_z_ptr, \
+    int stream_id = std::rand() % 3;
+    #pragma acc parallel loop async(stream_id) collapse(3) present(clusters_x_ptr, clusters_y_ptr, clusters_z_ptr, \
                     clusters_p_ptr, clusters_p_dx_ptr, clusters_p_dy_ptr, clusters_p_dz_ptr, \
                     clusters_q_ptr, clusters_q_dx_ptr, clusters_q_dy_ptr, clusters_q_dz_ptr, \
                     potential)
@@ -594,19 +618,27 @@ void BoundaryElement::cluster_cluster_interact(double* __restrict potential,
         }
         }
     
-#ifdef OPENMP_ENABLED
+#ifdef OPENACC_ENABLED
+        #pragma acc atomic update
+#elif OPENMP_ENABLED
         #pragma omp atomic update
 #endif
         clusters_p_ptr   [jj] += pot_comp_;
-#ifdef OPENMP_ENABLED
+#ifdef OPENACC_ENABLED
+        #pragma acc atomic update
+#elif OPENMP_ENABLED
         #pragma omp atomic update
 #endif
         clusters_p_dx_ptr[jj] += pot_comp_dx;
-#ifdef OPENMP_ENABLED
+#ifdef OPENACC_ENABLED
+        #pragma acc atomic update
+#elif OPENMP_ENABLED
         #pragma omp atomic update
 #endif
         clusters_p_dy_ptr[jj] += pot_comp_dy;
-#ifdef OPENMP_ENABLED
+#ifdef OPENACC_ENABLED
+        #pragma acc atomic update
+#elif OPENMP_ENABLED
         #pragma omp atomic update
 #endif
         clusters_p_dz_ptr[jj] += pot_comp_dz;
