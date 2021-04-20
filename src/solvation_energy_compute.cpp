@@ -1,6 +1,5 @@
 #include <algorithm>
 #include <vector>
-#include <iostream>
 
 #include "constants.h"
 #include "solvation_energy_compute.h"
@@ -139,8 +138,6 @@ void SolvationEnergyCompute::particle_particle_interact(std::array<std::size_t, 
                          * (elem_q_dx_ptr[j] * pot_temp_dx
                           + elem_q_dy_ptr[j] * pot_temp_dy
                           + elem_q_dz_ptr[j] * pot_temp_dz);
-                          
-        //std::cout << "j = " << j << ", " << pot_temp_dd << ", " << pot_temp_dx << std::endl;
 
 #ifdef OPENACC_ENABLED
         #pragma acc atomic update
