@@ -26,6 +26,7 @@ protected:
     std::vector<double> z_;
     std::vector<std::size_t> order_;
     
+    
 public:
     Particles(const struct Params& params) : params_(params) {};
     ~Particles() = default;

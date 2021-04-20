@@ -19,8 +19,6 @@ private:
     const class Molecule& molecule_;
     const class InterpolationPoints& mol_interp_pts_;
     
-    const class InteractionList* interaction_list_;
-    
     const double eps_;
     const double kappa_;
     
@@ -36,6 +34,9 @@ private:
     std::vector<double> elem_interp_potential_dy_;
     std::vector<double> elem_interp_potential_dz_;
     
+    const std::size_t potential_offset_;
+    std::vector<double>& potential_;
+    
     
     /* Source clusters */
     
@@ -48,7 +49,6 @@ private:
     
     /* Potentials */
     
-    const std::size_t source_term_offset_;
     double solvation_energy_;
     
     
@@ -71,16 +71,17 @@ private:
 
     
 public:
-    SolvationEnergyCompute(std::vector<double>& source_term,
+
+    SolvationEnergyCompute(std::vector<double>& potential,
                       class Elements& elements, const class InterpolationPoints& elem_interp_pts,
                       const class Tree& elem_tree,
                       const class Molecule& molecule, const class InterpolationPoints& mol_interp_pts,
                       const class Tree& mol_tree,
-                      const class InteractionList& interaction_list, double phys_eps_solute);
+                      const class InteractionList& interaction_list, double phys_eps, double phys_kappa);
 
     ~SolvationEnergyCompute() = default;
     
-    void compute();
+    double compute();
     
 };
 

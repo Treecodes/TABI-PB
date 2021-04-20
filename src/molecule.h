@@ -33,10 +33,8 @@ public:
     Molecule(Valist*, struct Params&, struct Timers_Molecule&);
 #endif
     
-    void compute_coulombic_energy();
     void build_xyzr_file() const;
     
-    double coulombic_energy() const { return coulombic_energy_; };
     const double* charge_ptr() const { return charge_.data(); };
     const double* radius_ptr() const { return radius_.data(); };
     
@@ -51,7 +49,6 @@ public:
 struct Timers_Molecule
 {
     Timer ctor;
-    Timer compute_coulombic_energy;
     Timer build_xyzr_file;
     Timer copyin_to_device;
     Timer delete_from_device;

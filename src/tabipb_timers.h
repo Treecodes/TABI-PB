@@ -11,15 +11,16 @@
 #include "tree.h"
 #include "interaction_list.h"
 #include "boundary_element.h"
+#include "output.h"
 
 struct Timers
 {
     Timers_Molecule molecule;
     Timers_Elements elements;
     Timers_Tree tree;
-    //Timers_Clusters clusters;
     Timers_InteractionList interaction_list;
     Timers_BoundaryElement boundary_element;
+    Timers_Output output;
 
     Timer tabipb;
 
@@ -38,9 +39,10 @@ struct Timers
         
         molecule         .print();
         elements         .print();
-        tree             .print();
-        interaction_list .print();
+        //tree             .print();
+        //interaction_list .print();
         boundary_element .print();
+        output           .print();
     }
 
 
@@ -51,9 +53,10 @@ struct Timers
         
         durations.append(molecule         .get_durations());
         durations.append(elements         .get_durations());
-        durations.append(tree             .get_durations());
-        durations.append(interaction_list .get_durations());
+        //durations.append(tree             .get_durations());
+        //durations.append(interaction_list .get_durations());
         durations.append(boundary_element .get_durations());
+        durations.append(output           .get_durations());
 
         return durations;
     }
@@ -66,9 +69,10 @@ struct Timers
         
         headers.append(molecule         .get_headers());
         headers.append(elements         .get_headers());
-        headers.append(tree             .get_headers());
-        headers.append(interaction_list .get_headers());
+        //headers.append(tree             .get_headers());
+        //headers.append(interaction_list .get_headers());
         headers.append(boundary_element .get_headers());
+        headers.append(output           .get_headers());
 
         return headers;
     }

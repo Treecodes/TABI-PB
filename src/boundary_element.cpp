@@ -13,10 +13,10 @@
 BoundaryElement::BoundaryElement(class Elements& elements, const class InterpolationPoints& interp_pts,
          const class Tree& tree, const class InteractionList& interaction_list,
          const class Molecule& molecule, 
-         const struct Params& params, struct Timers_BoundaryElement& timers)
+         const struct Params& params, class Output& output, struct Timers_BoundaryElement& timers)
     : elements_(elements), interp_pts_(interp_pts), tree_(tree),
       interaction_list_(interaction_list), molecule_(molecule), 
-      params_(params), timers_(timers)
+      params_(params), output_(output), timers_(timers)
 {
     timers_.ctor.start();
 
@@ -43,13 +43,13 @@ void BoundaryElement::run_GMRES()
     timers_.run_GMRES.start();
 
     long int restrt = 10;
-    long int length = 2 * elements_.num();
+    long int length = output_.potential().size();
     long int ldw    = length;
     long int ldh    = restrt + 1;
     
     // These values are modified on return
-    residual_       = 1e-4;
-    num_iter_       = 100;
+    double residual   = 1e-4;
+    long int num_iter = 100;
 
     std::vector<double> work_vec(ldw * (restrt + 4));
     std::vector<double> h_vec   (ldh * (restrt + 2));
@@ -59,24 +59,27 @@ void BoundaryElement::run_GMRES()
 
     BoundaryElement::copyin_clusters_to_device();
     
-    int err_code = BoundaryElement::gmres_(length, elements_.source_term_ptr(), potential_.data(),
-                                    restrt, work, ldw, h, ldh, num_iter_, residual_);
+    int err_code = BoundaryElement::gmres_(length, elements_.source_term_ptr(), output_.potential().data(),
+                                    restrt, work, ldw, h, ldh, num_iter, residual);
 
     BoundaryElement::delete_clusters_from_device();
+    
+    output_.set_residual(residual);
+    output_.set_num_iter(num_iter);
 
     if (err_code) {
         std::cout << "GMRES error code " << err_code << ". Exiting.";
         std::exit(1);
     }
     
-    std::cout << "GMRES completed. " << num_iter_ << " iterations, " << residual_ << " residual.";
+    std::cout << "GMRES completed. " << num_iter << " iterations, " << residual << " residual.";
 
     timers_.run_GMRES.stop();
 }
 
 
 void BoundaryElement::matrix_vector(double alpha, const double* __restrict potential_old,
-                             double beta,        double* __restrict potential_new)
+                                     double beta,       double* __restrict potential_new)
 {
     timers_.matrix_vector.start();
 
@@ -90,7 +93,7 @@ void BoundaryElement::matrix_vector(double alpha, const double* __restrict poten
 
 #ifdef OPENACC_ENABLED
     #pragma acc enter data copyin(potential_old[0:potential_num], \
-                              potential_new[0:potential_num])
+                                  potential_new[0:potential_num])
 #endif
 
     BoundaryElement::clear_cluster_charges();
@@ -128,7 +131,7 @@ void BoundaryElement::matrix_vector(double alpha, const double* __restrict poten
 
 #ifdef OPENACC_ENABLED
     #pragma acc exit data copyout(potential_old[0:potential_num], \
-                              potential_new[0:potential_num])
+                                  potential_new[0:potential_num])
 #endif
     
     for (std::size_t i = 0; i < potential_.size() / 2; ++i)
@@ -1157,34 +1160,34 @@ void BoundaryElement::delete_clusters_from_device() const
 }
 
 
-void BoundaryElement::finalize()
-{
-    timers_.finalize.start();
-
-    solvation_energy_ = constants::UNITS_PARA  * elements_.compute_solvation_energy(potential_);
-    coulombic_energy_ = constants::UNITS_COEFF * molecule_.coulombic_energy();
-    free_energy_      = solvation_energy_ + coulombic_energy_;
-    
-    elements_.unorder(potential_);
-
-    constexpr double pot_scaling = constants::UNITS_COEFF * constants::PI * 4.;
-    std::transform(std::begin(potential_), std::end(potential_),
-                   std::begin(potential_), [=](double x){ return x * pot_scaling; });
-                   
-    auto pot_min_max = std::minmax_element(
-        potential_.begin(), potential_.begin() + potential_.size() / 2);
-                                           
-    auto pot_normal_min_max = std::minmax_element(
-        potential_.begin() + potential_.size() / 2, potential_.end());
-        
-    pot_min_ = *pot_min_max.first;
-    pot_max_ = *pot_min_max.second;
-    
-    pot_normal_min_ = *pot_normal_min_max.first;
-    pot_normal_max_ = *pot_normal_min_max.second;
-    
-    timers_.finalize.stop();
-}
+//void BoundaryElement::finalize()
+//{
+//    timers_.finalize.start();
+//
+//    solvation_energy_ = constants::UNITS_PARA  * elements_.compute_solvation_energy(potential_);
+//    coulombic_energy_ = constants::UNITS_COEFF * molecule_.coulombic_energy();
+//    free_energy_      = solvation_energy_ + coulombic_energy_;
+//
+//    elements_.unorder(potential_);
+//
+//    constexpr double pot_scaling = constants::UNITS_COEFF * constants::PI * 4.;
+//    std::transform(std::begin(potential_), std::end(potential_),
+//                   std::begin(potential_), [=](double x){ return x * pot_scaling; });
+//
+//    auto pot_min_max = std::minmax_element(
+//        potential_.begin(), potential_.begin() + potential_.size() / 2);
+//
+//    auto pot_normal_min_max = std::minmax_element(
+//        potential_.begin() + potential_.size() / 2, potential_.end());
+//
+//    pot_min_ = *pot_min_max.first;
+//    pot_max_ = *pot_min_max.second;
+//
+//    pot_normal_min_ = *pot_normal_min_max.first;
+//    pot_normal_max_ = *pot_normal_min_max.second;
+//
+//    timers_.finalize.stop();
+//}
 
 
 void Timers_BoundaryElement::print() const
@@ -1198,6 +1201,8 @@ void Timers_BoundaryElement::print() const
     std::cout << std::setw(12) << std::right << run_GMRES                  .elapsed_time() << std::endl;
     std::cout << "|       |...matrix_vector..........: ";
     std::cout << std::setw(12) << std::right << matrix_vector              .elapsed_time() << std::endl;
+    std::cout << "|           |...upward pass........: ";
+    std::cout << std::setw(12) << std::right << upward_pass                .elapsed_time() << std::endl;
     std::cout << "|           |...PP interact........: ";
     std::cout << std::setw(12) << std::right << particle_particle_interact .elapsed_time() << std::endl;
     std::cout << "|           |...PC interact........: ";
@@ -1206,10 +1211,10 @@ void Timers_BoundaryElement::print() const
     std::cout << std::setw(12) << std::right << cluster_particle_interact  .elapsed_time() << std::endl;
     std::cout << "|           |...CC interact........: ";
     std::cout << std::setw(12) << std::right << cluster_cluster_interact   .elapsed_time() << std::endl;
+    std::cout << "|           |...downward pass......: ";
+    std::cout << std::setw(12) << std::right << downward_pass              .elapsed_time() << std::endl;
     std::cout << "|       |...precondition...........: ";
     std::cout << std::setw(12) << std::right << precondition               .elapsed_time() << std::endl;
-    std::cout << "|   |...finalize...................: ";
-    std::cout << std::setw(12) << std::right << finalize                   .elapsed_time() << std::endl;
     std::cout << "|" << std::endl;
 }
 
@@ -1220,12 +1225,14 @@ std::string Timers_BoundaryElement::get_durations() const
     durations.append(std::to_string(ctor                       .elapsed_time())).append(", ");
     durations.append(std::to_string(run_GMRES                  .elapsed_time())).append(", ");
     durations.append(std::to_string(matrix_vector              .elapsed_time())).append(", ");
+    durations.append(std::to_string(upward_pass                .elapsed_time())).append(", ");
+    durations.append(std::to_string(particle_cluster_interact  .elapsed_time())).append(", ");
     durations.append(std::to_string(particle_particle_interact .elapsed_time())).append(", ");
     durations.append(std::to_string(particle_cluster_interact  .elapsed_time())).append(", ");
     durations.append(std::to_string(cluster_particle_interact  .elapsed_time())).append(", ");
     durations.append(std::to_string(cluster_cluster_interact   .elapsed_time())).append(", ");
+    durations.append(std::to_string(downward_pass              .elapsed_time())).append(", ");
     durations.append(std::to_string(precondition               .elapsed_time())).append(", ");
-    durations.append(std::to_string(finalize                   .elapsed_time())).append(", ");
     
     return durations;
 }
@@ -1237,12 +1244,17 @@ std::string Timers_BoundaryElement::get_headers() const
     headers.append("BoundaryElement ctor, ");
     headers.append("BoundaryElement run_GMRES, ");
     headers.append("BoundaryElement matrix_vector, ");
+//    headers.append("BoundaryElement clear_cluster_charges, ");
+//    headers.append("BoundaryElement clear_cluster_potentials, ");
+//    headers.append("BoundaryElement copyin_clusters_to_device, ");
+//    headers.append("BoundaryElement delete_clusters_from_device, ");
+    headers.append("BoundaryElement upward_pass, ");
     headers.append("BoundaryElement particle_particle_interact, ");
     headers.append("BoundaryElement particle_cluster_interact, ");
     headers.append("BoundaryElement cluster_particle_interact, ");
     headers.append("BoundaryElement cluster_cluster_interact, ");
+    headers.append("BoundaryElement downward_pass, ");
     headers.append("BoundaryElement precondition, ");
-    headers.append("BoundaryElement finalize, ");
     
     return headers;
 }
