@@ -8,6 +8,7 @@ add_executable(tabipb main.cpp
         interp_pts.cpp interp_pts.h
         interaction_list.cpp interaction_list.h
         tree_compute.h
+        solvation_energy_compute.cpp solvation_energy_compute.h
         source_term_compute.cpp source_term_compute.h
         boundary_element.cpp gmres.cpp
         precondition.cpp boundary_element.h
@@ -60,6 +61,7 @@ if (ENABLE_TABIPB_APBS)
         params.cpp params.h particles.cpp particles.h 
         molecule.cpp molecule.h elements.cpp elements.h tree.cpp tree.h
         interaction_list.cpp interaction_list.h tree_compute.h
+        solvation_energy_compute.cpp solvation_energy_compute.h
         source_term_compute.cpp source_term_compute.h
         boundary_element.cpp gmres.cpp precondition.cpp 
         boundary_element.h constants.h

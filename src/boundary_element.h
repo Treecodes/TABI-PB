@@ -2,12 +2,12 @@
 #define H_TABIPB_TREECODE_STRUCT_H
 
 #include "timer.h"
+#include "output.h"
 #include "elements.h"
 #include "interp_pts.h"
 #include "interaction_list.h"
 
 struct Timers_BoundaryElement;
-struct Timers;
 
 class BoundaryElement
 {
@@ -18,6 +18,7 @@ private:
     const class InteractionList& interaction_list_;
     const class Molecule& molecule_;
     const struct Params& params_;
+    class Output& output_;
     struct Timers_BoundaryElement& timers_;
     
     std::vector<double> potential_;
@@ -35,10 +36,6 @@ private:
     std::vector<double> interp_potential_dx_;
     std::vector<double> interp_potential_dy_;
     std::vector<double> interp_potential_dz_;
-    
-    /* iteration data */
-    long int num_iter_;
-    double residual_;
     
     /* output */
     double solvation_energy_;
@@ -91,14 +88,13 @@ private:
 public:
     BoundaryElement(class Elements& elements, const class InterpolationPoints& interp_pts,
              const class Tree& tree, const class InteractionList& interaction_list,
-             const class Molecule& molecule, const struct Params& params,
+             const class Molecule& molecule, const struct Params& params, class Output& output,
              struct Timers_BoundaryElement& timers);
     ~BoundaryElement() = default;
     
     void run_GMRES();
-    void finalize();
-    
-    friend std::array<double, 3> Output(const BoundaryElement&, const Timers&);
+    //void finalize();
+
 };
 
 
@@ -106,7 +102,6 @@ struct Timers_BoundaryElement
 {
     Timer ctor;
     Timer run_GMRES;
-    Timer finalize;
     
     Timer clear_charges;
     Timer clear_potentials;

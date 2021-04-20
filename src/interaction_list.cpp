@@ -7,7 +7,7 @@
 
 InteractionList::InteractionList(const class Tree& tree, const int degree, const double theta,
                                  struct Timers_InteractionList& timers)
-    : source_tree_(tree), target_tree_(tree),
+    : target_tree_(tree), source_tree_(tree),
       size_check_(std::pow(degree + 1, 3)), theta_(theta), timers_(timers)
 {
     timers_.ctor.start();
@@ -23,9 +23,9 @@ InteractionList::InteractionList(const class Tree& tree, const int degree, const
     timers_.ctor.stop();
 }
 
-InteractionList::InteractionList(const class Tree& source_tree, const class Tree& target_tree,
+InteractionList::InteractionList(const class Tree& target_tree, const class Tree& source_tree,
                                  const int degree, const double theta, struct Timers_InteractionList& timers)
-    : source_tree_(source_tree), target_tree_(target_tree),
+    : target_tree_(target_tree), source_tree_(source_tree),
       size_check_(std::pow(degree + 1, 3)), theta_(theta), timers_(timers)
 {
     timers_.ctor.start();

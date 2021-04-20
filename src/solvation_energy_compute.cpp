@@ -1,8 +1,9 @@
 #include <algorithm>
 #include <vector>
+#include <iostream>
 
 #include "constants.h"
-#include "source_term_compute.h"
+#include "solvation_energy_compute.h"
 
 
 SolvationEnergyCompute::SolvationEnergyCompute(std::vector<double>& potential,
@@ -15,7 +16,7 @@ SolvationEnergyCompute::SolvationEnergyCompute(std::vector<double>& potential,
       elements_(elements), elem_interp_pts_(elem_interp_pts),
       molecule_(molecule), mol_interp_pts_ (mol_interp_pts),
       eps_(phys_eps), kappa_(phys_kappa),
-      potential_(potential), potential_offset_(potential.size())
+      potential_(potential), potential_offset_(elements.num())
 {
 //    timers_.ctor.start();
     
@@ -39,22 +40,27 @@ SolvationEnergyCompute::SolvationEnergyCompute(std::vector<double>& potential,
     
     mol_interp_charge_.resize(num_mol_charges_);
     
+    solvation_energy_ = 0.;
+
 //    timers_.ctor.stop();
 }
 
 
 
 
-void SolvationEnergyCompute::compute()
+double SolvationEnergyCompute::compute()
 {
+       
     SolvationEnergyCompute::copyin_clusters_to_device();
     SolvationEnergyCompute::run();
     SolvationEnergyCompute::delete_clusters_from_device();
+    
+    return solvation_energy_;
 }
 
 
 void SolvationEnergyCompute::particle_particle_interact(std::array<std::size_t, 2> target_node_idxs,
-                                                   std::array<std::size_t, 2> source_node_idxs)
+                                                        std::array<std::size_t, 2> source_node_idxs)
 {
 //    timers_.particle_particle_interact.start();
 
@@ -70,30 +76,27 @@ void SolvationEnergyCompute::particle_particle_interact(std::array<std::size_t, 
     const double* __restrict elem_q_dx_ptr = elements_.nx_ptr();
     const double* __restrict elem_q_dy_ptr = elements_.ny_ptr();
     const double* __restrict elem_q_dz_ptr = elements_.nz_ptr();
+    
+    const double* __restrict elem_area_ptr = elements_.area_ptr();
+    const double* __restrict potential_ptr = potential_.data();
 
 
     /* Sources */
     
-    std::size_t source_node_begin = source_node_idxs[0];
-    std::size_t source_node_end   = source_node_idxs[1];
+    std::size_t source_node_begin      = source_node_idxs[0];
+    std::size_t source_node_end        = source_node_idxs[1];
     
     const double* __restrict mol_x_ptr = molecule_.x_ptr();
     const double* __restrict mol_y_ptr = molecule_.y_ptr();
     const double* __restrict mol_z_ptr = molecule_.z_ptr();
 
     const double* __restrict mol_q_ptr = molecule_.charge_ptr();
-    
-    
-    /* Potential */
-    
-    double* __restrict source_term_ptr = source_term_.data();
-
 
 #ifdef OPENACC_ENABLED
-    #pragma acc parallel loop present(elem_x_ptr,    elem_y_ptr,    elem_z_ptr, \
+    #pragma acc parallel loop present(elem_x_ptr,    elem_y_ptr,    elem_z_ptr, elem_area_ptr, \
                                       elem_q_dx_ptr, elem_q_dy_ptr, elem_q_dz_ptr, \
                                       mol_x_ptr,     mol_y_ptr,     mol_z_ptr,     mol_q_ptr, \
-                                      source_term_ptr)
+                                      potential_ptr)
 #endif
     for (std::size_t j = target_node_begin; j < target_node_end; ++j) {
         
@@ -101,41 +104,50 @@ void SolvationEnergyCompute::particle_particle_interact(std::array<std::size_t, 
         double target_y = elem_y_ptr[j];
         double target_z = elem_z_ptr[j];
         
-        double pot_temp_1  = 0.;
+        double pot_temp_dd = 0.;
         double pot_temp_dx = 0.;
         double pot_temp_dy = 0.;
         double pot_temp_dz = 0.;
         
 #ifdef OPENACC_ENABLED
-        #pragma acc loop reduction(+:pot_temp_1,  pot_temp_dx, \
+        #pragma acc loop reduction(+:pot_temp_dd, pot_temp_dx, \
                                      pot_temp_dy, pot_temp_dz)
 #endif
         for (std::size_t k = source_node_begin; k < source_node_end; ++k) {
 
-            double dx = mol_x_ptr[k] - target_x;
-            double dy = mol_y_ptr[k] - target_y;
-            double dz = mol_z_ptr[k] - target_z;
+            double dx = target_x - mol_x_ptr[k];
+            double dy = target_y - mol_y_ptr[k];
+            double dz = target_z - mol_z_ptr[k];
 
-            double rinv  = 1.0 / std::sqrt(dx*dx + dy*dy + dz*dz);
-            double G0    = one_over_4pi_eps_solute_ * rinv;
-            double Gn    = G0 * rinv * rinv;
+            double r     = std::sqrt(dx*dx + dy*dy + dz*dz);
+            double rinv  = 1. / r;
+            double G0    = constants::ONE_OVER_4PI * rinv;
+            double expkr = std::exp(-kappa_ * r);
+            
+            double L2  =  G0 * (1. - expkr);
+            double L1  =  G0 * rinv * rinv * (1. - eps_ * expkr * (1. + kappa_ * r));
 
-            pot_temp_1  += G0 * mol_q_ptr[k];
-            pot_temp_dx += Gn * mol_q_ptr[k] * dx;
-            pot_temp_dy += Gn * mol_q_ptr[k] * dy;
-            pot_temp_dz += Gn * mol_q_ptr[k] * dz;
+            pot_temp_dd += L2 * mol_q_ptr[k];
+            pot_temp_dx += L1 * mol_q_ptr[k] * dx;
+            pot_temp_dy += L1 * mol_q_ptr[k] * dy;
+            pot_temp_dz += L1 * mol_q_ptr[k] * dz;
         }
         
-#ifdef OPENMP_ENABLED
+        double pot_temp_1 = potential_ptr[j + potential_offset_]
+                          * elem_area_ptr[j] * pot_temp_dd;
+        double pot_temp_2 = potential_ptr[j] * elem_area_ptr[j]
+                         * (elem_q_dx_ptr[j] * pot_temp_dx
+                          + elem_q_dy_ptr[j] * pot_temp_dy
+                          + elem_q_dz_ptr[j] * pot_temp_dz);
+                          
+        //std::cout << "j = " << j << ", " << pot_temp_dd << ", " << pot_temp_dx << std::endl;
+
+#ifdef OPENACC_ENABLED
+        #pragma acc atomic update
+#elif  OPENMP_ENABLED
         #pragma omp atomic update
 #endif
-        source_term_ptr[j]                       += pot_temp_1;
-#ifdef OPENMP_ENABLED
-        #pragma omp atomic update
-#endif
-        source_term_ptr[j + source_term_offset_] += elem_q_dx_ptr[j] * pot_temp_dx
-                                                  + elem_q_dy_ptr[j] * pot_temp_dy
-                                                  + elem_q_dz_ptr[j] * pot_temp_dz;
+        solvation_energy_ += pot_temp_1 + pot_temp_2;
     }
 
 //    timers_.particle_particle_interact.stop();
@@ -143,7 +155,7 @@ void SolvationEnergyCompute::particle_particle_interact(std::array<std::size_t, 
 
 
 void SolvationEnergyCompute::particle_cluster_interact(std::array<std::size_t, 2> target_node_idxs,
-                                         std::size_t source_node_idx)
+                                                       std::size_t source_node_idx)
 {
 //    timers_.particle_cluster_interact.start();
     
@@ -159,6 +171,9 @@ void SolvationEnergyCompute::particle_cluster_interact(std::array<std::size_t, 2
     const double* __restrict elem_q_dx_ptr = elements_.nx_ptr();
     const double* __restrict elem_q_dy_ptr = elements_.ny_ptr();
     const double* __restrict elem_q_dz_ptr = elements_.nz_ptr();
+    
+    const double* __restrict elem_area_ptr = elements_.area_ptr();
+    const double* __restrict potential_ptr = potential_.data();
 
 
     /* Sources */
@@ -176,16 +191,11 @@ void SolvationEnergyCompute::particle_cluster_interact(std::array<std::size_t, 2
     const double* __restrict mol_clusters_q_ptr     = mol_interp_charge_.data();
     
     
-    /* Potential */
-    
-    double* __restrict source_term_ptr = source_term_.data();
-    
-    
 #ifdef OPENACC_ENABLED
-    #pragma acc parallel loop present(elem_x_ptr, elem_y_ptr, elem_z_ptr, elem_q_ptr, \
+    #pragma acc parallel loop present(elem_x_ptr, elem_y_ptr, elem_z_ptr, elem_area_ptr, \
                     elem_q_dx_ptr,      elem_q_dy_ptr,      elem_q_dz_ptr, \
                     mol_clusters_x_ptr, mol_clusters_y_ptr, mol_clusters_z_ptr, \
-                    mol_clusters_q_ptr, source_term_ptr)
+                    mol_clusters_q_ptr, potential_ptr)
 #endif
     for (std::size_t j = target_node_begin; j < target_node_end; ++j) {
 
@@ -193,13 +203,13 @@ void SolvationEnergyCompute::particle_cluster_interact(std::array<std::size_t, 2
         double target_y = elem_y_ptr[j];
         double target_z = elem_z_ptr[j];
         
-        double pot_temp_1  = 0.;
+        double pot_temp_dd = 0.;
         double pot_temp_dx = 0.;
         double pot_temp_dy = 0.;
         double pot_temp_dz = 0.;
         
 #ifdef OPENACC_ENABLED
-        #pragma acc loop collapse(3) reduction(+:pot_temp_1,  pot_temp_dx, \
+        #pragma acc loop collapse(3) reduction(+:pot_temp_dd, pot_temp_dx, \
                                                  pot_temp_dy, pot_temp_dz)
 #endif
         for (int k1 = 0; k1 < num_mol_interp_pts_per_node; ++k1) {
@@ -210,32 +220,39 @@ void SolvationEnergyCompute::particle_cluster_interact(std::array<std::size_t, 2
                            + k1 * num_mol_interp_pts_per_node * num_mol_interp_pts_per_node
                            + k2 * num_mol_interp_pts_per_node + k3;
 
-            double dx = mol_clusters_x_ptr[source_cluster_interp_pts_begin + k1] - target_x;
-            double dy = mol_clusters_y_ptr[source_cluster_interp_pts_begin + k2] - target_y;
-            double dz = mol_clusters_z_ptr[source_cluster_interp_pts_begin + k3] - target_z;
+            double dx = target_x - mol_clusters_x_ptr[source_cluster_interp_pts_begin + k1];
+            double dy = target_y - mol_clusters_y_ptr[source_cluster_interp_pts_begin + k2];
+            double dz = target_z - mol_clusters_z_ptr[source_cluster_interp_pts_begin + k3];
+            
+            double r     = std::sqrt(dx*dx + dy*dy + dz*dz);
+            double rinv  = 1. / r;
+            double G0    = constants::ONE_OVER_4PI * rinv;
+            double expkr = std::exp(-kappa_ * r);
+            
+            double L2  =  G0 * (1. - expkr);
+            double L1  =  G0 * rinv * rinv * (1. - eps_ * expkr * (1. + kappa_ * r));
 
-            double rinv  = 1.0 / std::sqrt(dx*dx + dy*dy + dz*dz);
-            double G0    = one_over_4pi_eps_solute_ * rinv;
-            double Gn    = G0 * rinv * rinv;
-
-            pot_temp_1  += G0 * mol_clusters_q_ptr[kk];
-            pot_temp_dx += Gn * mol_clusters_q_ptr[kk] * dx;
-            pot_temp_dy += Gn * mol_clusters_q_ptr[kk] * dy;
-            pot_temp_dz += Gn * mol_clusters_q_ptr[kk] * dz;
+            pot_temp_dd += L2 * mol_clusters_q_ptr[kk];
+            pot_temp_dx += L1 * mol_clusters_q_ptr[kk] * dx;
+            pot_temp_dy += L1 * mol_clusters_q_ptr[kk] * dy;
+            pot_temp_dz += L1 * mol_clusters_q_ptr[kk] * dz;
         }
         }
         }
         
-#ifdef OPENMP_ENABLED
+        double pot_temp_1 = potential_ptr[j + potential_offset_]
+                          * elem_area_ptr[j] * pot_temp_dd;
+        double pot_temp_2 = potential_ptr[j] * elem_area_ptr[j]
+                         * (elem_q_dx_ptr[j] * pot_temp_dx
+                          + elem_q_dy_ptr[j] * pot_temp_dy
+                          + elem_q_dz_ptr[j] * pot_temp_dz);
+
+#ifdef OPENACC_ENABLED
+        #pragma acc atomic update
+#elif  OPENMP_ENABLED
         #pragma omp atomic update
 #endif
-        source_term_ptr[j]                       += pot_temp_1;
-#ifdef OPENMP_ENABLED
-        #pragma omp atomic update
-#endif
-        source_term_ptr[j + source_term_offset_] += elem_q_dx_ptr[j] * pot_temp_dx
-                                                  + elem_q_dy_ptr[j] * pot_temp_dy
-                                                  + elem_q_dz_ptr[j] * pot_temp_dz;
+        solvation_energy_ += pot_temp_1 + pot_temp_2;
     }
 
 //    timers_.particle_cluster_interact.stop();
@@ -243,7 +260,7 @@ void SolvationEnergyCompute::particle_cluster_interact(std::array<std::size_t, 2
 
 
 void SolvationEnergyCompute::cluster_particle_interact(std::size_t target_node_idx,
-                                                  std::array<std::size_t, 2> source_node_idxs)
+                                                       std::array<std::size_t, 2> source_node_idxs)
 {
 //    timers_.cluster_particle_interact.start();
 
@@ -294,35 +311,39 @@ void SolvationEnergyCompute::cluster_particle_interact(std::size_t target_node_i
         double target_y = elem_clusters_y_ptr[target_cluster_interp_pts_begin + j2];
         double target_z = elem_clusters_z_ptr[target_cluster_interp_pts_begin + j3];
         
-        double pot_temp_1  = 0.;
+        double pot_temp_dd = 0.;
         double pot_temp_dx = 0.;
         double pot_temp_dy = 0.;
         double pot_temp_dz = 0.;
     
 #ifdef OPENACC_ENABLED
-        #pragma acc loop reduction(+:pot_temp_1,  pot_temp_dx, \
+        #pragma acc loop reduction(+:pot_temp_dd, pot_temp_dx, \
                                      pot_temp_dy, pot_temp_dz)
 #endif
         for (std::size_t k = source_node_begin; k < source_node_end; ++k) {
 
-            double dx = mol_x_ptr[k] - target_x;
-            double dy = mol_y_ptr[k] - target_y;
-            double dz = mol_z_ptr[k] - target_z;
+            double dx = target_x - mol_x_ptr[k];
+            double dy = target_y - mol_y_ptr[k];
+            double dz = target_z - mol_z_ptr[k];
+            
+            double r     = std::sqrt(dx*dx + dy*dy + dz*dz);
+            double rinv  = 1. / r;
+            double G0    = constants::ONE_OVER_4PI * rinv;
+            double expkr = std::exp(-kappa_ * r);
+            
+            double L2  =  G0 * (1. - expkr);
+            double L1  =  G0 * rinv * rinv * (1. - eps_ * expkr * (1. + kappa_ * r));
 
-            double rinv  = 1.0 / std::sqrt(dx*dx + dy*dy + dz*dz);
-            double G0    = one_over_4pi_eps_solute_ * rinv;
-            double Gn    = G0 * rinv * rinv;
-
-            pot_temp_1  += G0 * mol_q_ptr[k];
-            pot_temp_dx += Gn * mol_q_ptr[k] * dx;
-            pot_temp_dy += Gn * mol_q_ptr[k] * dy;
-            pot_temp_dz += Gn * mol_q_ptr[k] * dz;
+            pot_temp_dd += L2 * mol_q_ptr[k];
+            pot_temp_dx += L1 * mol_q_ptr[k] * dx;
+            pot_temp_dy += L1 * mol_q_ptr[k] * dy;
+            pot_temp_dz += L1 * mol_q_ptr[k] * dz;
         }
     
 #ifdef OPENMP_ENABLED
         #pragma omp atomic update
 #endif
-        elem_clusters_p_ptr   [jj] += pot_temp_1;
+        elem_clusters_p_ptr   [jj] += pot_temp_dd;
 #ifdef OPENMP_ENABLED
         #pragma omp atomic update
 #endif
@@ -344,7 +365,7 @@ void SolvationEnergyCompute::cluster_particle_interact(std::size_t target_node_i
 
 
 void SolvationEnergyCompute::cluster_cluster_interact(std::size_t target_node_idx,
-                                                 std::size_t source_node_idx)
+                                                      std::size_t source_node_idx)
 {
 //    timers_.cluster_cluster_interact.start();
         
@@ -398,13 +419,13 @@ void SolvationEnergyCompute::cluster_cluster_interact(std::size_t target_node_id
         double target_y = elem_clusters_y_ptr[target_cluster_interp_pts_begin + j2];
         double target_z = elem_clusters_z_ptr[target_cluster_interp_pts_begin + j3];
         
-        double pot_temp_1  = 0.;
+        double pot_temp_dd = 0.;
         double pot_temp_dx = 0.;
         double pot_temp_dy = 0.;
         double pot_temp_dz = 0.;
     
 #ifdef OPENACC_ENABLED
-        #pragma acc loop collapse(3) reduction(+:pot_temp_1,  pot_temp_dx, \
+        #pragma acc loop collapse(3) reduction(+:pot_temp_dd, pot_temp_dx, \
                                                  pot_temp_dy, pot_temp_dz)
 #endif
         for (int k1 = 0; k1 < num_mol_interp_pts_per_node; k1++) {
@@ -415,18 +436,22 @@ void SolvationEnergyCompute::cluster_cluster_interact(std::size_t target_node_id
                            + k1 * num_mol_interp_pts_per_node * num_mol_interp_pts_per_node
                            + k2 * num_mol_interp_pts_per_node + k3;
 
-            double dx = mol_clusters_x_ptr[source_cluster_interp_pts_begin + k1] - target_x;
-            double dy = mol_clusters_y_ptr[source_cluster_interp_pts_begin + k2] - target_y;
-            double dz = mol_clusters_z_ptr[source_cluster_interp_pts_begin + k3] - target_z;
+            double dx = target_x - mol_clusters_x_ptr[source_cluster_interp_pts_begin + k1];
+            double dy = target_y - mol_clusters_y_ptr[source_cluster_interp_pts_begin + k2];
+            double dz = target_z - mol_clusters_z_ptr[source_cluster_interp_pts_begin + k3];
+            
+            double r     = std::sqrt(dx*dx + dy*dy + dz*dz);
+            double rinv  = 1. / r;
+            double G0    = constants::ONE_OVER_4PI * rinv;
+            double expkr = std::exp(-kappa_ * r);
+            
+            double L2  =  G0 * (1 - expkr);
+            double L1  =  G0 * rinv * rinv * (1. - eps_ * expkr * (1. + kappa_ * r));
 
-            double rinv  = 1.0 / std::sqrt(dx*dx + dy*dy + dz*dz);
-            double G0    = one_over_4pi_eps_solute_ * rinv;
-            double Gn    = G0 * rinv * rinv;
-
-            pot_temp_1  += G0 * mol_clusters_q_ptr[kk];
-            pot_temp_dx += Gn * mol_clusters_q_ptr[kk] * dx;
-            pot_temp_dy += Gn * mol_clusters_q_ptr[kk] * dy;
-            pot_temp_dz += Gn * mol_clusters_q_ptr[kk] * dz;
+            pot_temp_dd += L2 * mol_clusters_q_ptr[kk];
+            pot_temp_dx += L1 * mol_clusters_q_ptr[kk] * dx;
+            pot_temp_dy += L1 * mol_clusters_q_ptr[kk] * dy;
+            pot_temp_dz += L1 * mol_clusters_q_ptr[kk] * dz;
         }
         }
         }
@@ -434,7 +459,7 @@ void SolvationEnergyCompute::cluster_cluster_interact(std::size_t target_node_id
 #ifdef OPENMP_ENABLED
         #pragma omp atomic update
 #endif
-        elem_clusters_p_ptr   [jj] += pot_temp_1;
+        elem_clusters_p_ptr   [jj] += pot_temp_dd;
 #ifdef OPENMP_ENABLED
         #pragma omp atomic update
 #endif
@@ -644,8 +669,6 @@ void SolvationEnergyCompute::downward_pass()
     int num_elem_interp_pts_per_node        = num_elem_interp_pts_per_node_;
     int num_elem_interp_potentials_per_node = num_elem_interp_potentials_per_node_;
     
-    double*       __restrict source_term_ptr = source_term_.data();
-    
     const double* __restrict elem_x_ptr = elements_.x_ptr();
     const double* __restrict elem_y_ptr = elements_.y_ptr();
     const double* __restrict elem_z_ptr = elements_.z_ptr();
@@ -653,6 +676,9 @@ void SolvationEnergyCompute::downward_pass()
     const double* __restrict elem_q_dx_ptr = elements_.nx_ptr();
     const double* __restrict elem_q_dy_ptr = elements_.ny_ptr();
     const double* __restrict elem_q_dz_ptr = elements_.nz_ptr();
+    
+    const double* __restrict elem_area_ptr = elements_.area_ptr();
+    const double* __restrict potential_ptr = potential_.data();
     
     const double* __restrict elem_clusters_x_ptr = elem_interp_pts_.interp_x_ptr();
     const double* __restrict elem_clusters_y_ptr = elem_interp_pts_.interp_y_ptr();
@@ -687,12 +713,12 @@ void SolvationEnergyCompute::downward_pass()
         std::size_t num_particles  = particle_idxs[1] - particle_idxs[0];
 
 #ifdef OPENACC_ENABLED
-#pragma acc parallel loop present(elem_x_ptr,    elem_y_ptr,    elem_z_ptr, \
+#pragma acc parallel loop present(elem_x_ptr,    elem_y_ptr,    elem_z_ptr, elem_area_ptr, \
                                   elem_q_dx_ptr, elem_q_dy_ptr, elem_q_dz_ptr, \
                                   elem_clusters_x_ptr,    elem_clusters_y_ptr,    elem_clusters_z_ptr, \
                                   elem_clusters_p_ptr,    elem_clusters_p_dx_ptr, \
                                   elem_clusters_p_dy_ptr, elem_clusters_p_dz_ptr, \
-                                  source_term_ptr, weights_ptr)
+                                  potential_ptr, weights_ptr)
 #endif
         for (std::size_t i = 0; i < num_particles; ++i) {
         
@@ -732,13 +758,13 @@ void SolvationEnergyCompute::downward_pass()
             if (exact_idx_y == -1) denominator /= denominator_y;
             if (exact_idx_z == -1) denominator /= denominator_z;
 
-            double pot_temp_1  = 0.;
+            double pot_temp_dd = 0.;
             double pot_temp_dx = 0.;
             double pot_temp_dy = 0.;
             double pot_temp_dz = 0.;
             
 #ifdef OPENACC_ENABLED
-            #pragma acc loop collapse(3) reduction(+:pot_temp_1,  pot_temp_dx, \
+            #pragma acc loop collapse(3) reduction(+:pot_temp_dd, pot_temp_dx, \
                                                      pot_temp_dy, pot_temp_dz)
 #endif
             for (int k1 = 0; k1 < num_elem_interp_pts_per_node; ++k1) {
@@ -775,25 +801,23 @@ void SolvationEnergyCompute::downward_pass()
                     if (exact_idx_z != k3) numerator *= 0.;
                 }
 
-                pot_temp_1  += numerator * denominator * elem_clusters_p_ptr   [kk];
+                pot_temp_dd += numerator * denominator * elem_clusters_p_ptr   [kk];
                 pot_temp_dx += numerator * denominator * elem_clusters_p_dx_ptr[kk];
                 pot_temp_dy += numerator * denominator * elem_clusters_p_dy_ptr[kk];
                 pot_temp_dz += numerator * denominator * elem_clusters_p_dz_ptr[kk];
             }
             }
             }
-            
-            double pot_temp_2 = elem_q_dx_ptr[particle_start + i] * pot_temp_dx
+            double pot_temp_1 = potential_ptr[particle_start + i + potential_offset_]
+                              * elem_area_ptr[particle_start + i] * pot_temp_dd;
+            double pot_temp_2 = potential_ptr[particle_start + i] * elem_area_ptr[particle_start + i]
+                             * (elem_q_dx_ptr[particle_start + i] * pot_temp_dx
                               + elem_q_dy_ptr[particle_start + i] * pot_temp_dy
-                              + elem_q_dz_ptr[particle_start + i] * pot_temp_dz;
+                              + elem_q_dz_ptr[particle_start + i] * pot_temp_dz);
 #ifdef OPENACC_ENABLED
             #pragma acc atomic update
 #endif
-            source_term_ptr[particle_start + i]                       += pot_temp_1;
-#ifdef OPENACC_ENABLED
-            #pragma acc atomic update
-#endif
-            source_term_ptr[particle_start + i + source_term_offset_] += pot_temp_2;
+            solvation_energy_ += pot_temp_1 + pot_temp_2;
         }
     } //end loop over nodes
 #ifdef OPENACC_ENABLED
