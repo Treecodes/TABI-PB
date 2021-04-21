@@ -90,7 +90,8 @@ void SourceTermCompute::particle_particle_interact(std::array<std::size_t, 2> ta
 
 
 #ifdef OPENACC_ENABLED
-    #pragma acc parallel loop present(elem_x_ptr,    elem_y_ptr,    elem_z_ptr, \
+    int stream_id = std::rand() % 3;
+    #pragma acc parallel loop async(stream_id) present(elem_x_ptr,    elem_y_ptr,    elem_z_ptr, \
                                       elem_q_dx_ptr, elem_q_dy_ptr, elem_q_dz_ptr, \
                                       mol_x_ptr,     mol_y_ptr,     mol_z_ptr,     mol_q_ptr, \
                                       source_term_ptr)
@@ -182,7 +183,8 @@ void SourceTermCompute::particle_cluster_interact(std::array<std::size_t, 2> tar
     
     
 #ifdef OPENACC_ENABLED
-    #pragma acc parallel loop present(elem_x_ptr, elem_y_ptr, elem_z_ptr, \
+    int stream_id = std::rand() % 3;
+    #pragma acc parallel loop async(stream_id) present(elem_x_ptr, elem_y_ptr, elem_z_ptr, \
                     elem_q_dx_ptr,      elem_q_dy_ptr,      elem_q_dz_ptr, \
                     mol_clusters_x_ptr, mol_clusters_y_ptr, mol_clusters_z_ptr, \
                     mol_clusters_q_ptr, source_term_ptr)
@@ -226,11 +228,15 @@ void SourceTermCompute::particle_cluster_interact(std::array<std::size_t, 2> tar
         }
         }
         
-#ifdef OPENMP_ENABLED
+#ifdef OPENACC_ENABLED
+        #pragma acc atomic update
+#elif  OPENMP_ENABLED
         #pragma omp atomic update
 #endif
         source_term_ptr[j]                       += pot_temp_1;
-#ifdef OPENMP_ENABLED
+#ifdef OPENACC_ENABLED
+        #pragma acc atomic update
+#elif  OPENMP_ENABLED
         #pragma omp atomic update
 #endif
         source_term_ptr[j + source_term_offset_] += elem_q_dx_ptr[j] * pot_temp_dx
@@ -278,7 +284,8 @@ void SourceTermCompute::cluster_particle_interact(std::size_t target_node_idx,
 
 
 #ifdef OPENACC_ENABLED
-    #pragma acc parallel loop collapse(3) present(mol_x_ptr, mol_y_ptr, mol_z_ptr, mol_q_ptr, \
+    int stream_id = std::rand() % 3;
+    #pragma acc parallel loop collapse(3) async(stream_id) present(mol_x_ptr, mol_y_ptr, mol_z_ptr, mol_q_ptr, \
                     elem_clusters_x_ptr, elem_clusters_y_ptr,    elem_clusters_z_ptr, \
                     elem_clusters_p_ptr, elem_clusters_p_dx_ptr, elem_clusters_p_dy_ptr, elem_clusters_p_dz_ptr)
 #endif
@@ -319,19 +326,27 @@ void SourceTermCompute::cluster_particle_interact(std::size_t target_node_idx,
             pot_temp_dz += Gn * mol_q_ptr[k] * dz;
         }
     
-#ifdef OPENMP_ENABLED
+#ifdef OPENACC_ENABLED
+        #pragma acc atomic update
+#elif  OPENMP_ENABLED
         #pragma omp atomic update
 #endif
         elem_clusters_p_ptr   [jj] += pot_temp_1;
-#ifdef OPENMP_ENABLED
+#ifdef OPENACC_ENABLED
+        #pragma acc atomic update
+#elif  OPENMP_ENABLED
         #pragma omp atomic update
 #endif
         elem_clusters_p_dx_ptr[jj] += pot_temp_dx;
-#ifdef OPENMP_ENABLED
+#ifdef OPENACC_ENABLED
+        #pragma acc atomic update
+#elif  OPENMP_ENABLED
         #pragma omp atomic update
 #endif
         elem_clusters_p_dy_ptr[jj] += pot_temp_dy;
-#ifdef OPENMP_ENABLED
+#ifdef OPENACC_ENABLED
+        #pragma acc atomic update
+#elif  OPENMP_ENABLED
         #pragma omp atomic update
 #endif
         elem_clusters_p_dz_ptr[jj] += pot_temp_dz;
@@ -382,7 +397,8 @@ void SourceTermCompute::cluster_cluster_interact(std::size_t target_node_idx,
 
 
 #ifdef OPENACC_ENABLED
-    #pragma acc parallel loop collapse(3) present(mol_clusters_x_ptr, mol_clusters_y_ptr, mol_clusters_z_ptr, \
+    int stream_id = std::rand() % 3;
+    #pragma acc parallel loop collapse(3) async(stream_id) present(mol_clusters_x_ptr, mol_clusters_y_ptr, mol_clusters_z_ptr, \
                     mol_clusters_q_ptr,  elem_clusters_x_ptr,    elem_clusters_y_ptr,    elem_clusters_z_ptr, \
                     elem_clusters_p_ptr, elem_clusters_p_dx_ptr, elem_clusters_p_dy_ptr, elem_clusters_p_dz_ptr)
 #endif
@@ -431,19 +447,27 @@ void SourceTermCompute::cluster_cluster_interact(std::size_t target_node_idx,
         }
         }
     
-#ifdef OPENMP_ENABLED
+#ifdef OPENACC_ENABLED
+        #pragma acc atomic update
+#elif  OPENMP_ENABLED
         #pragma omp atomic update
 #endif
         elem_clusters_p_ptr   [jj] += pot_temp_1;
-#ifdef OPENMP_ENABLED
+#ifdef OPENACC_ENABLED
+        #pragma acc atomic update
+#elif  OPENMP_ENABLED
         #pragma omp atomic update
 #endif
         elem_clusters_p_dx_ptr[jj] += pot_temp_dx;
-#ifdef OPENMP_ENABLED
+#ifdef OPENACC_ENABLED
+        #pragma acc atomic update
+#elif  OPENMP_ENABLED
         #pragma omp atomic update
 #endif
         elem_clusters_p_dy_ptr[jj] += pot_temp_dy;
-#ifdef OPENMP_ENABLED
+#ifdef OPENACC_ENABLED
+        #pragma acc atomic update
+#elif  OPENMP_ENABLED
         #pragma omp atomic update
 #endif
         elem_clusters_p_dz_ptr[jj] += pot_temp_dz;
