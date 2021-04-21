@@ -126,10 +126,10 @@ void BoundaryElement::precondition_block(double *z, double *r)
             rhs[row + num_elements] = r[j + num_total_elements];
         }
 
-        int nrhs = 1, info;
         int num_cols_int = (int)num_cols;
         
         //CLAPACK style call:
+        //int nrhs = 1, info;
         //dgesv_(&num_cols_int, &nrhs, column_major_A.data(), &num_cols_int,
         //       pivot.data(), rhs.data(), &num_cols_int, &info);
 

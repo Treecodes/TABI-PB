@@ -91,7 +91,7 @@ void Molecule::copyin_to_device() const
     std::size_t z_num = z_.size();
     std::size_t charge_num = charge_.size();
 
-    #pragma acc enter data copyin(x_ptr[0:x_num], y_ptr[0:y_num], z_ptr[0:z_num] \
+    #pragma acc enter data copyin(x_ptr[0:x_num], y_ptr[0:y_num], z_ptr[0:z_num], \
                                   charge_ptr[0:charge_num])
 #endif
 

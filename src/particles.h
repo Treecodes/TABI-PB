@@ -1,6 +1,8 @@
 #ifndef H_TABIPB_PARTICLES_STRUCT_H
 #define H_TABIPB_PARTICLES_STRUCT_H
 
+#include <iterator>
+#include <algorithm>
 #include <array>
 #include <vector>
 #include <cstdlib>

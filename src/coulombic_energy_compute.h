@@ -30,8 +30,9 @@ private:
     std::vector<double> mol_interp_potential_;
     
     
-    /* Potentials */
-    
+    /* Coulombic energy */
+   
+    std::vector<double> coul_eng_vec_; 
     double coulombic_energy_;
     
     

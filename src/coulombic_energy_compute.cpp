@@ -1,3 +1,4 @@
+#include <cmath>
 #include <algorithm>
 #include <vector>
 
@@ -25,6 +26,12 @@ CoulombicEnergyCompute::CoulombicEnergyCompute(const class Molecule& molecule,
     mol_interp_charge_.resize(num_mol_charges_);
     mol_interp_potential_.resize(num_mol_potentials_);
     
+
+    /* Coulombic energy */
+
+    coul_eng_vec_.resize(1);
+    coul_eng_vec_[0] = 0.;
+
     coulombic_energy_ = 0.;
 
 //    timers_.ctor.stop();
@@ -37,7 +44,7 @@ double CoulombicEnergyCompute::compute()
     CoulombicEnergyCompute::run();
     CoulombicEnergyCompute::delete_clusters_from_device();
     
-    coulombic_energy_ /= 2.;
+    coulombic_energy_ = coul_eng_vec_[0] / 2;
     
     return coulombic_energy_;
 }
@@ -64,9 +71,14 @@ void CoulombicEnergyCompute::particle_particle_interact(std::array<std::size_t, 
 
     const double* __restrict mol_q_ptr = molecule_.charge_ptr();
 
+    /* Potential */
+
+    double* __restrict coul_eng_ptr = coul_eng_vec_.data();
+
 #ifdef OPENACC_ENABLED
     int stream_id = std::rand() % 3;
-    #pragma acc parallel loop async(stream_id) present(mol_x_ptr, mol_y_ptr, mol_z_ptr, mol_q_ptr)
+    #pragma acc parallel loop async(stream_id) present(mol_x_ptr, mol_y_ptr, mol_z_ptr, mol_q_ptr, \
+                                                       coul_eng_ptr)
 #endif
     for (std::size_t j = target_node_begin; j < target_node_end; ++j) {
         
@@ -95,7 +107,7 @@ void CoulombicEnergyCompute::particle_particle_interact(std::array<std::size_t, 
 #elif  OPENMP_ENABLED
         #pragma omp atomic update
 #endif
-        coulombic_energy_ += pot_temp;
+        coul_eng_ptr[0] += pot_temp;
     }
 
 //    timers_.particle_particle_interact.stop();
@@ -131,13 +143,17 @@ void CoulombicEnergyCompute::particle_cluster_interact(std::array<std::size_t, 2
     const double* __restrict mol_clusters_z_ptr     = mol_interp_pts_.interp_z_ptr();
     
     const double* __restrict mol_clusters_q_ptr     = mol_interp_charge_.data();
+
+    /* Potential */
+
+    double* __restrict coul_eng_ptr = coul_eng_vec_.data();
     
     
 #ifdef OPENACC_ENABLED
     int stream_id = std::rand() % 3;
     #pragma acc parallel loop async(stream_id) present(mol_x_ptr, mol_y_ptr, mol_z_ptr, mol_q_ptr, \
                                       mol_clusters_x_ptr, mol_clusters_y_ptr, mol_clusters_z_ptr, \
-                                      mol_clusters_q_ptr)
+                                      mol_clusters_q_ptr, coul_eng_ptr)
 #endif
     for (std::size_t j = target_node_begin; j < target_node_end; ++j) {
 
@@ -175,7 +191,7 @@ void CoulombicEnergyCompute::particle_cluster_interact(std::array<std::size_t, 2
 #elif  OPENMP_ENABLED
         #pragma omp atomic update
 #endif
-        coulombic_energy_ += pot_temp;
+        coul_eng_ptr[0] += pot_temp;
     }
 
 //    timers_.particle_cluster_interact.stop();
@@ -217,8 +233,7 @@ void CoulombicEnergyCompute::cluster_particle_interact(std::size_t target_node_i
 #ifdef OPENACC_ENABLED
     int stream_id = std::rand() % 3;
     #pragma acc parallel loop collapse(3) async(stream_id) present(mol_x_ptr, mol_y_ptr, mol_z_ptr, mol_q_ptr, \
-                    mol_clusters_x_ptr, mol_clusters_y_ptr,    mol_clusters_z_ptr, \
-                    mol_clusters_p_ptr)
+                    mol_clusters_x_ptr, mol_clusters_y_ptr, mol_clusters_z_ptr, mol_clusters_p_ptr)
 #endif
     for (int j1 = 0; j1 < num_mol_interp_pts_per_node; ++j1) {
     for (int j2 = 0; j2 < num_mol_interp_pts_per_node; ++j2) {
@@ -293,8 +308,8 @@ void CoulombicEnergyCompute::cluster_cluster_interact(std::size_t target_node_id
 
 #ifdef OPENACC_ENABLED
     int stream_id = std::rand() % 3;
-    #pragma acc parallel loop collapse(3) async(stream_id) present(mol_clusters_x_ptr, mol_clusters_y_ptr, mol_clusters_z_ptr, \
-                    mol_clusters_q_ptr,  mol_clusters_p_ptr)
+    #pragma acc parallel loop collapse(3) async(stream_id) present(mol_clusters_x_ptr, mol_clusters_y_ptr, \
+                    mol_clusters_z_ptr, mol_clusters_q_ptr,  mol_clusters_p_ptr)
 #endif
     for (int j1 = 0; j1 < num_mol_interp_pts_per_node; j1++) {
     for (int j2 = 0; j2 < num_mol_interp_pts_per_node; j2++) {
@@ -528,6 +543,7 @@ void CoulombicEnergyCompute::upward_pass()
 
 void CoulombicEnergyCompute::downward_pass()
 {
+/*
 //    timers_.downward_pass.start();
 
     int num_mol_interp_pts_per_node        = num_mol_interp_pts_per_node_;
@@ -544,6 +560,8 @@ void CoulombicEnergyCompute::downward_pass()
     const double* __restrict mol_clusters_z_ptr = mol_interp_pts_.interp_z_ptr();
     
     const double* __restrict mol_clusters_p_ptr = mol_interp_potential_.data();
+
+    double* __restrict coul_eng_ptr = coul_eng_vec_.data();
     
     std::vector<double> weights (num_mol_interp_pts_per_node);
     double* weights_ptr = weights.data();
@@ -569,7 +587,8 @@ void CoulombicEnergyCompute::downward_pass()
         std::size_t num_particles  = particle_idxs[1] - particle_idxs[0];
 
 #ifdef OPENACC_ENABLED
-#pragma acc parallel loop present(mol_x_ptr, mol_y_ptr, mol_z_ptr, mol_clusters_p_ptr, weights_ptr)
+#pragma acc parallel loop present(mol_x_ptr, mol_y_ptr, mol_z_ptr, mol_clusters_p_ptr, \
+                                  coul_eng_ptr, weights_ptr)
 #endif
         for (std::size_t i = 0; i < num_particles; ++i) {
         
@@ -657,7 +676,7 @@ void CoulombicEnergyCompute::downward_pass()
 #ifdef OPENACC_ENABLED
             #pragma acc atomic update
 #endif
-            coulombic_energy_ += pot_temp * qq;
+            coul_eng_ptr[0] += pot_temp * qq;
         }
     } //end loop over nodes
 #ifdef OPENACC_ENABLED
@@ -665,6 +684,7 @@ void CoulombicEnergyCompute::downward_pass()
 #endif
 
 //    timers_.downward_pass.stop();
+*/
 }
 
 
@@ -679,8 +699,12 @@ void CoulombicEnergyCompute::copyin_clusters_to_device() const
     
     const double* p_ptr = mol_interp_potential_.data();
     std::size_t p_num   = mol_interp_potential_.size();
+
+    const double* coul_eng_ptr = coul_eng_vec_.data();
+    std::size_t coul_eng_num   = coul_eng_vec_.size();
     
     #pragma acc enter data create(q_ptr[0:q_num], p_ptr[0:p_num])
+    #pragma acc enter data copyin(coul_eng_ptr[0:coul_eng_num])
 #endif
 
 //    timers_.copyin_clusters_to_device.stop();
@@ -698,7 +722,11 @@ void CoulombicEnergyCompute::delete_clusters_from_device() const
     const double* p_ptr = mol_interp_potential_.data();
     std::size_t p_num   = mol_interp_potential_.size();
     
+    const double* coul_eng_ptr = coul_eng_vec_.data();
+    std::size_t coul_eng_num   = coul_eng_vec_.size();
+
     #pragma acc exit data delete(q_ptr[0:q_num], p_ptr[0:p_num])
+    #pragma acc exit data copyout(coul_eng_ptr[0:coul_eng_num])
 #endif
 
 //    timers_.delete_clusters_from_device.stop();
