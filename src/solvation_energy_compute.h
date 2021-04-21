@@ -47,8 +47,9 @@ private:
     std::vector<double> mol_interp_charge_;
     
     
-    /* Potentials */
+    /* Solvation energy */
     
+    std::vector<double> solv_eng_vec_;
     double solvation_energy_;
     
     

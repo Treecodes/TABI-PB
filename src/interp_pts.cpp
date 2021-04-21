@@ -1,3 +1,4 @@
+#include <cmath>
 #include <cstddef>
 
 #include "interp_pts.h"

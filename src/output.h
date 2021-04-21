@@ -46,7 +46,7 @@ public:
     ~Output() = default;
     
     std::vector<double>& potential() { return potential_; };
-    const std::size_t potential_offset() { return potential_offset_; };
+    std::size_t potential_offset() { return potential_offset_; };
     
     void set_num_iter(long int num_iter) { num_iter_ = num_iter; }
     void set_residual(double residual) { residual_ = residual; }
