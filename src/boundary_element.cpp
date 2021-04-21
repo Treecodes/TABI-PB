@@ -127,6 +127,10 @@ void BoundaryElement::matrix_vector(double alpha, const double* __restrict poten
     #pragma acc wait
 #endif
     
+#ifdef OPENACC_ENABLED
+    #pragma acc wait
+#endif
+    
     BoundaryElement::downward_pass(potential_new);
 
 #ifdef OPENACC_ENABLED
@@ -430,7 +434,7 @@ void BoundaryElement::cluster_particle_interact(double* __restrict potential,
     
 #ifdef OPENACC_ENABLED
     int stream_id = std::rand() % 3;
-    #pragma acc parallel loop async(stream_id) collapse(3) present(clusters_x_ptr, clusters_y_ptr, clusters_z_ptr, \
+    #pragma acc parallel loop collapse(3) async(stream_id) present(clusters_x_ptr, clusters_y_ptr, clusters_z_ptr, \
                     clusters_p_ptr, clusters_p_dx_ptr, clusters_p_dy_ptr, clusters_p_dz_ptr, \
                     elements_x_ptr, elements_y_ptr, elements_z_ptr, \
                     sources_q_ptr, sources_q_dx_ptr, sources_q_dy_ptr, sources_q_dz_ptr, \
@@ -564,7 +568,7 @@ void BoundaryElement::cluster_cluster_interact(double* __restrict potential,
 
 #ifdef OPENACC_ENABLED
     int stream_id = std::rand() % 3;
-    #pragma acc parallel loop async(stream_id) collapse(3) present(clusters_x_ptr, clusters_y_ptr, clusters_z_ptr, \
+    #pragma acc parallel loop collapse(3) async(stream_id) present(clusters_x_ptr, clusters_y_ptr, clusters_z_ptr, \
                     clusters_p_ptr, clusters_p_dx_ptr, clusters_p_dy_ptr, clusters_p_dz_ptr, \
                     clusters_q_ptr, clusters_q_dx_ptr, clusters_q_dy_ptr, clusters_q_dz_ptr, \
                     potential)
@@ -729,7 +733,8 @@ void BoundaryElement::upward_pass()
         double* denominator_ptr = denominator.data();
         
 #ifdef OPENACC_ENABLED
-#pragma acc kernels present(elements_x_ptr, elements_y_ptr, elements_z_ptr, \
+    int stream_id = std::rand() % 3;
+    #pragma acc parallel loop async(stream_id) present(elements_x_ptr, elements_y_ptr, elements_z_ptr, \
                          sources_q_ptr, sources_q_dx_ptr, sources_q_dy_ptr, sources_q_dz_ptr, \
                          clusters_x_ptr, clusters_y_ptr, clusters_z_ptr, \
                          clusters_q_ptr, clusters_q_dx_ptr, clusters_q_dy_ptr, clusters_q_dz_ptr, \
