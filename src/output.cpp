@@ -1,3 +1,4 @@
+#include <cmath>
 #include <algorithm>
 #include <iostream>
 #include <iomanip>
@@ -107,6 +108,7 @@ void Output::compute_solvation_energy()
     const double* __restrict mol_q_ptr = molecule_.charge_ptr();
     
     const double* __restrict potential_ptr = potential_.data();
+    std::size_t potential_num = potential_.size();
     
 #ifdef OPENACC_ENABLED
     #pragma acc enter data copyin(potential_ptr[0:potential_num])
@@ -165,6 +167,7 @@ void Output::compute_solvation_energy(const class InterpolationPoints& elem_inte
 {
     timers_.compute_solvation_energy.start();
     const double* __restrict potential_ptr = potential_.data();
+    std::size_t potential_num = potential_.size();
     
 #ifdef OPENACC_ENABLED
     #pragma acc enter data copyin(potential_ptr[0:potential_num])

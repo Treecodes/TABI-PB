@@ -1,3 +1,4 @@
+#include <cmath>
 #include <algorithm>
 #include <vector>
 
@@ -840,7 +841,7 @@ void SourceTermCompute::copyin_clusters_to_device() const
     const double* p_ptr    = elem_interp_potential_.data();
     const double* p_dx_ptr = elem_interp_potential_dx_.data();
     const double* p_dy_ptr = elem_interp_potential_dy_.data();
-    const double* p_dy_ptr = elem_interp_potential_dz_.data();
+    const double* p_dz_ptr = elem_interp_potential_dz_.data();
     
     std::size_t p_num    = elem_interp_potential_.size();
     std::size_t p_dx_num = elem_interp_potential_dx_.size();
@@ -866,7 +867,7 @@ void SourceTermCompute::delete_clusters_from_device() const
     const double* p_ptr    = elem_interp_potential_.data();
     const double* p_dx_ptr = elem_interp_potential_dx_.data();
     const double* p_dy_ptr = elem_interp_potential_dy_.data();
-    const double* p_dy_ptr = elem_interp_potential_dz_.data();
+    const double* p_dz_ptr = elem_interp_potential_dz_.data();
     
     std::size_t p_num    = elem_interp_potential_.size();
     std::size_t p_dx_num = elem_interp_potential_dx_.size();

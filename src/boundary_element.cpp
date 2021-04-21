@@ -734,7 +734,7 @@ void BoundaryElement::upward_pass()
         
 #ifdef OPENACC_ENABLED
     int stream_id = std::rand() % 3;
-    #pragma acc parallel loop async(stream_id) present(elements_x_ptr, elements_y_ptr, elements_z_ptr, \
+    #pragma acc kernels present(elements_x_ptr, elements_y_ptr, elements_z_ptr, \
                          sources_q_ptr, sources_q_dx_ptr, sources_q_dy_ptr, sources_q_dz_ptr, \
                          clusters_x_ptr, clusters_y_ptr, clusters_z_ptr, \
                          clusters_q_ptr, clusters_q_dx_ptr, clusters_q_dy_ptr, clusters_q_dz_ptr, \
@@ -1233,7 +1233,6 @@ std::string Timers_BoundaryElement::get_durations() const
     durations.append(std::to_string(run_GMRES                  .elapsed_time())).append(", ");
     durations.append(std::to_string(matrix_vector              .elapsed_time())).append(", ");
     durations.append(std::to_string(upward_pass                .elapsed_time())).append(", ");
-    durations.append(std::to_string(particle_cluster_interact  .elapsed_time())).append(", ");
     durations.append(std::to_string(particle_particle_interact .elapsed_time())).append(", ");
     durations.append(std::to_string(particle_cluster_interact  .elapsed_time())).append(", ");
     durations.append(std::to_string(cluster_particle_interact  .elapsed_time())).append(", ");
