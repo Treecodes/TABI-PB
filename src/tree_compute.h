@@ -63,6 +63,9 @@ public:
             for (auto source_node_idx : interaction_list_.cluster_cluster(target_node_idx))
                 cluster_cluster_interact(target_node_idx, source_node_idx);
         }
+#ifdef OPENACC_ENABLED
+        #pragma acc wait
+#endif
         downward_pass();
     }
 };

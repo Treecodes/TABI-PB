@@ -65,7 +65,8 @@ void CoulombicEnergyCompute::particle_particle_interact(std::array<std::size_t, 
     const double* __restrict mol_q_ptr = molecule_.charge_ptr();
 
 #ifdef OPENACC_ENABLED
-    #pragma acc parallel loop present(mol_x_ptr, mol_y_ptr, mol_z_ptr, mol_q_ptr)
+    int stream_id = std::rand() % 3;
+    #pragma acc parallel loop async(stream_id) present(mol_x_ptr, mol_y_ptr, mol_z_ptr, mol_q_ptr)
 #endif
     for (std::size_t j = target_node_begin; j < target_node_end; ++j) {
         
@@ -133,7 +134,8 @@ void CoulombicEnergyCompute::particle_cluster_interact(std::array<std::size_t, 2
     
     
 #ifdef OPENACC_ENABLED
-    #pragma acc parallel loop present(mol_x_ptr, mol_y_ptr, mol_z_ptr, mol_q_ptr, \
+    int stream_id = std::rand() % 3;
+    #pragma acc parallel loop async(stream_id) present(mol_x_ptr, mol_y_ptr, mol_z_ptr, mol_q_ptr, \
                                       mol_clusters_x_ptr, mol_clusters_y_ptr, mol_clusters_z_ptr, \
                                       mol_clusters_q_ptr)
 #endif
@@ -213,7 +215,8 @@ void CoulombicEnergyCompute::cluster_particle_interact(std::size_t target_node_i
 
 
 #ifdef OPENACC_ENABLED
-    #pragma acc parallel loop collapse(3) present(mol_x_ptr, mol_y_ptr, mol_z_ptr, mol_q_ptr, \
+    int stream_id = std::rand() % 3;
+    #pragma acc parallel loop collapse(3) async(stream_id) present(mol_x_ptr, mol_y_ptr, mol_z_ptr, mol_q_ptr, \
                     mol_clusters_x_ptr, mol_clusters_y_ptr,    mol_clusters_z_ptr, \
                     mol_clusters_p_ptr)
 #endif
@@ -243,7 +246,9 @@ void CoulombicEnergyCompute::cluster_particle_interact(std::size_t target_node_i
             pot_temp += mol_q_ptr[k] / eps_solute_ / std::sqrt(dx*dx + dy*dy + dz*dz);;
         }
     
-#ifdef OPENMP_ENABLED
+#ifdef OPENACC_ENABLED
+        #pragma acc atomic update
+#elif  OPENMP_ENABLED
         #pragma omp atomic update
 #endif
         mol_clusters_p_ptr[jj] += pot_temp;
@@ -287,7 +292,8 @@ void CoulombicEnergyCompute::cluster_cluster_interact(std::size_t target_node_id
 
 
 #ifdef OPENACC_ENABLED
-    #pragma acc parallel loop collapse(3) present(mol_clusters_x_ptr, mol_clusters_y_ptr, mol_clusters_z_ptr, \
+    int stream_id = std::rand() % 3;
+    #pragma acc parallel loop collapse(3) async(stream_id) present(mol_clusters_x_ptr, mol_clusters_y_ptr, mol_clusters_z_ptr, \
                     mol_clusters_q_ptr,  mol_clusters_p_ptr)
 #endif
     for (int j1 = 0; j1 < num_mol_interp_pts_per_node; j1++) {
@@ -324,7 +330,9 @@ void CoulombicEnergyCompute::cluster_cluster_interact(std::size_t target_node_id
         }
         }
     
-#ifdef OPENMP_ENABLED
+#ifdef OPENACC_ENABLED
+        #pragma acc atomic update
+#elif  OPENMP_ENABLED
         #pragma omp atomic update
 #endif
         mol_clusters_p_ptr[jj] += pot_temp;
