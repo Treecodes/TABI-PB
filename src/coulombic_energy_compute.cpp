@@ -23,9 +23,8 @@ CoulombicEnergyCompute::CoulombicEnergyCompute(const class Molecule& molecule,
     num_mol_interp_potentials_per_node_ = num_mol_interp_charges_per_node_;
     num_mol_potentials_                 = num_mol_charges_;
     
-    mol_interp_charge_.resize(num_mol_charges_);
-    mol_interp_potential_.resize(num_mol_potentials_);
-    
+    mol_interp_charge_.assign(num_mol_charges_, 0.);
+    mol_interp_potential_.assign(num_mol_potentials_, 0.);
 
     /* Coulombic energy */
 
@@ -703,7 +702,7 @@ void CoulombicEnergyCompute::copyin_clusters_to_device() const
     const double* coul_eng_ptr = coul_eng_vec_.data();
     std::size_t coul_eng_num   = coul_eng_vec_.size();
     
-    #pragma acc enter data create(q_ptr[0:q_num], p_ptr[0:p_num])
+    #pragma acc enter data copyin(q_ptr[0:q_num], p_ptr[0:p_num])
     #pragma acc enter data copyin(coul_eng_ptr[0:coul_eng_num])
 #endif
 

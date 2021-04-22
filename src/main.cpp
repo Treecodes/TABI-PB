@@ -64,16 +64,10 @@ int main(int argc, char* argv[])
     
     boundary_element.run_GMRES();
 
-    class InteractionList mol_ilist2(mol_tree, params.tree_degree_, 0.0,
-                                    timers.interaction_list);
-    class InteractionList mol_elem_ilist2(elem_tree, mol_tree, params.tree_degree_, 0.0,
-                                    timers.interaction_list);
-        
-    output.compute_coulombic_energy(mol_interp_pts, mol_tree, mol_ilist2);
-    output.compute_solvation_energy(elem_interp_pts, elem_tree, mol_interp_pts, mol_tree, mol_elem_ilist2);
-    
     //output.compute_coulombic_energy();
     //output.compute_solvation_energy();
+    output.compute_coulombic_energy(mol_interp_pts, mol_tree, mol_ilist);
+    output.compute_solvation_energy(elem_interp_pts, elem_tree, mol_interp_pts, mol_tree, mol_elem_ilist);
     output.finalize();
 
     molecule.delete_from_device();
