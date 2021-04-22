@@ -26,10 +26,10 @@ SolvationEnergyCompute::SolvationEnergyCompute(std::vector<double>& potential,
     num_elem_interp_potentials_per_node_ = std::pow(num_elem_interp_pts_per_node_, 3);
     num_elem_potentials_                 = target_tree_.num_nodes() * num_elem_interp_potentials_per_node_;
     
-    elem_interp_potential_   .resize(num_elem_potentials_);
-    elem_interp_potential_dx_.resize(num_elem_potentials_);
-    elem_interp_potential_dy_.resize(num_elem_potentials_);
-    elem_interp_potential_dz_.resize(num_elem_potentials_);
+    elem_interp_potential_   .assign(num_elem_potentials_, 0.);
+    elem_interp_potential_dx_.assign(num_elem_potentials_, 0.);
+    elem_interp_potential_dy_.assign(num_elem_potentials_, 0.);
+    elem_interp_potential_dz_.assign(num_elem_potentials_, 0.);
     
     
     /* Source clusters */
@@ -38,7 +38,7 @@ SolvationEnergyCompute::SolvationEnergyCompute(std::vector<double>& potential,
     num_mol_interp_charges_per_node_ = std::pow(num_mol_interp_pts_per_node_, 3);
     num_mol_charges_                 = source_tree_.num_nodes() * num_mol_interp_charges_per_node_;
     
-    mol_interp_charge_.resize(num_mol_charges_);
+    mol_interp_charge_.assign(num_mol_charges_, 0.);
     
 
     /* Solvation energy */
@@ -693,7 +693,6 @@ void SolvationEnergyCompute::upward_pass()
 
 void SolvationEnergyCompute::downward_pass()
 {
-/*
 //    timers_.downward_pass.start();
 
     int num_elem_interp_pts_per_node        = num_elem_interp_pts_per_node_;
@@ -857,7 +856,6 @@ void SolvationEnergyCompute::downward_pass()
 #endif
 
 //    timers_.downward_pass.stop();
-*/
 }
 
 
@@ -883,7 +881,7 @@ void SolvationEnergyCompute::copyin_clusters_to_device() const
     const double* solv_eng_ptr = solv_eng_vec_.data();
     std::size_t solv_eng_num   = solv_eng_vec_.size();
     
-    #pragma acc enter data create(q_ptr[0:q_num], p_ptr[0:p_num], \
+    #pragma acc enter data copyin(q_ptr[0:q_num], p_ptr[0:p_num], \
                                   p_dx_ptr[0:p_dx_num], p_dy_ptr[0:p_dy_num], p_dz_ptr[0:p_dz_num])
     #pragma acc enter data copyin(solv_eng_ptr[0:solv_eng_num])
 #endif
