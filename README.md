@@ -43,7 +43,7 @@ cd examples/
 ```
 
 ## License
-Copyright © 2013-2020, The Regents of the University of Michigan. Released under the [3-Clause BSD License](LICENSE.md).
+Copyright © 2013-2022, The Regents of the University of Michigan. Released under the [3-Clause BSD License](LICENSE.md).
 
 
 ## Disclaimer
