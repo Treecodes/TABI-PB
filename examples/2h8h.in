@@ -1,0 +1,14 @@
+mol               2h8h.pqr
+mesh              SES
+sdens             1
+srad              1.4
+pdie              1
+sdie              80
+bulk              0.15
+temp              300
+tree_degree       1
+tree_max_per_leaf 50
+tree_theta        0.0
+outdata           CSV
+outdata           timers
+precondition      false
