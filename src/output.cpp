@@ -257,7 +257,7 @@ void Output::files(const struct Timers& timers) const
     }
 
     if (params_.output_csv_) {
-        std::ofstream csv_file("output.csv");
+        std::ofstream csv_file(params_.output_prefix_ + ".csv");
         csv_file << std::scientific << std::setprecision(12)
                  << molecule_.num()            << ", " << params_.mesh_              << ", "
                  << params_.mesh_density_      << ", " << params_.mesh_probe_radius_ << ", "
@@ -279,7 +279,7 @@ void Output::output_VTK() const
 {
     timers_.output_VTK.start();
 
-    std::ofstream vtk_file("output.vtk");
+    std::ofstream vtk_file(params_.output_prefix_ + ".vtk");
     vtk_file << "# vtk DataFile Version 1.0\n";
     vtk_file << "vtk file output.vtk\n";
     vtk_file << "ASCII\n";

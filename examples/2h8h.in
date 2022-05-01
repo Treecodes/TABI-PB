@@ -9,6 +9,6 @@ temp              300
 tree_degree       1
 tree_max_per_leaf 50
 tree_theta        0.0
-outdata           CSV
+outdata           csv
 outdata           timers
-precondition      false
+output_prefix     example_2h8h
