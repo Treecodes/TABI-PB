@@ -38,22 +38,24 @@ struct Params
     double phys_kappa_;
     double phys_kappa2_;
 
-   /* boundary_element parameters */
+    /* boundary_element parameters */
     int tree_degree_;
     int tree_max_per_leaf_;
     double tree_theta_;
     
-   /* preconditioning */
+    /* preconditioning */
     bool precondition_;
    
-   /* nonpolar energy */
+    /* nonpolar energy */
     int nonpolar_;
 
-   /* output of potential data */
+    /* output of potential data */
     bool output_vtk_;
     bool output_csv_;
     bool output_csv_headers_;
     bool output_timers_;
+
+    std::string output_prefix_;
     
     Params(char* paramfile);
     ~Params() = default;

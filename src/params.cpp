@@ -24,6 +24,7 @@ Params::Params(char* infile)
     output_csv_headers_ = false;
     output_timers_ = false;
     precondition_ = false;
+    output_prefix_ = "output";
     
     std::string line;
     
@@ -115,6 +116,9 @@ Params::Params(char* infile)
              if (param_value == "csv") output_csv_ = true;
              if (param_value == "csv_headers") output_csv_headers_ = true;
              if (param_value == "timers") output_timers_ = true;
+
+        } else if (param_token == "output_prefix") {
+             if (!param_value.empty()) output_prefix_ = param_value;
         
         } else {
             std::cout << "Skipping undefined token: " << param_token << std::endl;

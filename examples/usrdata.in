@@ -9,8 +9,8 @@ temp              300
 tree_degree       2
 tree_max_per_leaf 50
 tree_theta        0.8
-precondition      OFF
-outdata           VTK
-outdata           CSV
+outdata           vtk
+outdata           csv
+outdata           csv_headers
 outdata           timers
-precondition      false
+output_prefix     example_1a63
