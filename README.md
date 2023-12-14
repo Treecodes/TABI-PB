@@ -17,6 +17,7 @@ Please refer to the following references for more background:
    
   - W.H. Geng and R. Krasny, A treecode-accelerated boundary integral Poisson-Boltzmann solver for continuum electrostatics of solvated biomolecules, _J. Comput. Phys._ __247__ (2013), 62-87.
 
+  - L. Wilson, W. Geng and R. Krasny, TABI-PB 2.0: An improved version of the Treecode-Accelerated Boundary Integral Poisson-Boltzmann solver, _J. Phys. Chem. B_ __126__ (2022), 7104-7113.
 
 ## Build Instructions
 
@@ -47,4 +48,4 @@ Copyright © 2013-2022, The Regents of the University of Michigan. Released unde
 
 
 ## Disclaimer
-This material is based upon work supported under NSF Grant DMS-0915057, DMS-1418966, DMS-1418957, and by the Extreme Science and Engineering Discovery Environment (XSEDE) under grants ACI-1548562 and ASC-190062. Any opinions, findings, and conclusions or recommendations expressed in this material are those of the authors and do not necessarily reflect the views of the NSF.
+This material is based upon work supported under NSF Grants DMS-0915057, DMS-1418966/1418957, DMS-1819094/1819193, DMS-2110767/2110869 and by the Extreme Science and Engineering Discovery Environment (XSEDE) under grants ACI-1548562 and ASC-190062. Any opinions, findings, and conclusions or recommendations expressed in this material are those of the authors and do not necessarily reflect the views of the NSF.
